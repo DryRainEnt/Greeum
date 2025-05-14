@@ -1,0 +1,31 @@
+# 핵심 의존성
+numpy>=1.20.0
+flask>=2.0.0
+sqlalchemy>=1.4.0
+requests>=2.25.0
+python-dotenv>=0.19.0
+
+# 임베딩 모델
+sentence-transformers>=2.2.0
+openai>=0.27.0
+
+# REST API 및 도구
+flask-restx>=0.5.1
+flask-cors>=3.0.10
+gunicorn>=20.1.0
+
+# CLI 인터페이스
+click>=8.0.0
+rich>=10.0.0
+typer>=0.4.0
+
+# 시간 처리 및 자연어 처리
+python-dateutil>=2.8.2
+spacy>=3.0.0
+
+# 데이터베이스
+psycopg2-binary>=2.9.3; platform_system != "Windows"
+psycopg2>=2.9.3; platform_system == "Windows"
+
+# NLP 처리 (선택 사항)
+spacy>=3.5.0 
