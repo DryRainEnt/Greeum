@@ -1,12 +1,22 @@
-#!/usr/bin/env python3
-import click
+#!/usr/bin/env python
 import os
+import sys
 import json
+import argparse
 from datetime import datetime
-from typing import Optional, List
+import logging
+from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
+
+# 로깅 설정
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('memory_cli')
+
+# 모듈 디렉토리 추가
+parent_dir = str(Path(__file__).resolve().parent.parent)
+sys.path.append(parent_dir)
 
 # 콘솔 설정
 console = Console()
@@ -14,7 +24,7 @@ console = Console()
 @click.group()
 @click.version_option(version="0.1.0")
 def main():
-    """MemoryBlockEngine - LLM 독립적 기억 시스템 CLI"""
+    """Greeum - LLM 독립적 기억 시스템 CLI"""
     pass
 
 @main.command("init")

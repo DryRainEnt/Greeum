@@ -3,17 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MemoryBlockEngine - 관리 도구</title>
+    <title>Greeum - 관리 도구</title>
     <style>
+        :root {
+            --primary-color: #3A7CA5;
+            --secondary-color: #F9A826;
+            --tertiary-color: #16A085;
+            --bg-color: #F5F7FA;
+            --text-color: #333;
+            --border-color: #ddd;
+        }
+        
         body {
-            font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+            font-family: 'Noto Sans KR', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
             margin: 0;
             padding: 20px;
-            background-color: #f8f9fa;
-            color: #343a40;
         }
-        h1, h2, h3 {
-            color: #1a56db;
+        
+        h1 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        h2 {
+            color: var(--primary-color);
+            margin-top: 30px;
+        }
+
+        h3 {
+            color: var(--tertiary-color);
         }
         .container {
             max-width: 1200px;
@@ -137,8 +160,8 @@
 </head>
 <body>
     <div class="container">
+        <h1>�� Greeum 관리 도구</h1>
         <div class="header">
-            <h1>🧠 MemoryBlockEngine 관리 도구</h1>
             <div>
                 <button id="checkHealth">상태 확인</button>
             </div>

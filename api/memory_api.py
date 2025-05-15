@@ -199,6 +199,15 @@ def process_text():
     
     return jsonify(result)
 
+@app.route('/api/info')
+def api_info():
+    """API 정보 조회"""
+    return jsonify({
+        "status": "success",
+        "api_version": "0.1.0",
+        "name": "Greeum"
+    })
+
 if __name__ == '__main__':
     # templates 디렉토리 확인 및 생성
     templates_dir = os.path.join(os.path.dirname(__file__), 'templates')

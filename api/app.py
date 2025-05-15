@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MemoryBlockEngine REST API 서버
+Greeum REST API 서버
 """
 
 import os
@@ -18,7 +18,7 @@ logger = logging.getLogger("memory_api")
 # 앱 초기화
 app = Flask(__name__)
 CORS(app)  # 크로스 오리진 요청 허용
-api = Api(app, version='0.1.0', title='MemoryBlockEngine API',
+api = Api(app, version='0.1.0', title='Greeum API',
          description='LLM 독립적 메모리 시스템 API')
 
 # 네임스페이스 정의
@@ -561,7 +561,7 @@ class Entity(Resource):
 def index():
     """API 정보 페이지"""
     return jsonify({
-        'name': 'MemoryBlockEngine API',
+        'name': 'Greeum API',
         'version': '0.1.0',
         'description': 'LLM 독립적 메모리 시스템 API',
         'endpoints': {

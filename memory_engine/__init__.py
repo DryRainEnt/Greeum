@@ -1,5 +1,5 @@
 """
-MemoryBlockEngine - LLM 독립적 메모리 시스템
+Greeum - LLM 독립적 메모리 시스템
 
 이 패키지는 LLM에 인간과 유사한 기억 시스템을 제공하기 위한 
 독립적인 모듈을 포함하고 있습니다.
@@ -15,15 +15,15 @@ except ImportError:
 
 try:
     from .embedding_models import (
-        SimpleEmbeddingModel, SentenceTransformerEmbedding, OpenAIEmbedding,
+        EmbeddingModel, SimpleEmbeddingModel, SentenceTransformerEmbedding, OpenAIEmbedding,
         EmbeddingRegistry, get_embedding, register_embedding_model,
-        init_sentence_transformer, init_openai
+        init_sentence_transformer, init_openai, embedding_registry
     )
 except ImportError:
     pass
 
 try:
-    from .temporal_reasoner import TemporalReasoner
+    from .temporal_reasoner import TemporalReasoner, evaluate_temporal_query
 except ImportError:
     pass
 

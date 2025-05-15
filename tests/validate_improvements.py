@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-MemoryBlockEngine 개선 검증 스크립트
+Greeum 개선 검증 스크립트
 """
 
 import os
@@ -20,8 +20,15 @@ sys.path.append(parent_dir)
 from memory_engine import (
     DatabaseManager, BlockManager, STMManager, CacheManager, PromptWrapper,
     SimpleEmbeddingModel, embedding_registry, get_embedding,
-    TemporalReasoner, MemoryEvolutionManager, KnowledgeGraphManager
+    TemporalReasoner
 )
+
+# 개선된 모듈은 try-except로 임포트 (존재하지 않을 수 있음)
+try:
+    from memory_engine import MemoryEvolutionManager, KnowledgeGraphManager
+except ImportError:
+    MemoryEvolutionManager = None
+    KnowledgeGraphManager = None
 
 # 테스트 결과 저장 경로
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
@@ -62,8 +69,17 @@ class MemoryEngineValidator:
             self.block_manager = None  # 사용하지 않음 (DB 매니저로 대체)
             self.stm_manager = None  # 사용하지 않음 (DB 매니저로 대체)
             self.temporal_reasoner = TemporalReasoner(self.db_manager)
-            self.memory_evolution = MemoryEvolutionManager(self.db_manager)
-            self.knowledge_graph = KnowledgeGraphManager(self.db_manager)
+            
+            # 옵션 구성요소 초기화 (있는 경우에만)
+            if MemoryEvolutionManager is not None:
+                self.memory_evolution = MemoryEvolutionManager(self.db_manager)
+            else:
+                self.memory_evolution = None
+                
+            if KnowledgeGraphManager is not None:
+                self.knowledge_graph = KnowledgeGraphManager(self.db_manager)
+            else:
+                self.knowledge_graph = None
         else:
             self.db_manager = None
             self.block_manager = BlockManager()
@@ -77,28 +93,40 @@ class MemoryEngineValidator:
     
     def run_all_tests(self):
         """모든 테스트 실행"""
-        print("===== MemoryBlockEngine 개선 검증 시작 =====")
+        print("===== Greeum 개선 검증 시작 =====")
         
-        # 1. 대량 기억 처리 테스트
-        self.test_large_memory_insertion()
-        
-        # 2. 복잡한 맥락 이해 테스트
-        self.test_complex_context_search()
-        
-        # 3. 시간적 추론 테스트
-        self.test_temporal_reasoning()
-        
-        # 4. 대규모 임베딩 검색 테스트
-        self.test_large_embedding_search()
-        
-        # 5. 기억 진화 테스트
-        self.test_memory_evolution()
-        
-        # 결과 저장
-        self.save_results()
-        
-        print("\n===== 검증 완료 =====")
-        print(f"결과 저장 위치: {os.path.join(RESULTS_DIR, 'validation_results.json')}")
+        try:
+            # 1. 대량 기억 처리 테스트
+            self.test_large_memory_insertion()
+            
+            # 2. 복잡한 맥락 이해 테스트
+            self.test_complex_context_search()
+            
+            # 3. 시간적 추론 테스트
+            self.test_temporal_reasoning()
+            
+            # 4. 대규모 임베딩 검색 테스트
+            self.test_large_embedding_search()
+            
+            # 5. 기억 진화 테스트
+            self.test_memory_evolution()
+            
+            # 결과 저장
+            self.save_results()
+            
+            print("\n===== 검증 완료 =====")
+            print(f"결과 저장 위치: {os.path.join(RESULTS_DIR, 'validation_results.json')}")
+        except Exception as e:
+            print(f"\n===== 오류 발생: {e} =====")
+            import traceback
+            traceback.print_exc()
+            
+            # 지금까지의 결과 저장
+            try:
+                self.save_results()
+                print(f"부분적 결과 저장 위치: {os.path.join(RESULTS_DIR, 'validation_results.json')}")
+            except Exception:
+                print("결과 저장 실패")
     
     def test_large_memory_insertion(self, count=1000):
         """
@@ -345,9 +373,9 @@ class MemoryEngineValidator:
         """기억 진화 테스트"""
         print("\n[테스트 5] 기억 진화 테스트")
         
-        if not self.memory_evolution:
-            print("  기억 진화 테스트 건너뜀 (데이터베이스 모드가 아님)")
-            self.results["tests"]["memory_evolution"] = {"skipped": True}
+        if not self.memory_evolution or MemoryEvolutionManager is None:
+            print("  기억 진화 테스트 건너뜀 (메모리 진화 모듈 사용 불가)")
+            self.results["tests"]["memory_evolution"] = {"skipped": True, "reason": "MemoryEvolutionManager 모듈 없음"}
             return
         
         # 1. 원본 기억 추가

@@ -1,5 +1,7 @@
 """
-MemoryBlockEngine API 클라이언트
+Greeum API 클라이언트
+
+이 모듈은 Greeum API 서버와의 통신을 위한 클라이언트 클래스를 제공합니다.
 """
 
 import requests
@@ -7,7 +9,7 @@ import json
 from typing import Dict, List, Any, Optional, Union
 
 class MemoryClient:
-    """MemoryBlockEngine API 클라이언트"""
+    """Greeum API 클라이언트"""
     
     def __init__(self, base_url: str = "http://localhost:8000"):
         """

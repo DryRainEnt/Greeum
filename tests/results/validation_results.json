@@ -1,66 +1,70 @@
 {
-  "timestamp": "2025-05-15T05:17:58.768483",
+  "timestamp": "2025-05-15T16:28:21.158482",
   "tests": {
     "large_memory_insertion": {
       "count": 1000,
-      "duration_seconds": 4.290003776550293,
-      "average_insertion_time": 0.004290003776550293,
-      "insertions_per_second": 233.10002789883947
+      "duration_seconds": 4.492775201797485,
+      "average_insertion_time": 0.004492775201797485,
+      "insertions_per_second": 222.5795761158752
     },
     "complex_context_search": {
       "queries": {
         "인공지능 프로젝트에 관한 기억": {
           "embedding_search": {
             "count": 5,
-            "duration": 0.007999897003173828,
+            "duration": 0.00906062126159668,
             "blocks": [
               {
-                "block_index": 354,
-                "timestamp": "2025-05-10T05:18:00.315657",
-                "context_snippet": "결정에 관한 중요한 정보를 기록합니다. 인덱스: 354",
+                "block_index": 232,
+                "timestamp": "2024-09-17T16:28:22.214612",
+                "context_snippet": "팀원에 관한 중요한 정보를 기록합니다. 인덱스: 232",
                 "keywords": [
-                  "기획",
-                  "프로젝트"
-                ],
-                "tags": [
-                  "중요",
-                  "진행중"
-                ],
-                "importance": 0.8662702571169505,
-                "similarity": 0.1736689805984497,
-                "relevance_score": null
-              },
-              {
-                "block_index": 453,
-                "timestamp": "2025-03-25T05:18:00.742587",
-                "context_snippet": "결정에 관한 중요한 정보를 기록합니다. 인덱스: 453",
-                "keywords": [
-                  "개선",
-                  "기획",
-                  "분석",
-                  "진행"
+                  "결정",
+                  "구현",
+                  "해결책"
                 ],
                 "tags": [
                   "참고"
                 ],
-                "importance": 0.8163854215474716,
-                "similarity": 0.1736689805984497,
+                "importance": 0.49032508520217066,
+                "similarity": 0.19344916939735413,
                 "relevance_score": null
               },
               {
-                "block_index": 903,
-                "timestamp": "2024-05-26T05:18:02.706174",
-                "context_snippet": "결정에 관한 중요한 정보를 기록합니다. 인덱스: 903",
+                "block_index": 601,
+                "timestamp": "2024-07-10T16:28:23.885446",
+                "context_snippet": "팀원에 관한 중요한 정보를 기록합니다. 인덱스: 601",
                 "keywords": [
+                  "검토",
                   "결정",
-                  "성과"
+                  "문제",
+                  "팀원",
+                  "피드백"
                 ],
                 "tags": [
                   "긴급",
-                  "진행중"
+                  "진행중",
+                  "참고"
                 ],
-                "importance": 0.2708409961708937,
-                "similarity": 0.1736689805984497,
+                "importance": 0.21006687050260264,
+                "similarity": 0.19344916939735413,
+                "relevance_score": null
+              },
+              {
+                "block_index": 3,
+                "timestamp": "2024-12-08T16:28:21.262275",
+                "context_snippet": "목표 관련 이슈가 발생했으며 조치가 필요합니다. 인덱스: 3",
+                "keywords": [
+                  "개선",
+                  "기획",
+                  "분석",
+                  "일정"
+                ],
+                "tags": [
+                  "긴급"
+                ],
+                "importance": 0.7294762307930093,
+                "similarity": 0.1875905692577362,
                 "relevance_score": null
               }
             ]
@@ -69,53 +73,51 @@
             "count": 100,
             "blocks": [
               {
-                "block_index": 7,
-                "timestamp": "2024-10-21T05:17:58.858579",
-                "context_snippet": "해결책에 관한 중요한 정보를 기록합니다. 인덱스: 7",
+                "block_index": 518,
+                "timestamp": "2024-08-29T16:28:23.512125",
+                "context_snippet": "결정에 관한 중요한 정보를 기록합니다. 인덱스: 518",
                 "keywords": [
                   "문제",
-                  "피드백",
-                  "회의"
+                  "아이디어"
                 ],
                 "tags": [
                   "긴급",
                   "완료",
-                  "진행중"
+                  "참고"
                 ],
-                "importance": 0.5230049649103052,
+                "importance": 0.3102479532036797,
                 "similarity": null,
                 "relevance_score": null
               },
               {
-                "block_index": 9,
-                "timestamp": "2024-10-14T05:17:58.866583",
-                "context_snippet": "문제에 관한 중요한 정보를 기록합니다. 인덱스: 9",
+                "block_index": 8,
+                "timestamp": "2025-03-01T16:28:21.283167",
+                "context_snippet": "문제에 관한 중요한 정보를 기록합니다. 인덱스: 8",
                 "keywords": [
-                  "목표",
-                  "피드백"
+                  "검토",
+                  "진행"
                 ],
                 "tags": [
                   "참고"
                 ],
-                "importance": 0.9848962730296361,
+                "importance": 0.555569524624651,
                 "similarity": null,
                 "relevance_score": null
               },
               {
-                "block_index": 522,
-                "timestamp": "2024-12-07T05:18:01.043718",
-                "context_snippet": "결정에 관한 중요한 정보를 기록합니다. 인덱스: 522",
+                "block_index": 520,
+                "timestamp": "2024-09-15T16:28:23.521570",
+                "context_snippet": "회의에 관한 중요한 정보를 기록합니다. 인덱스: 520",
                 "keywords": [
-                  "개선",
+                  "문제",
                   "아이디어",
-                  "진행"
+                  "팀원",
+                  "피드백"
                 ],
                 "tags": [
-                  "긴급",
-                  "완료",
-                  "중요"
+                  "긴급"
                 ],
-                "importance": 0.20912461018782894,
+                "importance": 0.5401219457484647,
                 "similarity": null,
                 "relevance_score": null
               }
@@ -125,54 +127,53 @@
             "count": 5,
             "blocks": [
               {
-                "block_index": 7,
-                "timestamp": "2024-10-21T05:17:58.858579",
-                "context_snippet": "해결책에 관한 중요한 정보를 기록합니다. 인덱스: 7",
+                "block_index": 131,
+                "timestamp": "2025-01-15T16:28:21.786405",
+                "context_snippet": "프로젝트에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 131",
                 "keywords": [
-                  "문제",
-                  "피드백",
-                  "회의"
+                  "분석",
+                  "성과",
+                  "일정",
+                  "진행",
+                  "피드백"
                 ],
                 "tags": [
-                  "긴급",
-                  "완료",
-                  "진행중"
+                  "중요"
                 ],
-                "importance": 0.5230049649103052,
+                "importance": 0.135012173208635,
                 "similarity": null,
                 "relevance_score": 0.35
               },
               {
-                "block_index": 9,
-                "timestamp": "2024-10-14T05:17:58.866583",
-                "context_snippet": "문제에 관한 중요한 정보를 기록합니다. 인덱스: 9",
+                "block_index": 8,
+                "timestamp": "2025-03-01T16:28:21.283167",
+                "context_snippet": "문제에 관한 중요한 정보를 기록합니다. 인덱스: 8",
                 "keywords": [
-                  "목표",
-                  "피드백"
+                  "검토",
+                  "진행"
                 ],
                 "tags": [
                   "참고"
                 ],
-                "importance": 0.9848962730296361,
+                "importance": 0.555569524624651,
                 "similarity": null,
                 "relevance_score": 0.315
               },
               {
-                "block_index": 11,
-                "timestamp": "2024-11-20T05:17:58.874867",
-                "context_snippet": "프로젝트에 관한 중요한 정보를 기록합니다. 인덱스: 11",
+                "block_index": 10,
+                "timestamp": "2024-09-15T16:28:21.291357",
+                "context_snippet": "프로젝트에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 10",
                 "keywords": [
-                  "구현",
-                  "기획",
-                  "성과",
-                  "피드백",
-                  "회의"
+                  "일정",
+                  "팀원",
+                  "프로젝트",
+                  "해결책"
                 ],
                 "tags": [
-                  "완료",
-                  "중요"
+                  "긴급",
+                  "진행중"
                 ],
-                "importance": 0.603674862656064,
+                "importance": 0.3340701997350054,
                 "similarity": null,
                 "relevance_score": 0.27999999999999997
               }
@@ -182,55 +183,57 @@
         "3년 전 기술 회의에서 결정한 사항": {
           "embedding_search": {
             "count": 5,
-            "duration": 0.0075092315673828125,
+            "duration": 0.009269952774047852,
             "blocks": [
               {
-                "block_index": 565,
-                "timestamp": "2025-01-23T05:18:01.218748",
-                "context_snippet": "일정에 관한 중요한 정보를 기록합니다. 인덱스: 565",
+                "block_index": 925,
+                "timestamp": "2025-03-11T16:28:25.385664",
+                "context_snippet": "일정에 관한 중요한 정보를 기록합니다. 인덱스: 925",
                 "keywords": [
-                  "개선",
+                  "결정",
+                  "문제",
+                  "성과",
+                  "진행",
+                  "팀원"
+                ],
+                "tags": [
+                  "완료"
+                ],
+                "importance": 0.4383066225490926,
+                "similarity": 1.0,
+                "relevance_score": null
+              },
+              {
+                "block_index": 136,
+                "timestamp": "2024-12-15T16:28:21.806446",
+                "context_snippet": "회의에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 136",
+                "keywords": [
+                  "진행",
                   "회의"
                 ],
                 "tags": [
-                  "참고"
+                  "긴급"
                 ],
-                "importance": 0.9366669707100587,
-                "similarity": 1.0,
+                "importance": 0.524915900249112,
+                "similarity": 0.208745539188385,
                 "relevance_score": null
               },
               {
-                "block_index": 619,
-                "timestamp": "2024-05-20T05:18:01.458273",
-                "context_snippet": "일정에 관한 중요한 정보를 기록합니다. 인덱스: 619",
+                "block_index": 613,
+                "timestamp": "2024-09-05T16:28:23.940634",
+                "context_snippet": "회의에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 613",
                 "keywords": [
-                  "성과",
-                  "피드백"
+                  "일정",
+                  "진행",
+                  "팀원",
+                  "프로젝트",
+                  "회의"
                 ],
                 "tags": [
-                  "완료",
-                  "중요"
+                  "완료"
                 ],
-                "importance": 0.4832493348837714,
-                "similarity": 1.0,
-                "relevance_score": null
-              },
-              {
-                "block_index": 885,
-                "timestamp": "2024-12-24T05:18:02.629889",
-                "context_snippet": "회의에 관한 중요한 정보를 기록합니다. 인덱스: 885",
-                "keywords": [
-                  "결정",
-                  "구현",
-                  "문제"
-                ],
-                "tags": [
-                  "긴급",
-                  "중요",
-                  "진행중"
-                ],
-                "importance": 0.34670313101250055,
-                "similarity": 0.20905882120132446,
+                "importance": 0.8465453240316483,
+                "similarity": 0.208745539188385,
                 "relevance_score": null
               }
             ]
@@ -243,53 +246,55 @@
             "count": 5,
             "blocks": [
               {
-                "block_index": 565,
-                "timestamp": "2025-01-23T05:18:01.218748",
-                "context_snippet": "일정에 관한 중요한 정보를 기록합니다. 인덱스: 565",
+                "block_index": 925,
+                "timestamp": "2025-03-11T16:28:25.385664",
+                "context_snippet": "일정에 관한 중요한 정보를 기록합니다. 인덱스: 925",
                 "keywords": [
-                  "개선",
-                  "회의"
+                  "결정",
+                  "문제",
+                  "성과",
+                  "진행",
+                  "팀원"
                 ],
                 "tags": [
-                  "참고"
+                  "완료"
                 ],
-                "importance": 0.9366669707100587,
+                "importance": 0.4383066225490926,
                 "similarity": 1.0,
                 "relevance_score": 0.65
               },
               {
-                "block_index": 619,
-                "timestamp": "2024-05-20T05:18:01.458273",
-                "context_snippet": "일정에 관한 중요한 정보를 기록합니다. 인덱스: 619",
+                "block_index": 136,
+                "timestamp": "2024-12-15T16:28:21.806446",
+                "context_snippet": "회의에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 136",
                 "keywords": [
-                  "성과",
-                  "피드백"
+                  "진행",
+                  "회의"
                 ],
                 "tags": [
-                  "완료",
-                  "중요"
+                  "긴급"
                 ],
-                "importance": 0.4832493348837714,
-                "similarity": 1.0,
-                "relevance_score": 0.5850000000000001
+                "importance": 0.524915900249112,
+                "similarity": 0.208745539188385,
+                "relevance_score": 0.12211614042520524
               },
               {
-                "block_index": 885,
-                "timestamp": "2024-12-24T05:18:02.629889",
-                "context_snippet": "회의에 관한 중요한 정보를 기록합니다. 인덱스: 885",
+                "block_index": 613,
+                "timestamp": "2024-09-05T16:28:23.940634",
+                "context_snippet": "회의에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 613",
                 "keywords": [
-                  "결정",
-                  "구현",
-                  "문제"
+                  "일정",
+                  "진행",
+                  "팀원",
+                  "프로젝트",
+                  "회의"
                 ],
                 "tags": [
-                  "긴급",
-                  "중요",
-                  "진행중"
+                  "완료"
                 ],
-                "importance": 0.34670313101250055,
-                "similarity": 0.20905882120132446,
-                "relevance_score": 0.10871058702468872
+                "importance": 0.8465453240316483,
+                "similarity": 0.208745539188385,
+                "relevance_score": 0.10854768037796021
               }
             ]
           }
@@ -297,58 +302,58 @@
         "마지막으로 만났던 사람에 대한 정보": {
           "embedding_search": {
             "count": 5,
-            "duration": 0.006997346878051758,
+            "duration": 0.008541584014892578,
             "blocks": [
               {
-                "block_index": 765,
-                "timestamp": "2024-06-27T05:18:02.106151",
-                "context_snippet": "프로젝트에 관한 중요한 정보를 기록합니다. 인덱스: 765",
+                "block_index": 846,
+                "timestamp": "2024-09-07T16:28:25.015861",
+                "context_snippet": "회의 진행 상황이 예상보다 좋습니다. 인덱스: 846",
                 "keywords": [
-                  "검토",
-                  "문제",
-                  "성과",
-                  "일정",
-                  "평가"
+                  "결정",
+                  "아이디어",
+                  "팀원",
+                  "프로젝트"
                 ],
                 "tags": [
                   "긴급",
-                  "완료",
                   "중요"
                 ],
-                "importance": 0.7589827127348994,
-                "similarity": 0.2197839766740799,
-                "relevance_score": null
-              },
-              {
-                "block_index": 198,
-                "timestamp": "2024-10-30T05:17:59.639657",
-                "context_snippet": "회의 진행 상황이 예상보다 좋습니다. 인덱스: 198",
-                "keywords": [
-                  "개선",
-                  "분석"
-                ],
-                "tags": [
-                  "긴급",
-                  "진행중"
-                ],
-                "importance": 0.6116105540838379,
+                "importance": 0.8925891744831849,
                 "similarity": 0.21080626547336578,
                 "relevance_score": null
               },
               {
-                "block_index": 91,
-                "timestamp": "2024-08-15T05:17:59.201085",
-                "context_snippet": "일정에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 91",
+                "block_index": 882,
+                "timestamp": "2024-07-12T16:28:25.179744",
+                "context_snippet": "회의 진행 상황이 예상보다 좋습니다. 인덱스: 882",
                 "keywords": [
-                  "기획",
-                  "성과",
-                  "평가"
+                  "문제",
+                  "해결책",
+                  "회의"
                 ],
                 "tags": [
+                  "완료",
+                  "중요",
                   "참고"
                 ],
-                "importance": 0.7410558502947294,
-                "similarity": 0.16431072354316711,
+                "importance": 0.3116354425701148,
+                "similarity": 0.21080626547336578,
+                "relevance_score": null
+              },
+              {
+                "block_index": 173,
+                "timestamp": "2024-07-27T16:28:21.959832",
+                "context_snippet": "해결책 진행 상황이 예상보다 좋습니다. 인덱스: 173",
+                "keywords": [
+                  "문제",
+                  "회의"
+                ],
+                "tags": [
+                  "완료",
+                  "중요"
+                ],
+                "importance": 0.3649768669090945,
+                "similarity": 0.1559346318244934,
                 "relevance_score": null
               }
             ]
@@ -357,57 +362,54 @@
             "count": 100,
             "blocks": [
               {
-                "block_index": 0,
-                "timestamp": "2024-11-22T05:17:58.829345",
-                "context_snippet": "목표에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 0",
-                "keywords": [
-                  "일정",
-                  "프로젝트",
-                  "회의"
-                ],
-                "tags": [
-                  "긴급",
-                  "중요"
-                ],
-                "importance": 0.11849615963897361,
-                "similarity": null,
-                "relevance_score": null
-              },
-              {
                 "block_index": 2,
-                "timestamp": "2024-08-06T05:17:58.837479",
-                "context_snippet": "아이디어에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 2",
+                "timestamp": "2024-10-07T16:28:21.259275",
+                "context_snippet": "성과에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 2",
                 "keywords": [
-                  "목표",
-                  "분석",
-                  "평가",
-                  "프로젝트",
-                  "회의"
+                  "문제",
+                  "성과"
                 ],
                 "tags": [
                   "긴급",
-                  "진행중"
-                ],
-                "importance": 0.7842822284064644,
-                "similarity": null,
-                "relevance_score": null
-              },
-              {
-                "block_index": 3,
-                "timestamp": "2025-02-03T05:17:58.842479",
-                "context_snippet": "회의에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 3",
-                "keywords": [
-                  "아이디어",
-                  "일정",
-                  "진행",
-                  "평가"
-                ],
-                "tags": [
                   "완료",
-                  "진행중",
                   "참고"
                 ],
-                "importance": 0.6742020095654372,
+                "importance": 0.8086297781182326,
+                "similarity": null,
+                "relevance_score": null
+              },
+              {
+                "block_index": 518,
+                "timestamp": "2024-08-29T16:28:23.512125",
+                "context_snippet": "결정에 관한 중요한 정보를 기록합니다. 인덱스: 518",
+                "keywords": [
+                  "문제",
+                  "아이디어"
+                ],
+                "tags": [
+                  "긴급",
+                  "완료",
+                  "참고"
+                ],
+                "importance": 0.3102479532036797,
+                "similarity": null,
+                "relevance_score": null
+              },
+              {
+                "block_index": 7,
+                "timestamp": "2024-06-04T16:28:21.278655",
+                "context_snippet": "팀원에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 7",
+                "keywords": [
+                  "문제",
+                  "분석",
+                  "성과",
+                  "일정",
+                  "회의"
+                ],
+                "tags": [
+                  "완료"
+                ],
+                "importance": 0.8237016176825129,
                 "similarity": null,
                 "relevance_score": null
               }
@@ -417,57 +419,52 @@
             "count": 5,
             "blocks": [
               {
-                "block_index": 0,
-                "timestamp": "2024-11-22T05:17:58.829345",
-                "context_snippet": "목표에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 0",
+                "block_index": 2,
+                "timestamp": "2024-10-07T16:28:21.259275",
+                "context_snippet": "성과에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 2",
                 "keywords": [
-                  "일정",
-                  "프로젝트",
-                  "회의"
+                  "문제",
+                  "성과"
                 ],
                 "tags": [
                   "긴급",
-                  "중요"
+                  "완료",
+                  "참고"
                 ],
-                "importance": 0.11849615963897361,
+                "importance": 0.8086297781182326,
                 "similarity": null,
                 "relevance_score": 0.35
               },
               {
-                "block_index": 2,
-                "timestamp": "2024-08-06T05:17:58.837479",
-                "context_snippet": "아이디어에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 2",
+                "block_index": 7,
+                "timestamp": "2024-06-04T16:28:21.278655",
+                "context_snippet": "팀원에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 7",
                 "keywords": [
-                  "목표",
+                  "문제",
                   "분석",
-                  "평가",
-                  "프로젝트",
+                  "성과",
+                  "일정",
                   "회의"
                 ],
                 "tags": [
-                  "긴급",
-                  "진행중"
+                  "완료"
                 ],
-                "importance": 0.7842822284064644,
+                "importance": 0.8237016176825129,
                 "similarity": null,
                 "relevance_score": 0.315
               },
               {
-                "block_index": 3,
-                "timestamp": "2025-02-03T05:17:58.842479",
-                "context_snippet": "회의에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 3",
+                "block_index": 8,
+                "timestamp": "2025-03-01T16:28:21.283167",
+                "context_snippet": "문제에 관한 중요한 정보를 기록합니다. 인덱스: 8",
                 "keywords": [
-                  "아이디어",
-                  "일정",
-                  "진행",
-                  "평가"
+                  "검토",
+                  "진행"
                 ],
                 "tags": [
-                  "완료",
-                  "진행중",
                   "참고"
                 ],
-                "importance": 0.6742020095654372,
+                "importance": 0.555569524624651,
                 "similarity": null,
                 "relevance_score": 0.27999999999999997
               }
@@ -477,57 +474,55 @@
         "중요한 이벤트에 참석한 사람들": {
           "embedding_search": {
             "count": 5,
-            "duration": 0.007999658584594727,
+            "duration": 0.00864553451538086,
             "blocks": [
               {
-                "block_index": 228,
-                "timestamp": "2024-09-28T05:17:59.762951",
-                "context_snippet": "성과에 관한 중요한 정보를 기록합니다. 인덱스: 228",
+                "block_index": 372,
+                "timestamp": "2024-05-15T16:28:22.829382",
+                "context_snippet": "성과에 관한 중요한 정보를 기록합니다. 인덱스: 372",
                 "keywords": [
-                  "검토",
-                  "일정",
-                  "프로젝트"
+                  "목표",
+                  "성과",
+                  "해결책"
                 ],
                 "tags": [
-                  "긴급",
-                  "완료",
-                  "중요"
-                ],
-                "importance": 0.18752049737175702,
-                "similarity": 0.19940108060836792,
-                "relevance_score": null
-              },
-              {
-                "block_index": 624,
-                "timestamp": "2024-06-23T05:18:01.479387",
-                "context_snippet": "성과에 관한 중요한 정보를 기록합니다. 인덱스: 624",
-                "keywords": [
-                  "기획",
-                  "성과"
-                ],
-                "tags": [
-                  "완료",
                   "진행중",
                   "참고"
                 ],
-                "importance": 0.4962597078925741,
+                "importance": 0.47948479871329774,
                 "similarity": 0.19940108060836792,
                 "relevance_score": null
               },
               {
                 "block_index": 660,
-                "timestamp": "2024-07-08T05:18:01.635044",
+                "timestamp": "2025-04-20T16:28:24.152548",
                 "context_snippet": "성과에 관한 중요한 정보를 기록합니다. 인덱스: 660",
                 "keywords": [
-                  "평가",
-                  "프로젝트"
+                  "성과",
+                  "평가"
                 ],
                 "tags": [
-                  "중요",
+                  "완료"
+                ],
+                "importance": 0.5987811186260144,
+                "similarity": 0.19940108060836792,
+                "relevance_score": null
+              },
+              {
+                "block_index": 220,
+                "timestamp": "2024-12-30T16:28:22.163807",
+                "context_snippet": "아이디어에 관한 중요한 정보를 기록합니다. 인덱스: 220",
+                "keywords": [
+                  "검토",
+                  "분석"
+                ],
+                "tags": [
+                  "긴급",
+                  "진행중",
                   "참고"
                 ],
-                "importance": 0.9339363021937281,
-                "similarity": 0.19940108060836792,
+                "importance": 0.6806413634512665,
+                "similarity": 0.19214750826358795,
                 "relevance_score": null
               }
             ]
@@ -536,53 +531,51 @@
             "count": 100,
             "blocks": [
               {
-                "block_index": 7,
-                "timestamp": "2024-10-21T05:17:58.858579",
-                "context_snippet": "해결책에 관한 중요한 정보를 기록합니다. 인덱스: 7",
+                "block_index": 518,
+                "timestamp": "2024-08-29T16:28:23.512125",
+                "context_snippet": "결정에 관한 중요한 정보를 기록합니다. 인덱스: 518",
                 "keywords": [
                   "문제",
-                  "피드백",
-                  "회의"
+                  "아이디어"
                 ],
                 "tags": [
                   "긴급",
                   "완료",
-                  "진행중"
+                  "참고"
                 ],
-                "importance": 0.5230049649103052,
+                "importance": 0.3102479532036797,
                 "similarity": null,
                 "relevance_score": null
               },
               {
-                "block_index": 9,
-                "timestamp": "2024-10-14T05:17:58.866583",
-                "context_snippet": "문제에 관한 중요한 정보를 기록합니다. 인덱스: 9",
+                "block_index": 8,
+                "timestamp": "2025-03-01T16:28:21.283167",
+                "context_snippet": "문제에 관한 중요한 정보를 기록합니다. 인덱스: 8",
                 "keywords": [
-                  "목표",
-                  "피드백"
+                  "검토",
+                  "진행"
                 ],
                 "tags": [
                   "참고"
                 ],
-                "importance": 0.9848962730296361,
+                "importance": 0.555569524624651,
                 "similarity": null,
                 "relevance_score": null
               },
               {
-                "block_index": 522,
-                "timestamp": "2024-12-07T05:18:01.043718",
-                "context_snippet": "결정에 관한 중요한 정보를 기록합니다. 인덱스: 522",
+                "block_index": 520,
+                "timestamp": "2024-09-15T16:28:23.521570",
+                "context_snippet": "회의에 관한 중요한 정보를 기록합니다. 인덱스: 520",
                 "keywords": [
-                  "개선",
+                  "문제",
                   "아이디어",
-                  "진행"
+                  "팀원",
+                  "피드백"
                 ],
                 "tags": [
-                  "긴급",
-                  "완료",
-                  "중요"
+                  "긴급"
                 ],
-                "importance": 0.20912461018782894,
+                "importance": 0.5401219457484647,
                 "similarity": null,
                 "relevance_score": null
               }
@@ -592,57 +585,58 @@
             "count": 5,
             "blocks": [
               {
-                "block_index": 35,
-                "timestamp": "2025-01-08T05:17:58.977378",
-                "context_snippet": "해결책에 관한 중요한 정보를 기록합니다. 인덱스: 35",
+                "block_index": 32,
+                "timestamp": "2025-02-23T16:28:21.380521",
+                "context_snippet": "결정에 관한 중요한 정보를 기록합니다. 인덱스: 32",
                 "keywords": [
+                  "기획",
+                  "일정"
+                ],
+                "tags": [
+                  "긴급",
+                  "참고"
+                ],
+                "importance": 0.37742632046331914,
+                "similarity": null,
+                "relevance_score": 0.35
+              },
+              {
+                "block_index": 36,
+                "timestamp": "2024-12-30T16:28:21.396706",
+                "context_snippet": "목표에 관한 중요한 정보를 기록합니다. 인덱스: 36",
+                "keywords": [
+                  "개선",
                   "결정",
-                  "구현"
+                  "구현",
+                  "성과",
+                  "일정"
                 ],
                 "tags": [
                   "완료",
                   "참고"
                 ],
-                "importance": 0.9045702434084554,
-                "similarity": null,
-                "relevance_score": 0.35
-              },
-              {
-                "block_index": 38,
-                "timestamp": "2025-02-22T05:17:58.988377",
-                "context_snippet": "해결책에 관한 중요한 정보를 기록합니다. 인덱스: 38",
-                "keywords": [
-                  "목표",
-                  "문제",
-                  "성과",
-                  "프로젝트",
-                  "피드백"
-                ],
-                "tags": [
-                  "긴급",
-                  "진행중"
-                ],
-                "importance": 0.5813515083726896,
+                "importance": 0.7329211595471926,
                 "similarity": null,
                 "relevance_score": 0.315
               },
               {
-                "block_index": 7,
-                "timestamp": "2024-10-21T05:17:58.858579",
-                "context_snippet": "해결책에 관한 중요한 정보를 기록합니다. 인덱스: 7",
+                "block_index": 37,
+                "timestamp": "2024-12-27T16:28:21.400733",
+                "context_snippet": "결정에 관한 중요한 정보를 기록합니다. 인덱스: 37",
                 "keywords": [
+                  "검토",
+                  "목표",
                   "문제",
-                  "피드백",
-                  "회의"
+                  "진행"
                 ],
                 "tags": [
-                  "긴급",
                   "완료",
-                  "진행중"
+                  "진행중",
+                  "참고"
                 ],
-                "importance": 0.5230049649103052,
-                "similarity": 0.14829780161380768,
-                "relevance_score": 0.28963935710489747
+                "importance": 0.8048145649245607,
+                "similarity": null,
+                "relevance_score": 0.27999999999999997
               }
             ]
           }
@@ -650,66 +644,61 @@
         "프로젝트 마감일과 관련된 내용": {
           "embedding_search": {
             "count": 5,
-            "duration": 0.00699925422668457,
+            "duration": 0.008573532104492188,
             "blocks": [
               {
-                "block_index": 880,
-                "timestamp": "2024-11-08T05:18:02.608588",
-                "context_snippet": "일정 진행 상황이 예상보다 좋습니다. 인덱스: 880",
+                "block_index": 538,
+                "timestamp": "2024-05-27T16:28:23.601100",
+                "context_snippet": "일정 진행 상황이 예상보다 좋습니다. 인덱스: 538",
                 "keywords": [
+                  "결정",
+                  "구현",
                   "기획",
-                  "목표",
-                  "문제",
-                  "성과",
                   "해결책"
                 ],
                 "tags": [
                   "긴급",
-                  "완료",
-                  "참고"
+                  "중요"
                 ],
-                "importance": 0.10829474366911057,
+                "importance": 0.21841424226452982,
                 "similarity": 0.17054013907909393,
                 "relevance_score": null
               },
               {
-                "block_index": 41,
-                "timestamp": "2024-06-27T05:17:59.000378",
-                "context_snippet": "성과에 관한 중요한 정보를 기록합니다. 인덱스: 41",
+                "block_index": 37,
+                "timestamp": "2024-12-27T16:28:21.400733",
+                "context_snippet": "결정에 관한 중요한 정보를 기록합니다. 인덱스: 37",
                 "keywords": [
-                  "결정",
-                  "기획",
+                  "검토",
                   "목표",
-                  "일정",
-                  "평가"
+                  "문제",
+                  "진행"
                 ],
                 "tags": [
-                  "중요",
+                  "완료",
                   "진행중",
                   "참고"
                 ],
-                "importance": 0.23821377050637849,
-                "similarity": 0.1671716719865799,
+                "importance": 0.8048145649245607,
+                "similarity": 0.16076411306858063,
                 "relevance_score": null
               },
               {
-                "block_index": 299,
-                "timestamp": "2024-05-31T05:18:00.072177",
-                "context_snippet": "프로젝트 진행 상황이 예상보다 좋습니다. 인덱스: 299",
+                "block_index": 597,
+                "timestamp": "2025-01-09T16:28:23.867716",
+                "context_snippet": "회의 진행 상황이 예상보다 좋습니다. 인덱스: 597",
                 "keywords": [
-                  "결정",
-                  "일정",
-                  "진행",
-                  "평가",
-                  "프로젝트"
+                  "개선",
+                  "해결책",
+                  "회의"
                 ],
                 "tags": [
                   "긴급",
                   "중요",
-                  "진행중"
+                  "참고"
                 ],
-                "importance": 0.7694718329528399,
-                "similarity": 0.1644205003976822,
+                "importance": 0.4004352145653417,
+                "similarity": 0.15037715435028076,
                 "relevance_score": null
               }
             ]
@@ -718,54 +707,55 @@
             "count": 100,
             "blocks": [
               {
-                "block_index": 0,
-                "timestamp": "2024-11-22T05:17:58.829345",
-                "context_snippet": "목표에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 0",
+                "block_index": 514,
+                "timestamp": "2024-11-18T16:28:23.494769",
+                "context_snippet": "일정 관련 이슈가 발생했으며 조치가 필요합니다. 인덱스: 514",
                 "keywords": [
-                  "일정",
-                  "프로젝트",
-                  "회의"
-                ],
-                "tags": [
-                  "긴급",
-                  "중요"
-                ],
-                "importance": 0.11849615963897361,
-                "similarity": null,
-                "relevance_score": null
-              },
-              {
-                "block_index": 1,
-                "timestamp": "2025-04-19T05:17:58.833145",
-                "context_snippet": "프로젝트 진행 상황이 예상보다 좋습니다. 인덱스: 1",
-                "keywords": [
-                  "프로젝트",
-                  "회의"
-                ],
-                "tags": [
-                  "긴급",
-                  "참고"
-                ],
-                "importance": 0.9565398357773724,
-                "similarity": null,
-                "relevance_score": null
-              },
-              {
-                "block_index": 2,
-                "timestamp": "2024-08-06T05:17:58.837479",
-                "context_snippet": "아이디어에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 2",
-                "keywords": [
-                  "목표",
-                  "분석",
+                  "검토",
+                  "기획",
                   "평가",
                   "프로젝트",
-                  "회의"
+                  "피드백"
                 ],
                 "tags": [
-                  "긴급",
+                  "완료"
+                ],
+                "importance": 0.6963176316758888,
+                "similarity": null,
+                "relevance_score": null
+              },
+              {
+                "block_index": 5,
+                "timestamp": "2024-07-08T16:28:21.271471",
+                "context_snippet": "아이디어 진행 상황이 예상보다 좋습니다. 인덱스: 5",
+                "keywords": [
+                  "검토",
+                  "아이디어",
+                  "평가",
+                  "프로젝트",
+                  "피드백"
+                ],
+                "tags": [
                   "진행중"
                 ],
-                "importance": 0.7842822284064644,
+                "importance": 0.45201285721785966,
+                "similarity": null,
+                "relevance_score": null
+              },
+              {
+                "block_index": 521,
+                "timestamp": "2024-06-27T16:28:23.525591",
+                "context_snippet": "문제 진행 상황이 예상보다 좋습니다. 인덱스: 521",
+                "keywords": [
+                  "개선",
+                  "프로젝트"
+                ],
+                "tags": [
+                  "완료",
+                  "진행중",
+                  "참고"
+                ],
+                "importance": 0.6835202841879886,
                 "similarity": null,
                 "relevance_score": null
               }
@@ -775,54 +765,55 @@
             "count": 5,
             "blocks": [
               {
-                "block_index": 0,
-                "timestamp": "2024-11-22T05:17:58.829345",
-                "context_snippet": "목표에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 0",
+                "block_index": 514,
+                "timestamp": "2024-11-18T16:28:23.494769",
+                "context_snippet": "일정 관련 이슈가 발생했으며 조치가 필요합니다. 인덱스: 514",
                 "keywords": [
-                  "일정",
+                  "검토",
+                  "기획",
+                  "평가",
                   "프로젝트",
-                  "회의"
+                  "피드백"
                 ],
                 "tags": [
-                  "긴급",
-                  "중요"
+                  "완료"
                 ],
-                "importance": 0.11849615963897361,
+                "importance": 0.6963176316758888,
                 "similarity": null,
                 "relevance_score": 0.35
               },
               {
-                "block_index": 1,
-                "timestamp": "2025-04-19T05:17:58.833145",
-                "context_snippet": "프로젝트 진행 상황이 예상보다 좋습니다. 인덱스: 1",
+                "block_index": 5,
+                "timestamp": "2024-07-08T16:28:21.271471",
+                "context_snippet": "아이디어 진행 상황이 예상보다 좋습니다. 인덱스: 5",
                 "keywords": [
+                  "검토",
+                  "아이디어",
+                  "평가",
                   "프로젝트",
-                  "회의"
+                  "피드백"
                 ],
                 "tags": [
-                  "긴급",
-                  "참고"
+                  "진행중"
                 ],
-                "importance": 0.9565398357773724,
+                "importance": 0.45201285721785966,
                 "similarity": null,
                 "relevance_score": 0.315
               },
               {
-                "block_index": 2,
-                "timestamp": "2024-08-06T05:17:58.837479",
-                "context_snippet": "아이디어에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 2",
+                "block_index": 521,
+                "timestamp": "2024-06-27T16:28:23.525591",
+                "context_snippet": "문제 진행 상황이 예상보다 좋습니다. 인덱스: 521",
                 "keywords": [
-                  "목표",
-                  "분석",
-                  "평가",
-                  "프로젝트",
-                  "회의"
+                  "개선",
+                  "프로젝트"
                 ],
                 "tags": [
-                  "긴급",
-                  "진행중"
+                  "완료",
+                  "진행중",
+                  "참고"
                 ],
-                "importance": 0.7842822284064644,
+                "importance": 0.6835202841879886,
                 "similarity": null,
                 "relevance_score": 0.27999999999999997
               }
@@ -836,59 +827,60 @@
         "어제 있었던 회의": {
           "detected_time": "어제",
           "time_range": {
-            "from_date": "2025-05-14T05:18:03.339589",
-            "to_date": "2025-05-15T05:18:03.339589"
+            "from_date": "2025-05-14T16:28:26.000652",
+            "to_date": "2025-05-15T16:28:26.000652"
           },
           "blocks_count": 4,
           "blocks": [
             {
-              "block_index": 763,
-              "timestamp": "2025-05-15T05:18:02.098140",
-              "context_snippet": "프로젝트 진행 상황이 예상보다 좋습니다. 인덱스: 763",
+              "block_index": 818,
+              "timestamp": "2025-05-15T16:28:24.892346",
+              "context_snippet": "해결책에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 818",
               "keywords": [
-                "구현",
-                "기획",
+                "아이디어",
                 "팀원",
+                "해결책"
+              ],
+              "tags": [
+                "긴급",
+                "참고"
+              ],
+              "importance": 0.9833927257268078,
+              "similarity": null,
+              "relevance_score": null
+            },
+            {
+              "block_index": 888,
+              "timestamp": "2025-05-14T16:28:25.208848",
+              "context_snippet": "아이디어에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 888",
+              "keywords": [
                 "평가",
-                "프로젝트"
+                "해결책"
+              ],
+              "tags": [
+                "긴급",
+                "중요",
+                "참고"
+              ],
+              "importance": 0.6141671375175101,
+              "similarity": null,
+              "relevance_score": null
+            },
+            {
+              "block_index": 854,
+              "timestamp": "2025-05-14T16:28:25.053201",
+              "context_snippet": "일정에 관한 중요한 정보를 기록합니다. 인덱스: 854",
+              "keywords": [
+                "검토",
+                "결정",
+                "일정",
+                "평가"
               ],
               "tags": [
                 "완료",
-                "중요",
                 "진행중"
               ],
-              "importance": 0.34108545239024785,
-              "similarity": null,
-              "relevance_score": null
-            },
-            {
-              "block_index": 685,
-              "timestamp": "2025-05-15T05:18:01.747457",
-              "context_snippet": "프로젝트에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 685",
-              "keywords": [
-                "진행",
-                "회의"
-              ],
-              "tags": [
-                "진행중"
-              ],
-              "importance": 0.11878484412435387,
-              "similarity": null,
-              "relevance_score": null
-            },
-            {
-              "block_index": 576,
-              "timestamp": "2025-05-15T05:18:01.266380",
-              "context_snippet": "팀원 진행 상황이 예상보다 좋습니다. 인덱스: 576",
-              "keywords": [
-                "목표",
-                "아이디어",
-                "진행"
-              ],
-              "tags": [
-                "완료"
-              ],
-              "importance": 0.9007304013661815,
+              "importance": 0.923477418532761,
               "similarity": null,
               "relevance_score": null
             }
@@ -897,59 +889,60 @@
         "지난주 프로젝트 진행 상황": {
           "detected_time": "지난주",
           "time_range": {
-            "from_date": "2025-05-08T05:18:03.340589",
-            "to_date": "2025-05-15T05:18:03.340589"
+            "from_date": "2025-05-08T16:28:26.001655",
+            "to_date": "2025-05-15T16:28:26.001655"
           },
-          "blocks_count": 22,
+          "blocks_count": 19,
           "blocks": [
             {
-              "block_index": 763,
-              "timestamp": "2025-05-15T05:18:02.098140",
-              "context_snippet": "프로젝트 진행 상황이 예상보다 좋습니다. 인덱스: 763",
+              "block_index": 818,
+              "timestamp": "2025-05-15T16:28:24.892346",
+              "context_snippet": "해결책에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 818",
               "keywords": [
-                "구현",
-                "기획",
+                "아이디어",
                 "팀원",
+                "해결책"
+              ],
+              "tags": [
+                "긴급",
+                "참고"
+              ],
+              "importance": 0.9833927257268078,
+              "similarity": null,
+              "relevance_score": null
+            },
+            {
+              "block_index": 888,
+              "timestamp": "2025-05-14T16:28:25.208848",
+              "context_snippet": "아이디어에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 888",
+              "keywords": [
                 "평가",
-                "프로젝트"
+                "해결책"
+              ],
+              "tags": [
+                "긴급",
+                "중요",
+                "참고"
+              ],
+              "importance": 0.6141671375175101,
+              "similarity": null,
+              "relevance_score": null
+            },
+            {
+              "block_index": 854,
+              "timestamp": "2025-05-14T16:28:25.053201",
+              "context_snippet": "일정에 관한 중요한 정보를 기록합니다. 인덱스: 854",
+              "keywords": [
+                "검토",
+                "결정",
+                "일정",
+                "평가"
               ],
               "tags": [
                 "완료",
-                "중요",
                 "진행중"
               ],
-              "importance": 0.34108545239024785,
-              "similarity": null,
-              "relevance_score": null
-            },
-            {
-              "block_index": 685,
-              "timestamp": "2025-05-15T05:18:01.747457",
-              "context_snippet": "프로젝트에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 685",
-              "keywords": [
-                "진행",
-                "회의"
-              ],
-              "tags": [
-                "진행중"
-              ],
-              "importance": 0.11878484412435387,
-              "similarity": null,
-              "relevance_score": null
-            },
-            {
-              "block_index": 576,
-              "timestamp": "2025-05-15T05:18:01.266380",
-              "context_snippet": "팀원 진행 상황이 예상보다 좋습니다. 인덱스: 576",
-              "keywords": [
-                "목표",
-                "아이디어",
-                "진행"
-              ],
-              "tags": [
-                "완료"
-              ],
-              "importance": 0.9007304013661815,
+              "importance": 0.923477418532761,
               "similarity": null,
               "relevance_score": null
             }
@@ -975,59 +968,60 @@
         "작년에 세운 계획": {
           "detected_time": "작년",
           "time_range": {
-            "from_date": "2024-05-15T05:18:03.345590",
-            "to_date": "2025-05-15T05:18:03.345590"
+            "from_date": "2024-05-15T16:28:26.006162",
+            "to_date": "2025-05-15T16:28:26.006162"
           },
           "blocks_count": 100,
           "blocks": [
             {
-              "block_index": 763,
-              "timestamp": "2025-05-15T05:18:02.098140",
-              "context_snippet": "프로젝트 진행 상황이 예상보다 좋습니다. 인덱스: 763",
+              "block_index": 818,
+              "timestamp": "2025-05-15T16:28:24.892346",
+              "context_snippet": "해결책에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 818",
               "keywords": [
-                "구현",
-                "기획",
+                "아이디어",
                 "팀원",
+                "해결책"
+              ],
+              "tags": [
+                "긴급",
+                "참고"
+              ],
+              "importance": 0.9833927257268078,
+              "similarity": null,
+              "relevance_score": null
+            },
+            {
+              "block_index": 888,
+              "timestamp": "2025-05-14T16:28:25.208848",
+              "context_snippet": "아이디어에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 888",
+              "keywords": [
                 "평가",
-                "프로젝트"
+                "해결책"
+              ],
+              "tags": [
+                "긴급",
+                "중요",
+                "참고"
+              ],
+              "importance": 0.6141671375175101,
+              "similarity": null,
+              "relevance_score": null
+            },
+            {
+              "block_index": 854,
+              "timestamp": "2025-05-14T16:28:25.053201",
+              "context_snippet": "일정에 관한 중요한 정보를 기록합니다. 인덱스: 854",
+              "keywords": [
+                "검토",
+                "결정",
+                "일정",
+                "평가"
               ],
               "tags": [
                 "완료",
-                "중요",
                 "진행중"
               ],
-              "importance": 0.34108545239024785,
-              "similarity": null,
-              "relevance_score": null
-            },
-            {
-              "block_index": 685,
-              "timestamp": "2025-05-15T05:18:01.747457",
-              "context_snippet": "프로젝트에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 685",
-              "keywords": [
-                "진행",
-                "회의"
-              ],
-              "tags": [
-                "진행중"
-              ],
-              "importance": 0.11878484412435387,
-              "similarity": null,
-              "relevance_score": null
-            },
-            {
-              "block_index": 576,
-              "timestamp": "2025-05-15T05:18:01.266380",
-              "context_snippet": "팀원 진행 상황이 예상보다 좋습니다. 인덱스: 576",
-              "keywords": [
-                "목표",
-                "아이디어",
-                "진행"
-              ],
-              "tags": [
-                "완료"
-              ],
-              "importance": 0.9007304013661815,
+              "importance": 0.923477418532761,
               "similarity": null,
               "relevance_score": null
             }
@@ -1041,288 +1035,301 @@
       "queries": {
         "인공지능 프로젝트 계획": {
           "embedding_time": 0.0,
-          "search_time": 0.008510828018188477,
+          "search_time": 0.009043693542480469,
           "results_count": 10,
           "top_results": [
             {
-              "block_index": 248,
-              "timestamp": "2025-05-10T05:17:59.842964",
-              "context_snippet": "팀원에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 248",
+              "block_index": 857,
+              "timestamp": "2024-08-24T16:28:25.065987",
+              "context_snippet": "팀원 관련 이슈가 발생했으며 조치가 필요합니다. 인덱스: 857",
               "keywords": [
-                "개선",
-                "평가",
-                "해결책",
-                "회의"
-              ],
-              "tags": [
-                "중요",
-                "참고"
-              ],
-              "importance": 0.2240176138914427,
-              "similarity": 0.17767448723316193,
-              "relevance_score": null
-            },
-            {
-              "block_index": 519,
-              "timestamp": "2024-07-13T05:18:01.031112",
-              "context_snippet": "목표에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 519",
-              "keywords": [
-                "검토",
-                "구현",
-                "일정",
-                "회의"
-              ],
-              "tags": [
-                "중요",
-                "진행중"
-              ],
-              "importance": 0.9837951386459483,
-              "similarity": 0.15456116199493408,
-              "relevance_score": null
-            },
-            {
-              "block_index": 582,
-              "timestamp": "2024-11-03T05:18:01.292381",
-              "context_snippet": "목표에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 582",
-              "keywords": [
-                "문제",
+                "결정",
+                "성과",
                 "아이디어"
               ],
               "tags": [
-                "완료",
                 "진행중"
               ],
-              "importance": 0.981724116263902,
-              "similarity": 0.15456116199493408,
+              "importance": 0.44836693545713524,
+              "similarity": 0.20174652338027954,
+              "relevance_score": null
+            },
+            {
+              "block_index": 260,
+              "timestamp": "2024-11-29T16:28:22.340096",
+              "context_snippet": "결정 관련 이슈가 발생했으며 조치가 필요합니다. 인덱스: 260",
+              "keywords": [
+                "결정",
+                "구현",
+                "진행",
+                "회의"
+              ],
+              "tags": [
+                "긴급",
+                "진행중",
+                "참고"
+              ],
+              "importance": 0.6094936059977527,
+              "similarity": 0.1803295761346817,
+              "relevance_score": null
+            },
+            {
+              "block_index": 743,
+              "timestamp": "2025-03-28T16:28:24.533543",
+              "context_snippet": "팀원에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 743",
+              "keywords": [
+                "개선",
+                "검토",
+                "구현",
+                "진행",
+                "해결책"
+              ],
+              "tags": [
+                "긴급",
+                "진행중",
+                "참고"
+              ],
+              "importance": 0.43689670966797023,
+              "similarity": 0.17767448723316193,
               "relevance_score": null
             }
           ]
         },
         "데이터 분석 결과 요약": {
           "embedding_time": 0.0,
-          "search_time": 0.008001089096069336,
+          "search_time": 0.008069753646850586,
           "results_count": 10,
           "top_results": [
             {
-              "block_index": 112,
-              "timestamp": "2024-06-13T05:17:59.284588",
-              "context_snippet": "해결책에 관한 중요한 정보를 기록합니다. 인덱스: 112",
+              "block_index": 524,
+              "timestamp": "2024-11-26T16:28:23.539638",
+              "context_snippet": "성과에 관한 중요한 정보를 기록합니다. 인덱스: 524",
+              "keywords": [
+                "결정",
+                "구현",
+                "성과",
+                "해결책"
+              ],
+              "tags": [
+                "긴급",
+                "완료"
+              ],
+              "importance": 0.13136114430315976,
+              "similarity": 0.15681849420070648,
+              "relevance_score": null
+            },
+            {
+              "block_index": 220,
+              "timestamp": "2024-12-30T16:28:22.163807",
+              "context_snippet": "아이디어에 관한 중요한 정보를 기록합니다. 인덱스: 220",
               "keywords": [
                 "검토",
-                "문제",
-                "프로젝트",
-                "피드백"
+                "분석"
               ],
               "tags": [
-                "완료",
-                "진행중"
-              ],
-              "importance": 0.3665712264036708,
-              "similarity": 0.19376003742218018,
-              "relevance_score": null
-            },
-            {
-              "block_index": 879,
-              "timestamp": "2025-05-07T05:18:02.605588",
-              "context_snippet": "결정 관련 이슈가 발생했으며 조치가 필요합니다. 인덱스: 879",
-              "keywords": [
-                "개선",
-                "문제",
-                "진행"
-              ],
-              "tags": [
-                "긴급"
-              ],
-              "importance": 0.8174825157489749,
-              "similarity": 0.19224943220615387,
-              "relevance_score": null
-            },
-            {
-              "block_index": 416,
-              "timestamp": "2024-08-09T05:18:00.579773",
-              "context_snippet": "성과에 관한 중요한 정보를 기록합니다. 인덱스: 416",
-              "keywords": [
-                "구현",
-                "문제",
-                "팀원",
-                "피드백",
-                "회의"
-              ],
-              "tags": [
-                "완료",
+                "긴급",
                 "진행중",
                 "참고"
               ],
-              "importance": 0.6917478747446169,
-              "similarity": 0.15681849420070648,
+              "importance": 0.6806413634512665,
+              "similarity": 0.15135611593723297,
+              "relevance_score": null
+            },
+            {
+              "block_index": 329,
+              "timestamp": "2024-10-09T16:28:22.645028",
+              "context_snippet": "성과에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 329",
+              "keywords": [
+                "결정",
+                "구현",
+                "분석"
+              ],
+              "tags": [
+                "중요"
+              ],
+              "importance": 0.7380448304501547,
+              "similarity": 0.15013323724269867,
               "relevance_score": null
             }
           ]
         },
         "사용자 인터페이스 디자인": {
           "embedding_time": 0.0,
-          "search_time": 0.00800013542175293,
+          "search_time": 0.0076825618743896484,
           "results_count": 10,
           "top_results": [
             {
-              "block_index": 74,
-              "timestamp": "2025-02-03T05:17:59.131557",
-              "context_snippet": "팀원에 관한 중요한 정보를 기록합니다. 인덱스: 74",
+              "block_index": 38,
+              "timestamp": "2024-11-09T16:28:21.404751",
+              "context_snippet": "프로젝트 관련 이슈가 발생했으며 조치가 필요합니다. 인덱스: 38",
               "keywords": [
                 "구현",
+                "아이디어",
+                "일정",
                 "팀원",
-                "해결책"
-              ],
-              "tags": [
-                "긴급",
-                "참고"
-              ],
-              "importance": 0.1493276229443902,
-              "similarity": 0.17837309837341309,
-              "relevance_score": null
-            },
-            {
-              "block_index": 304,
-              "timestamp": "2024-10-28T05:18:00.093360",
-              "context_snippet": "프로젝트에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 304",
-              "keywords": [
-                "구현",
                 "평가"
               ],
               "tags": [
-                "중요"
+                "참고"
               ],
-              "importance": 0.5311525800089058,
-              "similarity": 0.1764843463897705,
+              "importance": 0.4932547227452375,
+              "similarity": 0.16914162039756775,
               "relevance_score": null
             },
             {
-              "block_index": 786,
-              "timestamp": "2024-06-03T05:18:02.197077",
-              "context_snippet": "일정에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 786",
+              "block_index": 929,
+              "timestamp": "2024-06-07T16:28:25.403723",
+              "context_snippet": "회의에 관한 중요한 정보를 기록합니다. 인덱스: 929",
               "keywords": [
-                "결정",
-                "목표"
+                "검토",
+                "문제",
+                "분석",
+                "피드백"
               ],
               "tags": [
+                "긴급",
                 "완료"
               ],
-              "importance": 0.30052184432514123,
-              "similarity": 0.16349276900291443,
+              "importance": 0.9742516472503979,
+              "similarity": 0.167415052652359,
+              "relevance_score": null
+            },
+            {
+              "block_index": 423,
+              "timestamp": "2024-08-23T16:28:23.083967",
+              "context_snippet": "해결책에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 423",
+              "keywords": [
+                "검토",
+                "결정",
+                "기획",
+                "문제",
+                "해결책"
+              ],
+              "tags": [
+                "중요",
+                "진행중"
+              ],
+              "importance": 0.25195839716171176,
+              "similarity": 0.16616737842559814,
               "relevance_score": null
             }
           ]
         },
         "성능 최적화 방안": {
           "embedding_time": 0.0,
-          "search_time": 0.010000467300415039,
+          "search_time": 0.007022380828857422,
           "results_count": 10,
           "top_results": [
             {
-              "block_index": 234,
-              "timestamp": "2024-11-17T05:17:59.786536",
-              "context_snippet": "성과에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 234",
+              "block_index": 180,
+              "timestamp": "2025-05-13T16:28:21.988289",
+              "context_snippet": "성과에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 180",
               "keywords": [
-                "분석",
+                "개선",
+                "목표",
+                "평가",
                 "피드백"
               ],
               "tags": [
-                "긴급"
+                "긴급",
+                "진행중",
+                "참고"
               ],
-              "importance": 0.908536604532441,
+              "importance": 0.9005377618034596,
               "similarity": 0.19825352728366852,
               "relevance_score": null
             },
             {
-              "block_index": 578,
-              "timestamp": "2024-09-20T05:18:01.275380",
-              "context_snippet": "해결책 관련 이슈가 발생했으며 조치가 필요합니다. 인덱스: 578",
+              "block_index": 702,
+              "timestamp": "2025-02-16T16:28:24.338934",
+              "context_snippet": "성과에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 702",
               "keywords": [
                 "결정",
-                "목표",
-                "일정",
-                "해결책"
+                "구현",
+                "분석",
+                "성과",
+                "평가"
               ],
               "tags": [
-                "긴급",
                 "중요"
               ],
-              "importance": 0.5222796263859648,
-              "similarity": 0.1830224245786667,
+              "importance": 0.661432800093454,
+              "similarity": 0.19825352728366852,
               "relevance_score": null
             },
             {
-              "block_index": 510,
-              "timestamp": "2025-04-11T05:18:00.991138",
-              "context_snippet": "프로젝트에 관한 중요한 정보를 기록합니다. 인덱스: 510",
+              "block_index": 137,
+              "timestamp": "2024-07-21T16:28:21.810956",
+              "context_snippet": "아이디어 진행 상황이 예상보다 좋습니다. 인덱스: 137",
               "keywords": [
-                "검토",
-                "결정",
+                "기획",
+                "목표",
+                "분석",
+                "아이디어",
                 "해결책"
               ],
               "tags": [
                 "긴급",
                 "중요",
-                "진행중"
+                "참고"
               ],
-              "importance": 0.32207245519359706,
-              "similarity": 0.16801807284355164,
+              "importance": 0.6662424478446178,
+              "similarity": 0.15792331099510193,
               "relevance_score": null
             }
           ]
         },
         "팀 회의 결정사항": {
           "embedding_time": 0.0,
-          "search_time": 0.008000373840332031,
+          "search_time": 0.008767843246459961,
           "results_count": 10,
           "top_results": [
             {
-              "block_index": 673,
-              "timestamp": "2024-10-21T05:18:01.689280",
-              "context_snippet": "목표에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 673",
-              "keywords": [
-                "개선",
-                "구현"
-              ],
-              "tags": [
-                "진행중"
-              ],
-              "importance": 0.5537839917131481,
-              "similarity": 0.1900835633277893,
-              "relevance_score": null
-            },
-            {
-              "block_index": 808,
-              "timestamp": "2025-04-15T05:18:02.288614",
-              "context_snippet": "목표에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 808",
+              "block_index": 230,
+              "timestamp": "2024-07-28T16:28:22.206075",
+              "context_snippet": "팀원에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 230",
               "keywords": [
                 "기획",
-                "분석",
-                "평가",
-                "피드백"
+                "일정"
               ],
               "tags": [
-                "참고"
+                "완료"
               ],
-              "importance": 0.5427956353728284,
-              "similarity": 0.1900835633277893,
+              "importance": 0.7866490898481009,
+              "similarity": 0.16359639167785645,
               "relevance_score": null
             },
             {
-              "block_index": 81,
-              "timestamp": "2024-09-18T05:17:59.160663",
-              "context_snippet": "아이디어에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 81",
+              "block_index": 319,
+              "timestamp": "2024-07-12T16:28:22.603544",
+              "context_snippet": "회의에 대한 팀원들의 피드백이 긍정적입니다. 인덱스: 319",
               "keywords": [
-                "성과",
-                "평가"
+                "목표",
+                "프로젝트"
+              ],
+              "tags": [
+                "긴급",
+                "중요",
+                "진행중"
+              ],
+              "importance": 0.4943872644591618,
+              "similarity": 0.15639111399650574,
+              "relevance_score": null
+            },
+            {
+              "block_index": 221,
+              "timestamp": "2024-11-29T16:28:22.166798",
+              "context_snippet": "결정에 대한 새로운 접근 방식을 고려해야 합니다. 인덱스: 221",
+              "keywords": [
+                "결정",
+                "회의"
               ],
               "tags": [
                 "완료",
-                "중요",
-                "참고"
+                "진행중"
               ],
-              "importance": 0.7813443748755237,
-              "similarity": 0.1697348952293396,
+              "importance": 0.6166931904586136,
+              "similarity": 0.1560162454843521,
               "relevance_score": null
             }
           ]
