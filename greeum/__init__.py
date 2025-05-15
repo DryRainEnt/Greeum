@@ -1,11 +1,11 @@
 """
-Greeum - LLM-Independent Memory System
+Greeum - LLM-Independent Memory System with Multilingual Support
 
 This package contains independent modules to provide a human-like 
 memory system for Large Language Models.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.3.0"
 
 # Core components imports
 try:
@@ -23,7 +23,7 @@ except ImportError:
     pass
 
 try:
-    from .temporal_reasoner import TemporalReasoner
+    from .temporal_reasoner import TemporalReasoner, evaluate_temporal_query
 except ImportError:
     pass
 
@@ -59,9 +59,12 @@ except ImportError:
     pass
 
 try:
-    from .text_utils import process_user_input
+    from .text_utils import process_user_input, extract_keywords, extract_tags, compute_text_importance
 except ImportError:
     pass
+
+# 편의를 위한 별명
+process_text = process_user_input
 
 __all__ = [
     # Core components
