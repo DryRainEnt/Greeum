@@ -1,0 +1,18 @@
+{
+  "current_context": "다음 프로젝트는 어떻게 개선하면 좋을까요?",
+  "waypoints": [
+    {
+      "block_index": 2,
+      "relevance": 1.0
+    },
+    {
+      "block_index": 1,
+      "relevance": 0.7
+    },
+    {
+      "block_index": 0,
+      "relevance": 0.7
+    }
+  ],
+  "last_updated": "2025-05-15T04:49:42.569233"
+}
