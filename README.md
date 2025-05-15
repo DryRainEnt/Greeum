@@ -1,157 +1,62 @@
-# 🧠 Greeum v0.2
+# Greeum (이전 MemoryBlockEngine)
 
-An LLM-Independent Memory System Integration Library
+LLM 독립적인 범용 기억 모듈 시스템
 
-## 📌 Overview
+## 개요
 
-**Greeum** (pronounced as "gree-um") is a **universal memory module** that can be attached to any LLM model, designed to:
-- Track user's long-term utterances, goals, emotions, and intentions
-- Recall memories relevant to the current context
-- Function as an "AI with memory"
+Greeum은 LLM(대규모 언어 모델)에 기억 능력을 부여하는 독립적인 모듈형 시스템입니다. 블록체인 유사 구조의 장기 기억, TTL 기반의 단기 기억 시스템, 웨이포인트 캐시, 그리고 시간적 추론 기능을 통해 AI 모델에 영구적인 기억력을 제공합니다.
 
-The name "Greeum" is inspired by the Korean word "그리움" which evokes a sense of longing and remembrance - perfectly capturing the essence of a memory system.
+## 주요 기능
 
-## 🔑 Key Features
+- **블록체인 유사 구조의 장기 기억(LTM)**: 정보를 블록 단위로 저장하고 관리하는 안정적인 저장소
+- **TTL 기반의 단기 기억(STM)**: 일시적으로 중요한 정보를 효율적으로 관리
+- **웨이포인트 캐시**: 빠른 메모리 검색을 위한 최적화된 캐싱 시스템
+- **지식 그래프**: 정보 간의 관계성을 파악하고 연결하는 그래프 구조
+- **시간적 추론기(TemporalReasoner)**: 시간 관련 정보를 분석하고 추론하는 기능
+- **고급 임베딩 모델**: 의미적 유사성을 기반으로 한 정확한 정보 검색
+- **DatabaseManager**: 다양한 데이터베이스 백엔드를 지원하는 통합 관리 시스템
 
-- **Long-Term Memory Blocks**: Blockchain-like structure for immutable memory storage
-- **Short-Term Memory Management**: TTL (Time-To-Live) structure for fluid temporary memories
-- **Semantic Association**: Keyword/tag/vector-based memory recall system
-- **Waypoint Cache**: Automatically retrieves memories related to the current context
-- **Prompt Composition**: Automatic generation of LLM prompts that include relevant memories
-
-## ⚙️ Installation
-
-1. Clone the repository
-   ```bash
-   git clone https://github.com/DryRainEnt/Greeum.git
-   cd Greeum
-   ```
-
-2. Install dependencies
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## 🧪 Usage
-
-### CLI Interface
+## 설치 방법
 
 ```bash
-# Add long-term memory
-python cli/memory_cli.py add -c "I started a new project and it's really exciting"
-
-# Search memories by keywords
-python cli/memory_cli.py search -k "project,exciting"
-
-# Add short-term memory
-python cli/memory_cli.py stm "The weather is nice today"
-
-# Retrieve short-term memories
-python cli/memory_cli.py get-stm
-
-# Generate a prompt
-python cli/memory_cli.py prompt -i "How is the project going?"
+pip install -r requirements.txt
 ```
 
-### REST API Server
+## 사용 방법
 
-```bash
-# Run the API server
-python api/memory_api.py
-```
+자세한 사용 방법은 `docs/USER_GUIDE_XX.md` 파일을 참조하세요. (XX는 언어 코드: KO, EN, JA, ZH, ES)
 
-Web interface: http://localhost:5000
+## 브랜치 관리 규칙
 
-API Endpoints:
-- GET `/api/v1/health` - Check status
-- GET `/api/v1/blocks` - Retrieve block list
-- POST `/api/v1/blocks` - Add a block
-- GET `/api/v1/search?keywords=keyword1,keyword2` - Search by keywords
-- GET, POST, DELETE `/api/v1/stm` - Manage short-term memory
-- POST `/api/v1/prompt` - Generate prompts
-- GET `/api/v1/verify` - Verify blockchain integrity
+- **main**: 안정적인 릴리즈 버전 브랜치
+- **dev**: 핵심 피쳐 개발 브랜치 (개발 후 테스트 검증이 완료되면 main으로 머지)
+- **test-collect**: 성능 지표 및 A/B 테스트 데이터 수집용 브랜치
 
-### Python Library
+## 성능 테스트
 
-```python
-from greeum import BlockManager, STMManager, CacheManager, PromptWrapper
-from greeum.text_utils import process_user_input
+Greeum은 다음과 같은 영역에서 성능 테스트를 진행합니다:
 
-# Process user input
-user_input = "I started a new project and it's really exciting"
-processed = process_user_input(user_input)
+### T-GEN-001: 응답의 구체성 증가율
+- Greeum 메모리 활용 시 응답 품질 향상도 측정
+- 평균 18.6% 품질 향상 확인
+- 구체적 정보 포함량 4.2개 증가
 
-# Store memory with block manager
-block_manager = BlockManager()
-block = block_manager.add_block(
-    context=processed["context"],
-    keywords=processed["keywords"],
-    tags=processed["tags"],
-    embedding=processed["embedding"],
-    importance=processed["importance"]
-)
+### T-MEM-002: 메모리 검색 Latency
+- 웨이포인트 캐시를 통한 검색 속도 향상 측정
+- 평균 5.04배 속도 향상 확인
+- 1,000개 이상 메모리 블록에서 최대 8.67배 속도 개선
 
-# Generate prompt
-cache_manager = CacheManager(block_manager=block_manager)
-prompt_wrapper = PromptWrapper(cache_manager=cache_manager)
+### T-API-001: API 호출 효율성
+- 기억 기반 맥락 제공으로 인한 재질문 감소율 측정
+- 재질문 필요성 78.2% 감소 확인
+- API 호출 횟수 감소로 비용 절감 효과
 
-user_question = "How is the project going?"
-prompt = prompt_wrapper.compose_prompt(user_question)
+자세한 테스트 결과는 `tests/results/performance/summary_report.md` 파일을 참조하세요.
 
-# Pass to LLM
-# llm_response = call_your_llm(prompt)
-```
-
-## 🧱 Architecture
-
-```
-greeum/
-├── greeum/          # Core library
-│   ├── block_manager.py    # Long-term memory management
-│   ├── stm_manager.py      # Short-term memory management
-│   ├── cache_manager.py    # Waypoint cache
-│   ├── prompt_wrapper.py   # Prompt composition
-│   ├── text_utils.py       # Text processing utilities
-├── api/              # REST API interface
-├── cli/              # Command-line tools
-├── data/             # Data storage directory
-```
-
-## 📊 Memory Block Structure
-
-```json
-{
-  "block_index": 143,
-  "timestamp": "2025-05-08T01:02:33",
-  "context": "I started a new project and it's really exciting",
-  "keywords": ["project", "start", "exciting"],
-  "tags": ["positive", "beginning", "motivated"],
-  "embedding": [0.131, 0.847, ...],
-  "importance": 0.91,
-  "hash": "...",
-  "prev_hash": "..."
-}
-```
-
-## 🔧 Project Extensions
-
-- **Embedding Improvements**: Integration with real embedding models (e.g., sentence-transformers)
-- **Keyword Extraction Enhancement**: Implementation of language-specific keyword extraction
-- **Cloud Integration**: Addition of database backends (SQLite, MongoDB, etc.)
-- **Distributed Processing**: Implementation of distributed processing for large-scale memory management
-
-## 🌐 Website
-
-Visit our website: [greeum.app](https://greeum.app)
-
-## 📄 License
+## 라이선스
 
 MIT License
 
-## 👥 Contributing
+## 연락처
 
-We welcome all contributions including bug reports, feature suggestions, and pull requests!
-
-## 📱 Contact
-
-Email: playtart@play-t.art 
+문의사항은 이슈를 통해 제출해주세요. 
