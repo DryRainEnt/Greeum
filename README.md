@@ -1,4 +1,4 @@
-# 🧠 Greeum v0.2
+# 🧠 Greeum v0.3
 
 An LLM-Independent Memory System Integration Library
 
@@ -7,6 +7,7 @@ An LLM-Independent Memory System Integration Library
 **Greeum** (pronounced as "gree-um") is a **universal memory module** that can be attached to any LLM model, designed to:
 - Track user's long-term utterances, goals, emotions, and intentions
 - Recall memories relevant to the current context
+- Process temporal reasoning in multiple languages
 - Function as an "AI with memory"
 
 The name "Greeum" is inspired by the Korean word "그리움" which evokes a sense of longing and remembrance - perfectly capturing the essence of a memory system.
@@ -18,6 +19,8 @@ The name "Greeum" is inspired by the Korean word "그리움" which evokes a sens
 - **Semantic Association**: Keyword/tag/vector-based memory recall system
 - **Waypoint Cache**: Automatically retrieves memories related to the current context
 - **Prompt Composition**: Automatic generation of LLM prompts that include relevant memories
+- **Temporal Reasoning**: Advanced time expression recognition in multiple languages
+- **Multilingual Support**: Automatic language detection and processing for Korean, English, and more
 
 ## ⚙️ Installation
 
@@ -43,6 +46,9 @@ python cli/memory_cli.py add -c "I started a new project and it's really excitin
 # Search memories by keywords
 python cli/memory_cli.py search -k "project,exciting"
 
+# Search memories by time expression
+python cli/memory_cli.py search-time -q "What did I do 3 days ago?" -l "auto"
+
 # Add short-term memory
 python cli/memory_cli.py stm "The weather is nice today"
 
@@ -67,6 +73,7 @@ API Endpoints:
 - GET `/api/v1/blocks` - Retrieve block list
 - POST `/api/v1/blocks` - Add a block
 - GET `/api/v1/search?keywords=keyword1,keyword2` - Search by keywords
+- GET `/api/v1/search/time?query=yesterday&language=en` - Search by time expression
 - GET, POST, DELETE `/api/v1/stm` - Manage short-term memory
 - POST `/api/v1/prompt` - Generate prompts
 - GET `/api/v1/verify` - Verify blockchain integrity
@@ -76,6 +83,7 @@ API Endpoints:
 ```python
 from greeum import BlockManager, STMManager, CacheManager, PromptWrapper
 from greeum.text_utils import process_user_input
+from greeum.temporal_reasoner import TemporalReasoner
 
 # Process user input
 user_input = "I started a new project and it's really exciting"
@@ -90,6 +98,11 @@ block = block_manager.add_block(
     embedding=processed["embedding"],
     importance=processed["importance"]
 )
+
+# Time-based search (multilingual)
+temporal_reasoner = TemporalReasoner(db_manager=block_manager, default_language="auto")
+time_query = "What did I do 3 days ago?"
+time_results = temporal_reasoner.search_by_time_reference(time_query)
 
 # Generate prompt
 cache_manager = CacheManager(block_manager=block_manager)
@@ -106,15 +119,18 @@ prompt = prompt_wrapper.compose_prompt(user_question)
 
 ```
 greeum/
-├── greeum/          # Core library
+├── greeum/                # Core library
 │   ├── block_manager.py    # Long-term memory management
 │   ├── stm_manager.py      # Short-term memory management
 │   ├── cache_manager.py    # Waypoint cache
 │   ├── prompt_wrapper.py   # Prompt composition
 │   ├── text_utils.py       # Text processing utilities
-├── api/              # REST API interface
-├── cli/              # Command-line tools
-├── data/             # Data storage directory
+│   ├── temporal_reasoner.py # Time-based reasoning 
+│   ├── embedding_models.py  # Embedding model integration
+├── api/                   # REST API interface
+├── cli/                   # Command-line tools
+├── data/                  # Data storage directory
+├── tests/                 # Test suite
 ```
 
 ## 📊 Memory Block Structure
@@ -133,8 +149,32 @@ greeum/
 }
 ```
 
+## 🔤 Supported Languages
+
+Greeum supports time expression recognition in the following languages:
+- 🇰🇷 Korean: Native support for Korean time expressions (어제, 지난주, 3일 전 등)
+- 🇺🇸 English: Full support for English time formats (yesterday, 3 days ago, etc.)
+- 🌐 Auto-detection: Automatically detects the language and processes accordingly
+
+## 🔍 Temporal Reasoning Examples
+
+```python
+# Korean
+result = evaluate_temporal_query("3일 전에 뭐 했어?", language="ko")
+# Returns: {detected: True, language: "ko", best_ref: {term: "3일 전"}}
+
+# English
+result = evaluate_temporal_query("What did I do 3 days ago?", language="en")
+# Returns: {detected: True, language: "en", best_ref: {term: "3 days ago"}}
+
+# Auto-detection
+result = evaluate_temporal_query("What happened yesterday?")
+# Returns: {detected: True, language: "en", best_ref: {term: "yesterday"}}
+```
+
 ## 🔧 Project Extensions
 
+- **Enhanced Multilingual Support**: Expanding to Japanese, Chinese, Spanish and more languages
 - **Embedding Improvements**: Integration with real embedding models (e.g., sentence-transformers)
 - **Keyword Extraction Enhancement**: Implementation of language-specific keyword extraction
 - **Cloud Integration**: Addition of database backends (SQLite, MongoDB, etc.)
