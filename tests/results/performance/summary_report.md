@@ -1,61 +1,61 @@
-# Greeum 성능 테스트 보고서
+# Greeum Performance Test Report
 
-## 테스트 개요
-- **테스트 일시**: 2025-05-19 15:30:45
-- **LLM 모델**: gpt-4
-- **평가 모델**: gpt-4
-- **테스트 환경**: Windows 10, Python 3.10
+## Test Overview
+- **Test Date**: 2025-05-19 15:30:45
+- **LLM Model**: gpt-4
+- **Evaluation Model**: gpt-4
+- **Test Environment**: Windows 10, Python 3.10
 
-## 테스트 결과 요약
+## Test Results Summary
 
-### T-GEN-001: 응답의 구체성 증가율
-- **샘플 수**: 5
-- **평균 점수 향상**: 1.86 (10점 만점)
-- **구체적 정보 증가량**: 4.2 개
-- **더 구체적인 응답 비율**: 92.0%
+### T-GEN-001: Response Specificity Improvement
+- **Sample Size**: 5
+- **Average Score Improvement**: 1.86 (out of 10)
+- **Specific Information Increase**: 4.2 items
+- **More Specific Response Rate**: 92.0%
 
-![응답 품질 비교](./T-GEN-001_quality.png)
+![Response Quality Comparison](./T-GEN-001_quality.png)
 
-#### 주요 발견사항
-- Greeum 메모리를 활용한 프롬프트는 일반 프롬프트 대비 평균 18.6% 높은 응답 품질을 제공
-- 개인화된 맥락 정보가 포함된 응답은 고유명사 및 구체적 데이터가 4.2개 더 많이 포함됨
-- 정보의 정확성이 15.3% 향상됨
+#### Key Findings
+- Prompts utilizing Greeum memory provide 18.6% higher response quality compared to standard prompts
+- Responses with personalized context information contain 4.2 more proper nouns and specific data points
+- Information accuracy improved by 15.3%
 
-### T-MEM-002: 메모리 검색 Latency
-- **샘플 수**: 50
-- **평균 LTM 검색 시간**: 145.78 ms
-- **평균 캐시 검색 시간**: 28.92 ms
-- **평균 속도 향상**: 5.04x
-- **최대 속도 향상**: 8.67x
+### T-MEM-002: Memory Search Latency
+- **Sample Size**: 50
+- **Average LTM Search Time**: 145.78 ms
+- **Average Cache Search Time**: 28.92 ms
+- **Average Speed Improvement**: 5.04x
+- **Maximum Speed Improvement**: 8.67x
 
-![웨이포인트 캐시 성능](./T-MEM-002_speedup.png)
+![Waypoint Cache Performance](./T-MEM-002_speedup.png)
 
-#### 주요 발견사항
-- 웨이포인트 캐시는 전체 LTM 스캔 대비 평균 5배 빠른 성능 제공
-- 메모리 크기가 1,000개 블록 이상일 때 속도 향상이 더욱 두드러짐
-- 반복 쿼리에 대한 성능이 최대 8.67배 향상됨
+#### Key Findings
+- Waypoint cache provides 5x faster performance compared to full LTM scans
+- Speed improvements become more pronounced with memory sizes over 1,000 blocks
+- Performance for repeated queries improved up to 8.67x
 
-### T-API-001: API 호출 효율성
-- **샘플 수**: 5
-- **일반 대화 재질문율**: 28.4%
-- **Greeum 활용 재질문율**: 6.2%
-- **API 호출 감소율**: 22.2%
+### T-API-001: API Call Efficiency
+- **Sample Size**: 5
+- **Standard Dialog Reprompt Rate**: 28.4%
+- **Greeum-Enhanced Reprompt Rate**: 6.2%
+- **API Call Reduction Rate**: 22.2%
 
-#### 주요 발견사항
-- 메모리 기반 맥락 제공이 재질문 필요성을 78.2% 감소시킴
-- API 호출 횟수 감소로 인한 비용 절감 효과 발생
-- 완전한 응답을 위한 추가 호출 필요성 감소
+#### Key Findings
+- Memory-based context provision reduces the need for reprompting by 78.2%
+- Cost savings from reduced API call frequency
+- Decreased need for additional calls to obtain complete responses
 
-## API 사용 통계
-- **총 LLM API 호출 수**: 42
-- **총 평가 모델 API 호출 수**: 15
-- **총 토큰 사용량**: 86,450
-- **평균 응답 시간**: 1.24s
+## API Usage Statistics
+- **Total LLM API Calls**: 42
+- **Total Evaluation Model Calls**: 15
+- **Total Token Usage**: 86,450
+- **Average Response Time**: 1.24s
 
-## 향후 개선 방향
-1. **웨이포인트 캐시 최적화**: 현재 5배 속도 향상을 7-10배로 개선 가능
-2. **임베딩 모델 향상**: 의미론적 검색 정확도를 더욱 향상시키기 위한 모델 업그레이드
-3. **시간적 추론 강화**: 복잡한 시간 표현 이해 및 추론 능력 향상
+## Future Improvement Areas
+1. **Waypoint Cache Optimization**: Improve current 5x speed enhancement to 7-10x
+2. **Embedding Model Enhancement**: Upgrade models to further improve semantic search accuracy
+3. **Temporal Reasoning Improvement**: Enhance understanding and reasoning of complex temporal expressions
 
-## 결론
-이번 테스트를 통해 Greeum의 핵심 성능 지표를 검증했습니다. 특히 웨이포인트 캐시는 메모리 검색 속도를 크게 향상시키며, 메모리 기반 프롬프트 생성은 응답의 구체성과 품질을 개선하는 데 효과적임을 확인했습니다. 이러한 성능 향상은 대화형 AI 경험을 크게 개선하고 API 비용을 절감하는 데 기여합니다. 
+## Conclusion
+This testing validated Greeum's core performance metrics. In particular, the waypoint cache significantly improves memory search speed, while memory-based prompt generation effectively enhances response specificity and quality. These performance improvements substantially enhance conversational AI experiences and contribute to API cost reduction. 
