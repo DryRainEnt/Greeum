@@ -7,20 +7,66 @@ import os
 class TemporalReasoner:
     """시간적 추론 및 질의 처리 클래스"""
     
-    def __init__(self, db_manager=None):
+    def __init__(self, db_manager=None, default_language="auto"):
         """
         시간적 추론 처리기 초기화
         
         Args:
             db_manager: 데이터베이스 관리자 (없으면 검색만 가능)
+            default_language: 기본 언어 설정 ("ko", "en", "ja", "zh", "es" 또는 "auto")
         """
         self.db_manager = db_manager
+        self.default_language = default_language
         self._setup_temporal_patterns()
         self._setup_date_formats()
     
+    def _detect_language(self, text: str) -> str:
+        """
+        텍스트의 언어 감지
+        
+        Args:
+            text: 분석할 텍스트
+            
+        Returns:
+            언어 코드 ("ko", "en", "ja", "zh", "es")
+        """
+        # 간단한 휴리스틱 기반 언어 감지
+        # 실제 구현에서는 langdetect 등의 라이브러리 사용 권장
+        
+        # 한글 문자 비율
+        ko_chars = len(re.findall(r'[가-힣]', text))
+        
+        # 일본어 문자 비율
+        ja_chars = len(re.findall(r'[\u3040-\u309F\u30A0-\u30FF]', text))
+        
+        # 중국어 문자 비율
+        zh_chars = len(re.findall(r'[\u4e00-\u9fff]', text))
+        
+        # 영어 문자 비율
+        en_chars = len(re.findall(r'[a-zA-Z]', text))
+        
+        # 스페인어 특수 문자 (ñ, á, é, í, ó, ú, ü 등)
+        es_chars = len(re.findall(r'[áéíóúüñ¿¡]', text.lower()))
+        
+        # 각 언어별 점수 계산
+        lang_scores = {
+            "ko": ko_chars * 2,  # 한글은 가중치를 높게 설정
+            "ja": ja_chars * 2,  # 일본어도 가중치를 높게 설정
+            "zh": zh_chars * 2,  # 중국어도 가중치를 높게 설정
+            "en": en_chars,
+            "es": en_chars * 0.5 + es_chars * 5  # 스페인어 특수 문자에 높은 가중치
+        }
+        
+        # 최고 점수 언어 반환
+        if max(lang_scores.values()) > 0:
+            return max(lang_scores.items(), key=lambda x: x[1])[0]
+        else:
+            return "en"  # 기본값은 영어
+    
     def _setup_temporal_patterns(self):
         """시간 표현 패턴 설정"""
-        self.time_patterns = {
+        # 한국어 시간 표현
+        self.ko_time_patterns = {
             # 상대적 기간 (정확한 매칭)
             "어제": lambda: timedelta(days=1),
             "그저께": lambda: timedelta(days=2),
@@ -59,8 +105,8 @@ class TemporalReasoner:
             "옛날": lambda: timedelta(days=365),
         }
         
-        # 미래 시간 패턴
-        self.future_patterns = {
+        # 한국어 미래 시간 패턴
+        self.ko_future_patterns = {
             "내일": lambda: timedelta(days=1),
             "모레": lambda: timedelta(days=2),
             "다음 주": lambda: timedelta(days=7),
@@ -72,6 +118,98 @@ class TemporalReasoner:
             r"(\d+)주 후": lambda m: timedelta(weeks=int(m.group(1))),
             r"(\d+)개월 후": lambda m: timedelta(days=int(m.group(1)) * 30),
             r"(\d+)년 후": lambda m: timedelta(days=int(m.group(1)) * 365),
+        }
+        
+        # 영어 시간 표현
+        self.en_time_patterns = {
+            # 상대적 기간 (정확한 매칭)
+            "yesterday": lambda: timedelta(days=1),
+            "the day before yesterday": lambda: timedelta(days=2),
+            "today": lambda: timedelta(days=0),
+            "now": lambda: timedelta(days=0),
+            "just now": lambda: timedelta(minutes=5),
+            "a moment ago": lambda: timedelta(minutes=10),
+            "recently": lambda: timedelta(days=3),
+            "last week": lambda: timedelta(days=7),
+            "last month": lambda: timedelta(days=30),
+            "last year": lambda: timedelta(days=365),
+            "a year ago": lambda: timedelta(days=365),
+            "two years ago": lambda: timedelta(days=730),
+            
+            # 정규식 패턴
+            r"(\d+) seconds ago": lambda m: timedelta(seconds=int(m.group(1))),
+            r"(\d+) minutes ago": lambda m: timedelta(minutes=int(m.group(1))),
+            r"(\d+) hours ago": lambda m: timedelta(hours=int(m.group(1))),
+            r"(\d+) days ago": lambda m: timedelta(days=int(m.group(1))),
+            r"(\d+) weeks ago": lambda m: timedelta(weeks=int(m.group(1))),
+            r"(\d+) months ago": lambda m: timedelta(days=int(m.group(1)) * 30),
+            r"(\d+) years ago": lambda m: timedelta(days=int(m.group(1)) * 365),
+            r"about (\d+) hours ago": lambda m: timedelta(hours=int(m.group(1))),
+            r"about (\d+) days ago": lambda m: timedelta(days=int(m.group(1))),
+            r"a few (hours|days|weeks|months) ago": lambda m: timedelta(
+                hours=6 if m.group(1) == "hours" else
+                days=3 if m.group(1) == "days" else
+                weeks=2 if m.group(1) == "weeks" else
+                days=60
+            ),
+            
+            # 모호한 기간
+            "a while ago": lambda: timedelta(hours=6),
+            "some time ago": lambda: timedelta(days=3),
+            "a few days ago": lambda: timedelta(days=3),
+            "a few weeks ago": lambda: timedelta(weeks=2),
+            "a few months ago": lambda: timedelta(days=60),
+            "long ago": lambda: timedelta(days=100),
+            "ages ago": lambda: timedelta(days=365),
+        }
+        
+        # 영어 미래 시간 패턴
+        self.en_future_patterns = {
+            "tomorrow": lambda: timedelta(days=1),
+            "the day after tomorrow": lambda: timedelta(days=2),
+            "next week": lambda: timedelta(days=7),
+            "next month": lambda: timedelta(days=30),
+            "next year": lambda: timedelta(days=365),
+            
+            r"in (\d+) days": lambda m: timedelta(days=int(m.group(1))),
+            r"in (\d+) weeks": lambda m: timedelta(weeks=int(m.group(1))),
+            r"in (\d+) months": lambda m: timedelta(days=int(m.group(1)) * 30),
+            r"in (\d+) years": lambda m: timedelta(days=int(m.group(1)) * 365),
+        }
+        
+        # 언어별 날짜 형식 패턴
+        self.date_patterns = {
+            "ko": [
+                # ISO 형식 (2023-05-01)
+                r"(\d{4}-\d{2}-\d{2})",
+                # 년월일 형식 (2023년 5월 1일)
+                r"(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일",
+                # 월일 형식 (5월 1일)
+                r"(\d{1,2})월\s*(\d{1,2})일",
+                # 슬래시 형식 (2023/05/01)
+                r"(\d{4})/(\d{1,2})/(\d{1,2})",
+            ],
+            "en": [
+                # ISO 형식 (2023-05-01)
+                r"(\d{4}-\d{2}-\d{2})",
+                # 미국식 형식 (May 1, 2023)
+                r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})",
+                # 영국식 형식 (1 May 2023)
+                r"(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})",
+                # 슬래시 형식 (05/01/2023) - 미국식
+                r"(\d{1,2})/(\d{1,2})/(\d{4})",
+            ]
+        }
+        
+        # 언어별 패턴 사전
+        self.time_patterns = {
+            "ko": self.ko_time_patterns,
+            "en": self.en_time_patterns,
+        }
+        
+        self.future_patterns = {
+            "ko": self.ko_future_patterns,
+            "en": self.en_future_patterns,
         }
     
     def _setup_date_formats(self):
@@ -103,7 +241,7 @@ class TemporalReasoner:
         now = datetime.now()
         
         # 1. 직접 매칭 (과거)
-        for term, delta_func in self.time_patterns.items():
+        for term, delta_func in self.time_patterns[self.default_language].items():
             if isinstance(term, str) and term in query:
                 delta = delta_func()
                 time_refs.append({
@@ -115,7 +253,7 @@ class TemporalReasoner:
                 })
         
         # 2. 정규식 매칭 (과거)
-        for pattern, delta_func in self.time_patterns.items():
+        for pattern, delta_func in self.time_patterns[self.default_language].items():
             if isinstance(pattern, str) and pattern.startswith('r'):
                 regex = pattern[1:]  # 'r' 제거
                 matches = re.finditer(regex, query)
@@ -130,7 +268,7 @@ class TemporalReasoner:
                     })
         
         # 3. 직접 매칭 (미래)
-        for term, delta_func in self.future_patterns.items():
+        for term, delta_func in self.future_patterns[self.default_language].items():
             if isinstance(term, str) and term in query:
                 delta = delta_func()
                 time_refs.append({
@@ -142,7 +280,7 @@ class TemporalReasoner:
                 })
         
         # 4. 정규식 매칭 (미래)
-        for pattern, delta_func in self.future_patterns.items():
+        for pattern, delta_func in self.future_patterns[self.default_language].items():
             if isinstance(pattern, str) and pattern.startswith('r'):
                 regex = pattern[1:]  # 'r' 제거
                 matches = re.finditer(regex, query)
