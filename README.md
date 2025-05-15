@@ -1,13 +1,15 @@
-# 🧠 MemoryBlockEngine v0.2
+# 🧠 Greeum v0.2
 
 An LLM-Independent Memory System Integration Library
 
 ## 📌 Overview
 
-**MemoryBlockEngine** is a **universal memory module** that can be attached to any LLM model, designed to:
+**Greeum** (pronounced as "gree-um") is a **universal memory module** that can be attached to any LLM model, designed to:
 - Track user's long-term utterances, goals, emotions, and intentions
 - Recall memories relevant to the current context
 - Function as an "AI with memory"
+
+The name "Greeum" is inspired by the Korean word "그리움" which evokes a sense of longing and remembrance - perfectly capturing the essence of a memory system.
 
 ## 🔑 Key Features
 
@@ -21,8 +23,8 @@ An LLM-Independent Memory System Integration Library
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/DryRainEnt/MemoryBlockEngine.git
-   cd MemoryBlockEngine
+   git clone https://github.com/DryRainEnt/Greeum.git
+   cd Greeum
    ```
 
 2. Install dependencies
@@ -72,8 +74,8 @@ API Endpoints:
 ### Python Library
 
 ```python
-from memory_engine import BlockManager, STMManager, CacheManager, PromptWrapper
-from memory_engine.text_utils import process_user_input
+from greeum import BlockManager, STMManager, CacheManager, PromptWrapper
+from greeum.text_utils import process_user_input
 
 # Process user input
 user_input = "I started a new project and it's really exciting"
@@ -103,8 +105,8 @@ prompt = prompt_wrapper.compose_prompt(user_question)
 ## 🧱 Architecture
 
 ```
-memory-block-engine/
-├── memory_engine/    # Core library
+greeum/
+├── greeum/          # Core library
 │   ├── block_manager.py    # Long-term memory management
 │   ├── stm_manager.py      # Short-term memory management
 │   ├── cache_manager.py    # Waypoint cache
@@ -137,6 +139,10 @@ memory-block-engine/
 - **Keyword Extraction Enhancement**: Implementation of language-specific keyword extraction
 - **Cloud Integration**: Addition of database backends (SQLite, MongoDB, etc.)
 - **Distributed Processing**: Implementation of distributed processing for large-scale memory management
+
+## 🌐 Website
+
+Visit our website: [greeum.app](https://greeum.app)
 
 ## 📄 License
 

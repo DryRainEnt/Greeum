@@ -7,14 +7,14 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = fh.read().splitlines()
 
 setup(
-    name="memory_engine",
+    name="greeum",
     version="0.1.0",
-    author="MemoryBlockEngine Team",
-    author_email="example@example.com",
-    description="LLM 독립적 메모리 시스템",
+    author="Greeum Team",
+    author_email="playtart@play-t.art",
+    description="LLM-Independent Memory System",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/username/MemoryBlockEngine",
+    url="https://github.com/DryRainEnt/Greeum",
     packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -25,7 +25,7 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "memory-engine=memory_engine.cli:main",
+            "greeum=greeum.cli:main",
         ],
     },
 ) 
