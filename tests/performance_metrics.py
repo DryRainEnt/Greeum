@@ -28,6 +28,9 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 # 상위 디렉토리를 path에 추가하여 모듈을 import할 수 있게 함
 sys.path.insert(0, os.path.abspath('..'))
 
+# 결과 디렉토리 생성
+os.makedirs("results/performance", exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -45,12 +48,14 @@ try:
     from greeum.temporal_reasoner import TemporalReasoner
     from greeum.knowledge_graph import KnowledgeGraphManager
     from greeum.embedding_models import get_embedding
+    logger.info("Greeum 패키지에서 모듈을 임포트했습니다.")
 except ImportError:
     try:
         from memory_engine import DatabaseManager, STMManager, CacheManager, PromptWrapper
         from memory_engine.temporal_reasoner import TemporalReasoner
         from memory_engine.knowledge_graph import KnowledgeGraphManager
         from memory_engine.embedding_models import get_embedding
+        logger.info("memory_engine 패키지에서 모듈을 임포트했습니다.")
     except ImportError:
         logger.error("필수 모듈을 가져올 수 없습니다. Greeum이 올바르게 설치되었는지 확인하세요.")
         sys.exit(1)
@@ -184,7 +189,9 @@ class GreemTester:
         scenarios["generic_qa"] = [
             {"query": "인공지능에 대해 설명해줘", "expected": ["머신러닝", "딥러닝", "신경망"]},
             {"query": "블록체인 기술이란 무엇인가?", "expected": ["분산", "원장", "암호화"]},
-            # 추가 샘플...
+            {"query": "자연어 처리의 최신 트렌드는?", "expected": ["트랜스포머", "BERT", "GPT"]},
+            {"query": "메타버스란 무엇인가?", "expected": ["가상", "현실", "디지털"]},
+            {"query": "양자 컴퓨팅의 원리는?", "expected": ["큐비트", "중첩", "양자역학"]}
         ]
         
         # 컨텍스트 회상 시나리오
@@ -198,7 +205,24 @@ class GreemTester:
                 "query": "내 전공이 뭐였지?",
                 "expected": ["컴퓨터 공학", "컴퓨터", "전공"]
             },
-            # 추가 샘플...
+            {
+                "history": [
+                    {"content": "다음 주에 도쿄로 여행 가려고 해", "speaker": "user"},
+                    {"content": "도쿄 여행 좋은 선택이네요! 어떤 계획이 있으신가요?", "speaker": "assistant"},
+                    {"content": "스시 맛집이랑 아키하바라를 가보고 싶어", "speaker": "user"}
+                ],
+                "query": "내가 어디로 여행 가려고 했었지?",
+                "expected": ["도쿄", "일본", "여행"]
+            },
+            {
+                "history": [
+                    {"content": "내 강아지 이름은 몽실이야", "speaker": "user"},
+                    {"content": "몽실이라는 이름이 귀엽네요!", "speaker": "assistant"},
+                    {"content": "몽실이는 말티즈인데 3살이야", "speaker": "user"}
+                ],
+                "query": "내 강아지 이름이 뭐였지?",
+                "expected": ["몽실이", "강아지", "말티즈"]
+            }
         ]
         
         # 장기 기억 유지 시나리오
@@ -213,7 +237,26 @@ class GreemTester:
                 "query": "내 프로젝트 마감일이 언제였지?",
                 "expected": ["5월 15일", "마감일", "프로젝트"]
             },
-            # 추가 샘플...
+            {
+                "memory": {
+                    "context": "사용자는 알레르기 때문에 땅콩과 해산물을 먹지 않습니다.",
+                    "keywords": ["알레르기", "땅콩", "해산물"],
+                    "tags": ["건강", "식습관"],
+                    "importance": 0.95
+                },
+                "query": "내가 알레르기가 있는 음식이 뭐였지?",
+                "expected": ["땅콩", "해산물", "알레르기"]
+            },
+            {
+                "memory": {
+                    "context": "사용자는 파리에서 3년간 거주한 경험이 있으며 프랑스어를 유창하게 구사합니다.",
+                    "keywords": ["파리", "프랑스어", "거주"],
+                    "tags": ["경험", "언어"],
+                    "importance": 0.8
+                },
+                "query": "내가 어느 나라 언어를 할 수 있었지?",
+                "expected": ["프랑스어", "프랑스", "파리"]
+            }
         ]
         
         # 복잡한 추론 시나리오
@@ -236,7 +279,24 @@ class GreemTester:
                 "query": "다음 회의는 무슨 요일에 열려?",
                 "expected": ["화요일", "다음 주", "공휴일"]
             },
-            # 추가 샘플...
+            {
+                "memory": [
+                    {
+                        "context": "마케팅 캠페인 예산은 2000만원으로 책정되었습니다.",
+                        "keywords": ["마케팅", "캠페인", "예산", "2000만원"],
+                        "tags": ["예산", "마케팅"],
+                        "importance": 0.85
+                    },
+                    {
+                        "context": "디지털 광고에 30%, 인플루언서 마케팅에 40%, 오프라인 이벤트에 30%의 예산을 할당하기로 결정했습니다.",
+                        "keywords": ["디지털 광고", "인플루언서", "오프라인 이벤트", "예산 할당"],
+                        "tags": ["예산", "할당"],
+                        "importance": 0.9
+                    }
+                ],
+                "query": "인플루언서 마케팅에 얼마의 예산을 쓸 수 있지?",
+                "expected": ["800만원", "40%", "인플루언서", "예산"]
+            }
         ]
         
         return scenarios
@@ -338,6 +398,18 @@ class GreemTester:
         with open(f"{self.config['results_path']}/T-GEN-001.json", "w", encoding="utf-8") as f:
             json.dump(summary, f, ensure_ascii=False, indent=2)
             
+        # 그래프 생성
+        plt.figure(figsize=(10, 6))
+        plt.bar(['일반 응답', 'Greeum 응답'], [df["direct_response_score"].mean(), df["enhanced_response_score"].mean()], color=['gray', 'blue'])
+        plt.title('Greeum 메모리 사용 전후 응답 품질 비교')
+        plt.ylabel('평균 응답 품질 점수 (1-10)')
+        plt.ylim(0, 10)
+        
+        for i, v in enumerate([df["direct_response_score"].mean(), df["enhanced_response_score"].mean()]):
+            plt.text(i, v + 0.1, f'{v:.2f}', ha='center')
+            
+        plt.savefig(f"{self.config['results_path']}/T-GEN-001_quality.png")
+        
         return summary
     
     def run_test_mem_002(self, samples=100):
