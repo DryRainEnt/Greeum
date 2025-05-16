@@ -21,6 +21,7 @@
 - **프롬프트 조합기**: 관련 기억을 포함한 LLM 프롬프트 자동 생성
 - **시간적 추론기**: 다국어 환경에서 고급 시간 표현 인식 처리
 - **다국어 지원**: 한국어, 영어 등 자동 언어 감지 및 처리
+- **Model Control Protocol**: [GreeumMCP](https://github.com/DryRainEnt/GreeumMCP) 별도 패키지를 통해 Cursor, Unity, Discord 등 외부 도구 연동 지원
 
 ## ⚙️ 설치 방법
 
@@ -199,6 +200,7 @@ result = evaluate_temporal_query("What happened yesterday?")
 
 ## 🔧 프로젝트 확장 계획
 
+- **Model Control Protocol**: MCP 지원에 대해서는 [GreeumMCP](https://github.com/DryRainEnt/GreeumMCP) 레포지토리를 확인하세요 - Greeum을 Cursor, Unity, Discord 등의 도구와 연결할 수 있는 별도의 패키지입니다
 - **다국어 지원 강화**: 일본어, 중국어, 스페인어 등 추가 언어 지원
 - **임베딩 개선**: 실제 임베딩 모델 통합 (예: sentence-transformers)
 - **키워드 추출 향상**: 언어별 키워드 추출 구현
@@ -220,3 +222,4 @@ MIT License
 ## 📱 연락처
 
 이메일: playtart@play-t.art 
+
