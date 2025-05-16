@@ -1,4 +1,4 @@
-# 🧠 Greeum v0.3
+# 🧠 Greeum v0.4.0
 
 [![KR](https://img.shields.io/badge/README-한국어-blue.svg)](docs/i18n/README_KR.md)
 [![EN](https://img.shields.io/badge/README-English-blue.svg)](README.md)
@@ -27,6 +27,7 @@ The name "Greeum" is inspired by the Korean word "그리움" which evokes a sens
 - **Prompt Composition**: Automatic generation of LLM prompts that include relevant memories
 - **Temporal Reasoning**: Advanced time expression recognition in multiple languages
 - **Multilingual Support**: Automatic language detection and processing for Korean, English, and more
+- **MCP Integration**: Model Control Protocol support for connecting with Cursor, Unity, Discord and other tools
 
 ## ⚙️ Installation
 
@@ -38,7 +39,17 @@ The name "Greeum" is inspired by the Korean word "그리움" which evokes a sens
 
 2. Install dependencies
    ```bash
+   # 기본 설치
    pip install -r requirements.txt
+   
+   # PyPI에서 설치
+   pip install greeum
+   
+   # MCP 기능 포함 설치
+   pip install greeum[mcp]
+   
+   # 모든 기능 포함 설치
+   pip install greeum[all]
    ```
 
 ## 🧪 Usage
@@ -121,6 +132,63 @@ prompt = prompt_wrapper.compose_prompt(user_question)
 # llm_response = call_your_llm(prompt)
 ```
 
+### MCP (Model Control Protocol) Integration
+
+#### 설치 및 설정
+
+```bash
+# MCP 기능 포함 설치
+pip install greeum[mcp]
+
+# 환경 변수 설정 (선택 사항)
+export ADMIN_KEY="your_admin_secret_key"  # API 키 관리를 위한 관리자 키
+```
+
+#### MCP 서비스 실행
+
+```bash
+# CLI 명령을 통한 서비스 실행
+greeum-mcp --port 8000 --data-dir ./data
+
+# 또는 Python 모듈로 직접 실행
+python -m memory_engine.mcp_service --port 8000 --data-dir ./data
+```
+
+#### MCP 클라이언트 사용 예제
+
+```python
+# MCP 클라이언트 사용
+from memory_engine.mcp_client import MCPClient
+
+# 클라이언트 초기화 (API 키 필요)
+client = MCPClient(api_key="YOUR_API_KEY")
+
+# 기억 추가
+result = client.manage_memory(
+    action="add",
+    memory_content="This is a memory created through MCP interface"
+)
+
+# 기억 검색
+memories = client.manage_memory(
+    action="query",
+    query="MCP",
+    limit=5
+)
+
+# Unity 통합 예제 (Unity가 MCP 호환되어 있는 경우)
+result = client.execute_menu_item(menu_path="GameObject/Create Empty")
+```
+
+#### MCP 기능으로 할 수 있는 것들
+
+- 외부 도구와 Greeum 기억 시스템 연동
+- 장기/단기 기억 관리 API 호출
+- API 키 기반 인증
+- 실시간 기억 검색 및 저장
+
+더 자세한 MCP 사용 방법은 `examples/README.md`를 참조하세요.
+
 ## 🧱 Architecture
 
 ```
@@ -135,7 +203,12 @@ greeum/
 │   ├── embedding_models.py  # Embedding model integration
 ├── api/                   # REST API interface
 ├── cli/                   # Command-line tools
+├── memory_engine/         # Original memory engine implementation
+│   ├── mcp_client.py       # MCP client implementation
+│   ├── mcp_service.py      # MCP service implementation
+│   ├── mcp_integrations.py # MCP integration utilities
 ├── data/                  # Data storage directory
+├── examples/              # Usage examples
 ├── tests/                 # Test suite
 ```
 
@@ -210,6 +283,7 @@ result = evaluate_temporal_query("What happened yesterday?")
 - **Keyword Extraction Enhancement**: Implementation of language-specific keyword extraction
 - **Cloud Integration**: Addition of database backends (SQLite, MongoDB, etc.)
 - **Distributed Processing**: Implementation of distributed processing for large-scale memory management
+- **Tool Integrations**: Expanded MCP support for additional tools and platforms
 
 ## 🌐 Website
 

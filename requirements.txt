@@ -28,4 +28,9 @@ psycopg2-binary>=2.9.3; platform_system != "Windows"
 psycopg2>=2.9.3; platform_system == "Windows"
 
 # NLP 처리 (선택 사항)
-spacy>=3.5.0 
+spacy>=3.5.0
+
+# MCP 관련 패키지
+websocket-client>=1.3.1
+jwt>=1.3.1
+uuid>=1.30 

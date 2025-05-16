@@ -9,6 +9,9 @@
 - [CacheManager](#cachemanager) - 웨이포인트 캐시
 - [PromptWrapper](#promptwrapper) - 프롬프트 조합
 - [TemporalReasoner](#temporalreasoner) - 시간 기반 추론
+- [MCPClient](#mcpclient) - MCP 클라이언트
+- [MCPService](#mcpservice) - MCP 서비스
+- [MCPIntegrations](#mcpintegrations) - MCP 통합 유틸리티
 - [텍스트 유틸리티](#텍스트-유틸리티) - 텍스트 처리 도구
 
 ---
@@ -260,6 +263,179 @@ TemporalReasoner 객체를 초기화합니다.
 
 ---
 
+## MCPClient
+
+MCP(Model Control Protocol) 클라이언트 클래스입니다. 외부 도구와 Greeum을 연결합니다.
+
+### 주요 메서드
+
+#### `__init__(api_key, base_url="http://localhost:8000/api/mcp")`
+
+MCPClient 객체를 초기화합니다.
+
+- `api_key` (str): MCP API 키
+- `base_url` (str, 선택): MCP API 기본 URL
+
+#### `manage_memory(action, memory_content="", memory_id=None, query=None, limit=10)`
+
+메모리 관리 API 호출을 수행합니다.
+
+- `action` (str): 수행할 작업 - "add", "get", "query", "update", "delete"
+- `memory_content` (str, 선택): 추가/업데이트할 메모리 내용
+- `memory_id` (str, 선택): 메모리 ID (get, update, delete 시 필요)
+- `query` (str, 선택): 검색 쿼리 (query 작업 시 필요)
+- `limit` (int, 선택): 반환할 최대 결과 수
+
+**반환**: API 응답 (Dict)
+
+#### `execute_menu_item(menu_path)`
+
+Unity 메뉴 아이템을 실행합니다.
+
+- `menu_path` (str): 메뉴 경로 (예: "GameObject/Create Empty")
+
+**반환**: API 응답 (Dict)
+
+#### `select_gameobject(object_path=None, instance_id=None)`
+
+Unity 게임오브젝트를 선택합니다.
+
+- `object_path` (str, 선택): 게임오브젝트 경로
+- `instance_id` (int, 선택): 게임오브젝트 인스턴스 ID
+
+**반환**: API 응답 (Dict)
+
+#### `add_package(source, **kwargs)`
+
+Unity 패키지를 추가합니다.
+
+- `source` (str): 패키지 소스 (registry, github, disk)
+- `**kwargs`: 패키지 추가에 필요한 추가 파라미터
+
+**반환**: API 응답 (Dict)
+
+#### `run_tests(test_mode="EditMode", test_filter="", return_only_failures=True)`
+
+Unity 테스트를 실행합니다.
+
+- `test_mode` (str, 선택): 테스트 모드 (EditMode 또는 PlayMode)
+- `test_filter` (str, 선택): 테스트 필터
+- `return_only_failures` (bool, 선택): 실패한 테스트만 반환 여부
+
+**반환**: API 응답 (Dict)
+
+#### `send_console_log(message, log_type="info")`
+
+Unity 콘솔에 로그 메시지를 전송합니다.
+
+- `message` (str): 로그 메시지
+- `log_type` (str, 선택): 로그 타입 (info, warning, error)
+
+**반환**: API 응답 (Dict)
+
+#### `update_component(component_name, **kwargs)`
+
+Unity 컴포넌트를 업데이트합니다.
+
+- `component_name` (str): 컴포넌트 이름
+- `**kwargs`: 컴포넌트 업데이트에 필요한 추가 파라미터
+
+**반환**: API 응답 (Dict)
+
+#### `add_asset_to_scene(**kwargs)`
+
+Unity 씬에 에셋을 추가합니다.
+
+- `**kwargs`: 에셋 추가에 필요한 파라미터
+
+**반환**: API 응답 (Dict)
+
+---
+
+## MCPService
+
+MCP 서비스를 제공하는 클래스입니다.
+
+### 주요 메서드
+
+#### `__init__(data_dir="./data", port=8000)`
+
+MCPService 객체를 초기화합니다.
+
+- `data_dir` (str, 선택): 데이터 디렉토리 경로
+- `port` (int, 선택): 서비스 포트
+
+#### `start()`
+
+MCP 서비스를 시작합니다.
+
+### CLI 도구 인터페이스
+
+CLI를 통해 MCP 서비스를 실행할 수 있습니다:
+
+```bash
+greeum-mcp --data-dir ./data --port 8000
+```
+
+또는 Python 모듈로 직접 실행:
+
+```bash
+python -m memory_engine.mcp_service --data-dir ./data --port 8000
+```
+
+---
+
+## MCPIntegrations
+
+외부 도구와 Greeum을 통합하는 유틸리티 클래스입니다.
+
+### 주요 메서드
+
+#### `__init__(data_dir="./data", config_path="./data/mcp_config.json")`
+
+MCPIntegrations 객체를 초기화합니다.
+
+- `data_dir` (str, 선택): 데이터 디렉토리 경로
+- `config_path` (str, 선택): MCP 구성 파일 경로
+
+#### `store_unity_event(event_type, event_data)`
+
+Unity 이벤트를 기억으로 저장합니다.
+
+- `event_type` (str): 이벤트 타입
+- `event_data` (Dict): 이벤트 데이터
+
+**반환**: 생성된 기억 ID
+
+#### `store_discord_event(event_type, event_data)`
+
+Discord 이벤트를 기억으로 저장합니다.
+
+- `event_type` (str): 이벤트 타입
+- `event_data` (Dict): 이벤트 데이터
+
+**반환**: 생성된 기억 ID
+
+#### `get_related_unity_memories(query, limit=5)`
+
+Unity 관련 기억을 검색합니다.
+
+- `query` (str): 검색 쿼리
+- `limit` (int, 선택): 반환할 최대 결과 수
+
+**반환**: 검색 결과 목록
+
+#### `get_related_discord_memories(query, limit=5)`
+
+Discord 관련 기억을 검색합니다.
+
+- `query` (str): 검색 쿼리
+- `limit` (int, 선택): 반환할 최대 결과 수
+
+**반환**: 검색 결과 목록
+
+---
+
 ## 텍스트 유틸리티
 
 텍스트 처리를 위한 유틸리티 함수들입니다.
@@ -324,10 +500,6 @@ Greeum은 다양한 명령줄 도구를 제공합니다. 자세한 내용은 [CL
 
 Greeum의 REST API를 사용하여 애플리케이션을 통합할 수 있습니다. 자세한 내용은 [API 서버 문서](tutorials.md#rest-api-서버)를 참조하세요.
 
-### 언어별 사용자 가이드
+### MCP 활용
 
-- [한국어 사용자 가이드](USER_GUIDE_KO.md)
-- [영어 사용자 가이드](USER_GUIDE_EN.md)
-- [일본어 사용자 가이드](USER_GUIDE_JP.md)
-- [중국어 사용자 가이드](USER_GUIDE_CN.md)
-- [스페인어 사용자 가이드](USER_GUIDE_ES.md) 
+MCP를 통해 Greeum과 외부 도구를 연동하는 방법은 [MCP 예제](../examples/README.md)를 참조하세요. 
