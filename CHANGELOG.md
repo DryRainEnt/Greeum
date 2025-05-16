@@ -2,6 +2,14 @@
 
 모든 중요한 변경 사항은 이 파일에 기록됩니다.
 
+## [0.4.1] - 2023-11-10
+
+### 변경
+- MCP 기능을 [GreeumMCP](https://github.com/DryRainEnt/GreeumMCP) 프로젝트로 이전
+- `memory_engine/mcp_*.py` 파일 및 관련 예제 제거
+- setup.py에서 MCP 관련 엔트리 포인트 및 의존성 제거
+- 문서 업데이트: README.md에서 MCP 관련 내용을 GreeumMCP 레포지토리 링크로 대체
+
 ## [0.4.0] - 2023-11-07
 
 ### 추가

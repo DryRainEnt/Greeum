@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="greeum",
-    version="0.4.0",
+    version="0.4.1",
     author="Greeum Team",
     author_email="playtart@play-t.art",
     description="LLM-Independent Memory System with Multilingual Support",
@@ -31,7 +31,6 @@ setup(
         "rich>=10.0.0",
         "typer>=0.4.0",
         "python-dateutil>=2.8.2",
-        "websocket-client>=1.3.1",
     ],
     extras_require={
         "embedding": ["sentence-transformers>=2.2.0", "openai>=0.27.0"],
@@ -42,16 +41,10 @@ setup(
             "spacy>=3.5.0",
             "gunicorn>=20.1.0",
         ],
-        "mcp": [
-            "websocket-client>=1.3.1",
-            "jwt>=1.3.1",
-            "uuid>=1.30",
-        ],
     },
     entry_points={
         "console_scripts": [
             "greeum=greeum.cli:main",
-            "greeum-mcp=memory_engine.mcp_service:main",
         ],
     },
 ) 
