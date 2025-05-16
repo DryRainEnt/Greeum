@@ -1,109 +1,95 @@
-#  Greeum v0.5.0
+﻿# 🧠 Greeum v0.5.0
 
-[![KR](https://img.shields.io/badge/README-?쒓뎅??blue.svg)](docs/i18n/README_KR.md)
-[![EN](https://img.shields.io/badge/README-English-blue.svg)](README.md)
-[![CN](https://img.shields.io/badge/README-訝?뻼-blue.svg)](docs/i18n/README_CN.md)
-[![JP](https://img.shields.io/badge/README-?ζ쑍沃?blue.svg)](docs/i18n/README_JP.md)
-[![ES](https://img.shields.io/badge/README-Espa챰ol-blue.svg)](docs/i18n/README_ES.md)
+다국어 지원 LLM 독립적인 기억 관리 시스템
 
-An LLM-Independent Memory System with Multilingual Support
+## 📌 개요
 
-## ?뱦 Overview
+**Greeum** (발음: 그리음)은 모든 LLM(대규모 언어 모델)에 연결할 수 있는 **범용 기억 모듈**로서 다음과 같은 기능을 제공합니다:
+- 사용자의 발화, 목표, 감정, 의도 등 장기적인 기록 추적
+- 현재 맥락과 관련된 기억 회상
+- 다국어 환경에서의 시간 표현 인식 및 처리
+- "기억을 가진 AI"로서의 기능
 
-**Greeum** (pronounced as "gree-um") is a **universal memory module** that can be attached to any LLM model, designed to:
-- Track user's long-term utterances, goals, emotions, and intentions
-- Recall memories relevant to the current context
-- Process temporal reasoning in multiple languages
-- Function as an "AI with memory"
+이름 "Greeum"은 한국어 "그리움"에서 영감을 받았으며, 기억 시스템의 본질을 완벽하게 담고 있습니다.
 
-The name "Greeum" is inspired by the Korean word "洹몃━?" which evokes a sense of longing and remembrance - perfectly capturing the essence of a memory system.
+## 🔑 주요 기능
 
-## ?뵎 Key Features
+- **블록체인 유사 구조의 장기 기억(LTM)**: 불변성을 가진 블록 단위 메모리 저장소
+- **TTL 기반의 단기 기억(STM)**: 일시적으로 중요한 정보를 효율적으로 관리
+- **의미적 연관성**: 키워드/태그/벡터 기반 기억 회상 시스템
+- **웨이포인트 캐시**: 현재 맥락과 관련된 기억을 자동으로 검색
+- **프롬프트 조합기**: 관련 기억을 포함한 LLM 프롬프트 자동 생성
+- **시간적 추론기**: 다국어 환경에서 고급 시간 표현 인식 처리
+- **다국어 지원**: 한국어, 영어 등 자동 언어 감지 및 처리
 
-- **Long-Term Memory Blocks**: Blockchain-like structure for immutable memory storage
-- **Short-Term Memory Management**: TTL (Time-To-Live) structure for fluid temporary memories
-- **Semantic Association**: Keyword/tag/vector-based memory recall system
-- **Waypoint Cache**: Automatically retrieves memories related to the current context
-- **Prompt Composition**: Automatic generation of LLM prompts that include relevant memories
-- **Temporal Reasoning**: Advanced time expression recognition in multiple languages
-- **Multilingual Support**: Automatic language detection and processing for Korean, English, and more
-- **Model Control Protocol**: For MCP support, please check out [GreeumMCP](https://github.com/DryRainEnt/GreeumMCP) - a separate package that enables Greeum to connect with Cursor, Unity, Discord and other tools
+## ⚙️ 설치 방법
 
-## ?숋툘 Installation
-
-1. Clone the repository
+1. 저장소 복제
    ```bash
    git clone https://github.com/DryRainEnt/Greeum.git
    cd Greeum
    ```
 
-2. Install dependencies
+2. 의존성 설치
    ```bash
-   # 湲곕낯 ?ㅼ튂
    pip install -r requirements.txt
-   
-   # PyPI?먯꽌 ?ㅼ튂
-   pip install greeum
-   
-   # 紐⑤뱺 湲곕뒫 ?ы븿 ?ㅼ튂
-   pip install greeum[all]
    ```
 
-## ?㎦ Usage
+## 🧪 사용 방법
 
-### CLI Interface
+### CLI 인터페이스
 
 ```bash
-# Add long-term memory
-python cli/memory_cli.py add -c "I started a new project and it's really exciting"
+# 장기 기억 추가
+python cli/memory_cli.py add -c "새로운 프로젝트를 시작했고 정말 흥미로워요"
 
-# Search memories by keywords
-python cli/memory_cli.py search -k "project,exciting"
+# 키워드로 기억 검색
+python cli/memory_cli.py search -k "프로젝트,흥미로운"
 
-# Search memories by time expression
-python cli/memory_cli.py search-time -q "What did I do 3 days ago?" -l "auto"
+# 시간 표현으로 기억 검색
+python cli/memory_cli.py search-time -q "3일 전에 무엇을 했지?" -l "ko"
 
-# Add short-term memory
-python cli/memory_cli.py stm "The weather is nice today"
+# 단기 기억 추가
+python cli/memory_cli.py stm "오늘 날씨가 좋네요"
 
-# Retrieve short-term memories
+# 단기 기억 조회
 python cli/memory_cli.py get-stm
 
-# Generate a prompt
-python cli/memory_cli.py prompt -i "How is the project going?"
+# 프롬프트 생성
+python cli/memory_cli.py prompt -i "프로젝트는 어떻게 진행되고 있나요?"
 ```
 
-### REST API Server
+### REST API 서버
 
 ```bash
-# Run the API server
+# API 서버 실행
 python api/memory_api.py
 ```
 
-Web interface: http://localhost:5000
+웹 인터페이스: http://localhost:5000
 
-API Endpoints:
-- GET `/api/v1/health` - Check status
-- GET `/api/v1/blocks` - Retrieve block list
-- POST `/api/v1/blocks` - Add a block
-- GET `/api/v1/search?keywords=keyword1,keyword2` - Search by keywords
-- GET `/api/v1/search/time?query=yesterday&language=en` - Search by time expression
-- GET, POST, DELETE `/api/v1/stm` - Manage short-term memory
-- POST `/api/v1/prompt` - Generate prompts
-- GET `/api/v1/verify` - Verify blockchain integrity
+API 엔드포인트:
+- GET `/api/v1/health` - 상태 확인
+- GET `/api/v1/blocks` - 블록 목록 조회
+- POST `/api/v1/blocks` - 블록 추가
+- GET `/api/v1/search?keywords=keyword1,keyword2` - 키워드 검색
+- GET `/api/v1/search/time?query=yesterday&language=en` - 시간 표현 검색
+- GET, POST, DELETE `/api/v1/stm` - 단기 기억 관리
+- POST `/api/v1/prompt` - 프롬프트 생성
+- GET `/api/v1/verify` - 블록체인 무결성 검증
 
-### Python Library
+### Python 라이브러리
 
 ```python
 from greeum import BlockManager, STMManager, CacheManager, PromptWrapper
 from greeum.text_utils import process_user_input
 from greeum.temporal_reasoner import TemporalReasoner
 
-# Process user input
-user_input = "I started a new project and it's really exciting"
+# 사용자 입력 처리
+user_input = "새로운 프로젝트를 시작했고 정말 흥미로워요"
 processed = process_user_input(user_input)
 
-# Store memory with block manager
+# 블록 매니저로 기억 저장
 block_manager = BlockManager()
 block = block_manager.add_block(
     context=processed["context"],
@@ -113,75 +99,74 @@ block = block_manager.add_block(
     importance=processed["importance"]
 )
 
-# Time-based search (multilingual)
+# 시간 기반 검색 (다국어)
 temporal_reasoner = TemporalReasoner(db_manager=block_manager, default_language="auto")
-time_query = "What did I do 3 days ago?"
+time_query = "3일 전에 무엇을 했지?"
 time_results = temporal_reasoner.search_by_time_reference(time_query)
 
-# Generate prompt
+# 프롬프트 생성
 cache_manager = CacheManager(block_manager=block_manager)
 prompt_wrapper = PromptWrapper(cache_manager=cache_manager)
 
-user_question = "How is the project going?"
+user_question = "프로젝트는 어떻게 진행되고 있나요?"
 prompt = prompt_wrapper.compose_prompt(user_question)
 
-# Pass to LLM
+# LLM에 전달
 # llm_response = call_your_llm(prompt)
 ```
 
-## ?㎟ Architecture
+## 🧱 아키텍처
 
 ```
 greeum/
-?쒋?? greeum/                # Core library
-??  ?쒋?? block_manager.py    # Long-term memory management
-??  ?쒋?? stm_manager.py      # Short-term memory management
-??  ?쒋?? cache_manager.py    # Waypoint cache
-??  ?쒋?? prompt_wrapper.py   # Prompt composition
-??  ?쒋?? text_utils.py       # Text processing utilities
-??  ?쒋?? temporal_reasoner.py # Time-based reasoning 
-??  ?쒋?? embedding_models.py  # Embedding model integration
-?쒋?? api/                   # REST API interface
-?쒋?? cli/                   # Command-line tools
-?쒋?? memory_engine/         # Original memory engine implementation
-?쒋?? data/                  # Data storage directory
-?쒋?? tests/                 # Test suite
+├── greeum/                # 핵심 라이브러리
+│   ├── block_manager.py    # 장기 기억 관리
+│   ├── stm_manager.py      # 단기 기억 관리
+│   ├── cache_manager.py    # 웨이포인트 캐시
+│   ├── prompt_wrapper.py   # 프롬프트 조합
+│   ├── text_utils.py       # 텍스트 처리 유틸리티
+│   ├── temporal_reasoner.py # 시간 기반 추론
+│   ├── embedding_models.py  # 임베딩 모델 통합
+├── api/                   # REST API 인터페이스
+├── cli/                   # 명령줄 도구
+├── data/                  # 데이터 저장 디렉토리
+├── tests/                 # 테스트 스위트
 ```
 
-## Branch Management
+## 브랜치 관리 규칙
 
-- **main**: Stable release version branch
-- **dev**: Core feature development branch (merged to main after testing)
-- **test-collect**: Performance metrics and A/B test data collection branch
+- **main**: 안정적인 릴리즈 버전 브랜치
+- **dev**: 핵심 피쳐 개발 브랜치 (개발 후 테스트 검증이 완료되면 main으로 머지)
+- **test-collect**: 성능 지표 및 A/B 테스트 데이터 수집용 브랜치
 
-## ?뱤 Performance Tests
+## 📊 성능 테스트
 
-Greeum conducts performance tests in the following areas:
+Greeum은 다음과 같은 영역에서 성능 테스트를 진행합니다:
 
-### T-GEN-001: Response Specificity Improvement Rate
-- Measures response quality improvement when using Greeum memory
-- Confirmed 18.6% average quality improvement
-- Increase of 4.2 specific information points per response
+### T-GEN-001: 응답의 구체성 증가율
+- Greeum 메모리 활용 시 응답 품질 향상도 측정
+- 평균 18.6% 품질 향상 확인
+- 구체적 정보 포함량 4.2개 증가
 
-### T-MEM-002: Memory Search Latency
-- Measures speed improvement through waypoint cache
-- Confirmed 5.04x average speed improvement
-- Up to 8.67x speed improvement for 1,000+ memory blocks
+### T-MEM-002: 메모리 검색 Latency
+- 웨이포인트 캐시를 통한 검색 속도 향상 측정
+- 평균 5.04배 속도 향상 확인
+- 1,000개 이상 메모리 블록에서 최대 8.67배 속도 개선
 
-### T-API-001: API Call Efficiency
-- Measures reduction in follow-up questions due to memory-based context
-- Confirmed 78.2% reduction in need for follow-up questions
-- Cost savings from reduced API calls
+### T-API-001: API 호출 효율성
+- 기억 기반 맥락 제공으로 인한 재질문 감소율 측정
+- 재질문 필요성 78.2% 감소 확인
+- API 호출 횟수 감소로 비용 절감 효과
 
-## ?뱤 Memory Block Structure
+## 📊 메모리 블록 구조
 
 ```json
 {
   "block_index": 143,
   "timestamp": "2025-05-08T01:02:33",
-  "context": "I started a new project and it's really exciting",
-  "keywords": ["project", "start", "exciting"],
-  "tags": ["positive", "beginning", "motivated"],
+  "context": "새로운 프로젝트를 시작했고 정말 흥미로워요",
+  "keywords": ["프로젝트", "시작", "흥미로운"],
+  "tags": ["긍정적", "시작", "동기부여"],
   "embedding": [0.131, 0.847, ...],
   "importance": 0.91,
   "hash": "...",
@@ -189,50 +174,49 @@ Greeum conducts performance tests in the following areas:
 }
 ```
 
-## ?뵥 Supported Languages
+## 🔤 지원 언어
 
-Greeum supports time expression recognition in the following languages:
-- ?눖?눟 Korean: Native support for Korean time expressions (?댁젣, 吏?쒖＜, 3???? etc.)
-- ?눣?눡 English: Full support for English time formats (yesterday, 3 days ago, etc.)
-- ?뙋 Auto-detection: Automatically detects the language and processes accordingly
+Greeum은 다음 언어의 시간 표현 인식을 지원합니다:
+- 🇰🇷 한국어: 한국어 시간 표현 기본 지원 (어제, 지난주, 3일 전 등)
+- 🇺🇸 영어: 영어 시간 형식 완전 지원 (yesterday, 3 days ago 등)
+- 🌐 자동 감지: 언어를 자동으로 감지하고 적절히 처리
 
-## ?뵇 Temporal Reasoning Examples
+## 🔍 시간적 추론 예시
 
 ```python
-# Korean
-result = evaluate_temporal_query("3???꾩뿉 萸??덉뼱?", language="ko")
-# Returns: {detected: True, language: "ko", best_ref: {term: "3????}}
+# 한국어
+result = evaluate_temporal_query("3일 전에 뭐 했어?", language="ko")
+# 반환값: {detected: True, language: "ko", best_ref: {term: "3일 전"}}
 
-# English
+# 영어
 result = evaluate_temporal_query("What did I do 3 days ago?", language="en")
-# Returns: {detected: True, language: "en", best_ref: {term: "3 days ago"}}
+# 반환값: {detected: True, language: "en", best_ref: {term: "3 days ago"}}
 
-# Auto-detection
+# 자동 감지
 result = evaluate_temporal_query("What happened yesterday?")
-# Returns: {detected: True, language: "en", best_ref: {term: "yesterday"}}
+# 반환값: {detected: True, language: "en", best_ref: {term: "yesterday"}}
 ```
 
-## ?뵩 Project Extensions
+## 🔧 프로젝트 확장 계획
 
-- **Enhanced Multilingual Support**: Expanding to Japanese, Chinese, Spanish and more languages
-- **Embedding Improvements**: Integration with real embedding models (e.g., sentence-transformers)
-- **Keyword Extraction Enhancement**: Implementation of language-specific keyword extraction
-- **Cloud Integration**: Addition of database backends (SQLite, MongoDB, etc.)
-- **Distributed Processing**: Implementation of distributed processing for large-scale memory management
-- **Tool Integrations**: See [GreeumMCP](https://github.com/DryRainEnt/GreeumMCP) for Model Control Protocol support
+- **다국어 지원 강화**: 일본어, 중국어, 스페인어 등 추가 언어 지원
+- **임베딩 개선**: 실제 임베딩 모델 통합 (예: sentence-transformers)
+- **키워드 추출 향상**: 언어별 키워드 추출 구현
+- **클라우드 통합**: 데이터베이스 백엔드 추가 (SQLite, MongoDB 등)
+- **분산 처리**: 대규모 메모리 관리를 위한 분산 처리 구현
 
-## ?뙋 Website
+## 🌐 웹사이트
 
-Visit our website: [greeum.app](https://greeum.app)
+웹사이트 방문: [greeum.app](https://greeum.app)
 
-## ?뱞 License
+## 📄 라이선스
 
 MIT License
 
-## ?뫁 Contributing
+## 👥 기여
 
-We welcome all contributions including bug reports, feature suggestions, and pull requests!
+버그 보고, 기능 제안, 풀 리퀘스트 등 모든 기여를 환영합니다!
 
-## ?벑 Contact
+## 📱 연락처
 
-Email: playtart@play-t.art 
+이메일: playtart@play-t.art 
