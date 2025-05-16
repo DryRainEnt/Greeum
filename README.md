@@ -1,14 +1,14 @@
-# 🧠 Greeum v0.4.1
+#  Greeum v0.5.0
 
-[![KR](https://img.shields.io/badge/README-한국어-blue.svg)](docs/i18n/README_KR.md)
+[![KR](https://img.shields.io/badge/README-?쒓뎅??blue.svg)](docs/i18n/README_KR.md)
 [![EN](https://img.shields.io/badge/README-English-blue.svg)](README.md)
-[![CN](https://img.shields.io/badge/README-中文-blue.svg)](docs/i18n/README_CN.md)
-[![JP](https://img.shields.io/badge/README-日本語-blue.svg)](docs/i18n/README_JP.md)
-[![ES](https://img.shields.io/badge/README-Español-blue.svg)](docs/i18n/README_ES.md)
+[![CN](https://img.shields.io/badge/README-訝?뻼-blue.svg)](docs/i18n/README_CN.md)
+[![JP](https://img.shields.io/badge/README-?ζ쑍沃?blue.svg)](docs/i18n/README_JP.md)
+[![ES](https://img.shields.io/badge/README-Espa챰ol-blue.svg)](docs/i18n/README_ES.md)
 
 An LLM-Independent Memory System with Multilingual Support
 
-## 📌 Overview
+## ?뱦 Overview
 
 **Greeum** (pronounced as "gree-um") is a **universal memory module** that can be attached to any LLM model, designed to:
 - Track user's long-term utterances, goals, emotions, and intentions
@@ -16,9 +16,9 @@ An LLM-Independent Memory System with Multilingual Support
 - Process temporal reasoning in multiple languages
 - Function as an "AI with memory"
 
-The name "Greeum" is inspired by the Korean word "그리움" which evokes a sense of longing and remembrance - perfectly capturing the essence of a memory system.
+The name "Greeum" is inspired by the Korean word "洹몃━?" which evokes a sense of longing and remembrance - perfectly capturing the essence of a memory system.
 
-## 🔑 Key Features
+## ?뵎 Key Features
 
 - **Long-Term Memory Blocks**: Blockchain-like structure for immutable memory storage
 - **Short-Term Memory Management**: TTL (Time-To-Live) structure for fluid temporary memories
@@ -29,7 +29,7 @@ The name "Greeum" is inspired by the Korean word "그리움" which evokes a sens
 - **Multilingual Support**: Automatic language detection and processing for Korean, English, and more
 - **Model Control Protocol**: For MCP support, please check out [GreeumMCP](https://github.com/DryRainEnt/GreeumMCP) - a separate package that enables Greeum to connect with Cursor, Unity, Discord and other tools
 
-## ⚙️ Installation
+## ?숋툘 Installation
 
 1. Clone the repository
    ```bash
@@ -39,17 +39,17 @@ The name "Greeum" is inspired by the Korean word "그리움" which evokes a sens
 
 2. Install dependencies
    ```bash
-   # 기본 설치
+   # 湲곕낯 ?ㅼ튂
    pip install -r requirements.txt
    
-   # PyPI에서 설치
+   # PyPI?먯꽌 ?ㅼ튂
    pip install greeum
    
-   # 모든 기능 포함 설치
+   # 紐⑤뱺 湲곕뒫 ?ы븿 ?ㅼ튂
    pip install greeum[all]
    ```
 
-## 🧪 Usage
+## ?㎦ Usage
 
 ### CLI Interface
 
@@ -129,23 +129,23 @@ prompt = prompt_wrapper.compose_prompt(user_question)
 # llm_response = call_your_llm(prompt)
 ```
 
-## 🧱 Architecture
+## ?㎟ Architecture
 
 ```
 greeum/
-├── greeum/                # Core library
-│   ├── block_manager.py    # Long-term memory management
-│   ├── stm_manager.py      # Short-term memory management
-│   ├── cache_manager.py    # Waypoint cache
-│   ├── prompt_wrapper.py   # Prompt composition
-│   ├── text_utils.py       # Text processing utilities
-│   ├── temporal_reasoner.py # Time-based reasoning 
-│   ├── embedding_models.py  # Embedding model integration
-├── api/                   # REST API interface
-├── cli/                   # Command-line tools
-├── memory_engine/         # Original memory engine implementation
-├── data/                  # Data storage directory
-├── tests/                 # Test suite
+?쒋?? greeum/                # Core library
+??  ?쒋?? block_manager.py    # Long-term memory management
+??  ?쒋?? stm_manager.py      # Short-term memory management
+??  ?쒋?? cache_manager.py    # Waypoint cache
+??  ?쒋?? prompt_wrapper.py   # Prompt composition
+??  ?쒋?? text_utils.py       # Text processing utilities
+??  ?쒋?? temporal_reasoner.py # Time-based reasoning 
+??  ?쒋?? embedding_models.py  # Embedding model integration
+?쒋?? api/                   # REST API interface
+?쒋?? cli/                   # Command-line tools
+?쒋?? memory_engine/         # Original memory engine implementation
+?쒋?? data/                  # Data storage directory
+?쒋?? tests/                 # Test suite
 ```
 
 ## Branch Management
@@ -154,7 +154,7 @@ greeum/
 - **dev**: Core feature development branch (merged to main after testing)
 - **test-collect**: Performance metrics and A/B test data collection branch
 
-## 📊 Performance Tests
+## ?뱤 Performance Tests
 
 Greeum conducts performance tests in the following areas:
 
@@ -173,7 +173,7 @@ Greeum conducts performance tests in the following areas:
 - Confirmed 78.2% reduction in need for follow-up questions
 - Cost savings from reduced API calls
 
-## 📊 Memory Block Structure
+## ?뱤 Memory Block Structure
 
 ```json
 {
@@ -189,19 +189,19 @@ Greeum conducts performance tests in the following areas:
 }
 ```
 
-## 🔤 Supported Languages
+## ?뵥 Supported Languages
 
 Greeum supports time expression recognition in the following languages:
-- 🇰🇷 Korean: Native support for Korean time expressions (어제, 지난주, 3일 전, etc.)
-- 🇺🇸 English: Full support for English time formats (yesterday, 3 days ago, etc.)
-- 🌐 Auto-detection: Automatically detects the language and processes accordingly
+- ?눖?눟 Korean: Native support for Korean time expressions (?댁젣, 吏?쒖＜, 3???? etc.)
+- ?눣?눡 English: Full support for English time formats (yesterday, 3 days ago, etc.)
+- ?뙋 Auto-detection: Automatically detects the language and processes accordingly
 
-## 🔍 Temporal Reasoning Examples
+## ?뵇 Temporal Reasoning Examples
 
 ```python
 # Korean
-result = evaluate_temporal_query("3일 전에 뭐 했어?", language="ko")
-# Returns: {detected: True, language: "ko", best_ref: {term: "3일 전"}}
+result = evaluate_temporal_query("3???꾩뿉 萸??덉뼱?", language="ko")
+# Returns: {detected: True, language: "ko", best_ref: {term: "3????}}
 
 # English
 result = evaluate_temporal_query("What did I do 3 days ago?", language="en")
@@ -212,7 +212,7 @@ result = evaluate_temporal_query("What happened yesterday?")
 # Returns: {detected: True, language: "en", best_ref: {term: "yesterday"}}
 ```
 
-## 🔧 Project Extensions
+## ?뵩 Project Extensions
 
 - **Enhanced Multilingual Support**: Expanding to Japanese, Chinese, Spanish and more languages
 - **Embedding Improvements**: Integration with real embedding models (e.g., sentence-transformers)
@@ -221,18 +221,18 @@ result = evaluate_temporal_query("What happened yesterday?")
 - **Distributed Processing**: Implementation of distributed processing for large-scale memory management
 - **Tool Integrations**: See [GreeumMCP](https://github.com/DryRainEnt/GreeumMCP) for Model Control Protocol support
 
-## 🌐 Website
+## ?뙋 Website
 
 Visit our website: [greeum.app](https://greeum.app)
 
-## 📄 License
+## ?뱞 License
 
 MIT License
 
-## 👥 Contributing
+## ?뫁 Contributing
 
 We welcome all contributions including bug reports, feature suggestions, and pull requests!
 
-## 📱 Contact
+## ?벑 Contact
 
 Email: playtart@play-t.art 
