@@ -1,4 +1,4 @@
-# Greeum API 레퍼런스
+﻿# Greeum API 레퍼런스
 
 이 문서는 Greeum의 모든 주요 API를 설명합니다. Greeum의 각 클래스와 기능을 활용하여 고급 기억 시스템을 구축할 수 있습니다.
 
