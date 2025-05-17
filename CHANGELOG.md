@@ -1,4 +1,19 @@
-﻿# Changelog
+﻿# 변경 내역 (Changelog)
+
+## v0.5.1 (2025-05-18)
+
+### 개선 사항
+
+- numpy 데이터 타입을 Python 기본 타입으로 변환하는 유틸리티 함수 `convert_numpy_types` 추가
+- API 클라이언트에 `proxies` 및 `timeout` 옵션 지원 추가
+- OpenAI 임베딩 모델 클래스를 최신 API 스펙(OpenAI v1.0.0+)에 맞게 업데이트
+- 다양한 프록시 환경에서의 호환성 개선
+
+### 버그 수정
+
+- JSON 직렬화 시 numpy 타입으로 인한 오류 해결
+
+# Changelog
 
 모든 중요한 변경 사항은 이 파일에 기록됩니다.
 

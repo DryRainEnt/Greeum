@@ -5,6 +5,33 @@ from collections import Counter
 import json
 from datetime import datetime
 
+# numpy 타입을 Python 기본 타입으로 변환하는 유틸리티 함수 추가
+def convert_numpy_types(obj: Any) -> Any:
+    """
+    numpy 데이터 타입을 Python 기본 타입으로 변환
+    
+    Args:
+        obj: 변환할 객체
+        
+    Returns:
+        변환된 객체
+    """
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(convert_numpy_types(item) for item in obj)
+    return obj
+
 # 기본 감정 태그 사전
 EMOTION_KEYWORDS = {
     "긍정적": ["좋다", "행복", "기쁘", "즐겁", "만족", "감사", "좋은", "성공", "감동"],

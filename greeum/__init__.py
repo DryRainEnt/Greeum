@@ -1,11 +1,11 @@
 """
-Greeum - LLM-Independent Memory System with Multilingual Support
+Greeum - 다국어 지원 LLM 독립적인 기억 관리 시스템
 
 This package contains independent modules to provide a human-like 
 memory system for Large Language Models.
 """
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 
 # Core components imports
 try:
@@ -59,14 +59,20 @@ except ImportError:
     pass
 
 try:
-    from .text_utils import process_user_input, extract_keywords, extract_tags, compute_text_importance
+    from .text_utils import process_user_input, extract_keywords_from_text, extract_tags_from_text, compute_text_importance, convert_numpy_types
 except ImportError:
     pass
 
 # 편의를 위한 별명
 process_text = process_user_input
 
+# numpy 타입 변환 유틸리티를 최상위로 노출
+from .text_utils import convert_numpy_types
+
+from .client import MemoryClient, SimplifiedMemoryClient
+
 __all__ = [
+    "__version__",
     # Core components
     "BlockManager",
     "STMManager",
@@ -96,4 +102,12 @@ __all__ = [
     
     # Knowledge graph
     "KnowledgeGraphManager",
+
+    "process_user_input",
+    "extract_keywords_from_text",
+    "extract_tags_from_text",
+    "compute_text_importance",
+    "MemoryClient",
+    "SimplifiedMemoryClient",
+    "convert_numpy_types"
 ] 

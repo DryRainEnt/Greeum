@@ -11,18 +11,22 @@ from typing import Dict, List, Any, Optional, Union
 class MemoryClient:
     """Greeum API 클라이언트"""
     
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = "http://localhost:8000", proxies: Optional[Dict[str, str]] = None, timeout: int = 30):
         """
         API 클라이언트 초기화
         
         Args:
             base_url: API 서버 기본 URL
+            proxies: 프록시 서버 설정 (예: {"http": "http://proxy:8080", "https": "https://proxy:8080"})
+            timeout: 요청 타임아웃 (초)
         """
         self.base_url = base_url.rstrip("/")
         self.headers = {
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
+        self.proxies = proxies
+        self.timeout = timeout
     
     def get_api_info(self) -> Dict[str, Any]:
         """
@@ -31,7 +35,12 @@ class MemoryClient:
         Returns:
             API 정보
         """
-        response = requests.get(f"{self.base_url}/", headers=self.headers)
+        response = requests.get(
+            f"{self.base_url}/", 
+            headers=self.headers,
+            proxies=self.proxies,
+            timeout=self.timeout
+        )
         response.raise_for_status()
         return response.json()
     
@@ -61,7 +70,9 @@ class MemoryClient:
         response = requests.post(
             f"{self.base_url}/memory/",
             headers=self.headers,
-            json=data
+            json=data,
+            proxies=self.proxies,
+            timeout=self.timeout
         )
         response.raise_for_status()
         return response.json()
@@ -78,7 +89,9 @@ class MemoryClient:
         """
         response = requests.get(
             f"{self.base_url}/memory/{block_index}",
-            headers=self.headers
+            headers=self.headers,
+            proxies=self.proxies,
+            timeout=self.timeout
         )
         response.raise_for_status()
         return response.json()
@@ -102,7 +115,9 @@ class MemoryClient:
         response = requests.get(
             f"{self.base_url}/memory/",
             headers=self.headers,
-            params=params
+            params=params,
+            proxies=self.proxies,
+            timeout=self.timeout
         )
         response.raise_for_status()
         return response.json()
@@ -128,7 +143,9 @@ class MemoryClient:
         response = requests.post(
             f"{self.base_url}/search/",
             headers=self.headers,
-            json=data
+            json=data,
+            proxies=self.proxies,
+            timeout=self.timeout
         )
         response.raise_for_status()
         return response.json()
@@ -154,7 +171,9 @@ class MemoryClient:
         response = requests.post(
             f"{self.base_url}/evolution/revisions",
             headers=self.headers,
-            json=data
+            json=data,
+            proxies=self.proxies,
+            timeout=self.timeout
         )
         response.raise_for_status()
         return response.json()
@@ -171,7 +190,9 @@ class MemoryClient:
         """
         response = requests.get(
             f"{self.base_url}/evolution/revisions/{block_index}",
-            headers=self.headers
+            headers=self.headers,
+            proxies=self.proxies,
+            timeout=self.timeout
         )
         response.raise_for_status()
         return response.json()
@@ -199,7 +220,9 @@ class MemoryClient:
         response = requests.get(
             f"{self.base_url}/knowledge/entities",
             headers=self.headers,
-            params=params
+            params=params,
+            proxies=self.proxies,
+            timeout=self.timeout
         )
         response.raise_for_status()
         return response.json()
@@ -225,7 +248,9 @@ class MemoryClient:
         response = requests.post(
             f"{self.base_url}/knowledge/entities",
             headers=self.headers,
-            json=data
+            json=data,
+            proxies=self.proxies,
+            timeout=self.timeout
         )
         response.raise_for_status()
         return response.json()
@@ -242,7 +267,9 @@ class MemoryClient:
         """
         response = requests.get(
             f"{self.base_url}/knowledge/entities/{entity_id}",
-            headers=self.headers
+            headers=self.headers,
+            proxies=self.proxies,
+            timeout=self.timeout
         )
         response.raise_for_status()
         return response.json()
@@ -254,14 +281,16 @@ class SimplifiedMemoryClient:
     (외부 LLM 통합에 사용하기 용이한 간결한 인터페이스)
     """
     
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = "http://localhost:8000", proxies: Optional[Dict[str, str]] = None, timeout: int = 30):
         """
         간소화된 클라이언트 초기화
         
         Args:
             base_url: API 서버 기본 URL
+            proxies: 프록시 서버 설정 (예: {"http": "http://proxy:8080", "https": "https://proxy:8080"})
+            timeout: 요청 타임아웃 (초)
         """
-        self.client = MemoryClient(base_url)
+        self.client = MemoryClient(base_url, proxies=proxies, timeout=timeout)
     
     def add(self, content: str) -> Dict[str, Any]:
         """

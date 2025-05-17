@@ -163,21 +163,29 @@ class SentenceTransformerEmbedding(EmbeddingModel):
 class OpenAIEmbedding(EmbeddingModel):
     """OpenAI API 기반 임베딩 모델"""
     
-    def __init__(self, api_key: str = None, model: str = "text-embedding-3-small"):
+    def __init__(self, api_key: str = None, model: str = "text-embedding-3-small", proxies: Optional[Dict[str, str]] = None):
         """
         OpenAI 임베딩 모델 초기화
         
         Args:
             api_key: OpenAI API 키 (없으면 환경 변수에서 가져옴)
             model: 사용할 임베딩 모델
+            proxies: 프록시 서버 설정 (예: {"http": "http://proxy:8080", "https": "https://proxy:8080"})
         """
         try:
             import openai
-            self.openai = openai
+            from openai import OpenAI
             
+            # 클라이언트 초기화
+            client_kwargs = {}
             if api_key:
-                openai.api_key = api_key
-            
+                client_kwargs["api_key"] = api_key
+            if proxies:
+                client_kwargs["http_client"] = openai.http_client.HttpClient(
+                    proxies=proxies
+                )
+                
+            self.client = OpenAI(**client_kwargs)
             self.model = model
             self._dimension_map = {
                 "text-embedding-3-small": 1536,
@@ -186,13 +194,18 @@ class OpenAIEmbedding(EmbeddingModel):
             }
             self._dimension = self._dimension_map.get(model, 1536)
         except ImportError:
-            raise ImportError("OpenAI를 설치하세요: pip install openai")
+            raise ImportError("OpenAI를 설치하세요: pip install openai>=1.0.0")
         
     def encode(self, text: str) -> List[float]:
         """텍스트 인코딩"""
         try:
-            response = self.openai.Embedding.create(input=text, model=self.model)
-            return response["data"][0]["embedding"]
+            # 최신 OpenAI API 사용
+            response = self.client.embeddings.create(
+                input=text,
+                model=self.model
+            )
+            # 최신 API 응답 구조에 맞게 처리
+            return response.data[0].embedding
         except Exception as e:
             print(f"OpenAI 임베딩 오류: {e}")
             # 오류 시 빈 벡터 반환
@@ -201,8 +214,13 @@ class OpenAIEmbedding(EmbeddingModel):
     def batch_encode(self, texts: List[str]) -> List[List[float]]:
         """텍스트 배치 인코딩"""
         try:
-            response = self.openai.Embedding.create(input=texts, model=self.model)
-            return [item["embedding"] for item in response["data"]]
+            # 최신 OpenAI API 사용
+            response = self.client.embeddings.create(
+                input=texts,
+                model=self.model
+            )
+            # 최신 API 응답 구조에 맞게 처리
+            return [item.embedding for item in response.data]
         except Exception as e:
             print(f"OpenAI 임베딩 오류: {e}")
             # 오류 시 빈 벡터 반환
