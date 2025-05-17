@@ -1,8 +1,13 @@
 # 🧠 Greeum v0.5.0
 
 <p align="center">
-  <a href="README_KR.md">🇰🇷 한국어</a> |
-  <a href="README_EN.md">🇺🇸 English</a>
+  <a href="../../README.md">🇰🇷 한국어</a> |
+  <a href="README_EN.md">🇺🇸 English</a> |
+  <a href="README_ZH.md">🇨🇳 中文</a> |
+  <a href="README_JP.md">🇯🇵 日本語</a> |
+  <a href="README_ES.md">🇪🇸 Español</a> |
+  <a href="README_DE.md">🇩🇪 Deutsch</a> |
+  <a href="README_FR.md">🇫🇷 Français</a>
 </p>
 
 다국어 지원 LLM 독립적인 기억 관리 시스템

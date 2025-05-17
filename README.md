@@ -2,7 +2,12 @@
 
 <p align="center">
   <a href="README.md">🇰🇷 한국어</a> |
-  <a href="docs/i18n/README_EN.md">🇺🇸 English</a>
+  <a href="docs/i18n/README_EN.md">🇺🇸 English</a> |
+  <a href="docs/i18n/README_ZH.md">🇨🇳 中文</a> |
+  <a href="docs/i18n/README_JP.md">🇯🇵 日本語</a> |
+  <a href="docs/i18n/README_ES.md">🇪🇸 Español</a> |
+  <a href="docs/i18n/README_DE.md">🇩🇪 Deutsch</a> |
+  <a href="docs/i18n/README_FR.md">🇫🇷 Français</a>
 </p>
 
 다국어 지원 LLM 독립적인 기억 관리 시스템
