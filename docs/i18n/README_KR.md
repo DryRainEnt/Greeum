@@ -1,8 +1,8 @@
-﻿# 🧠 Greeum v0.5.0
+# 🧠 Greeum v0.5.0
 
 <p align="center">
-  <a href="README.md">🇰🇷 한국어</a> |
-  <a href="docs/i18n/README_EN.md">🇺🇸 English</a>
+  <a href="README_KR.md">🇰🇷 한국어</a> |
+  <a href="README_EN.md">🇺🇸 English</a>
 </p>
 
 다국어 지원 LLM 독립적인 기억 관리 시스템
@@ -227,4 +227,3 @@ MIT License
 ## 📱 연락처
 
 이메일: playtart@play-t.art 
-
