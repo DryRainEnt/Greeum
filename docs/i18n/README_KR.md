@@ -20,6 +20,8 @@
 - 다국어 환경에서의 시간 표현 인식 및 처리
 - "기억을 가진 AI"로서의 기능
 
+Greeum은 RAG(Retrieval-Augmented Generation) 아키텍처에 기반한 LLM 독립적 메모리 시스템입니다. 정보 저장 및 검색(block_manager.py), 관련 기억 관리(cache_manager.py), 프롬프트 증강(prompt_wrapper.py) 등 RAG의 핵심 구성 요소를 구현하여 더 정확하고 맥락에 맞는 응답을 생성합니다.
+
 이름 "Greeum"은 한국어 "그리움"에서 영감을 받았으며, 기억 시스템의 본질을 완벽하게 담고 있습니다.
 
 ## 🔑 주요 기능

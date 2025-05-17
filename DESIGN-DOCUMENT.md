@@ -1,4 +1,4 @@
-# 🧠 Greeum v0.2 – LLM 독립 기억 시스템 통합 설계서
+﻿# 🧠 Greeum v0.2 – LLM 독립 기억 시스템 통합 설계서
 
 작성일: 2025-05-15 
 버전: v0.2  
@@ -206,3 +206,4 @@ memory-block-engine/
 
 _작성자: 티오  
 MemoryBlockEngine 기술 총괄 / LAIOS Memory Infrastructure Lead_
+

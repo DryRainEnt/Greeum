@@ -14,6 +14,8 @@ Sistema de Gestión de Memoria Independiente de LLM Multilingüe
 
 ## 📌 Descripción General
 
+Greeum es un sistema de memoria independiente de LLM basado en la arquitectura RAG (Generación Aumentada por Recuperación, Retrieval-Augmented Generation). Implementa componentes clave de RAG, incluyendo almacenamiento y recuperación de información (block_manager.py), gestión de memorias relacionadas (cache_manager.py) y aumento de prompts (prompt_wrapper.py) para generar respuestas más precisas y contextualmente relevantes.
+
 **Greeum** (pronunciado: gri-eum) es un **módulo de memoria universal** que puede conectarse a cualquier LLM (Modelo de Lenguaje Grande) y proporciona las siguientes características:
 - Seguimiento a largo plazo de expresiones, objetivos, emociones e intenciones del usuario
 - Recuperación de recuerdos relacionados con el contexto actual

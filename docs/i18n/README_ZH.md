@@ -14,6 +14,8 @@
 
 ## 📌 概述
 
+Greeum 是基于 RAG（检索增强生成，Retrieval-Augmented Generation）架构的 LLM 独立记忆系统。它实现了 RAG 的核心组件，包括信息存储和检索（block_manager.py）、相关记忆管理（cache_manager.py）和提示增强（prompt_wrapper.py），以生成更准确、更符合上下文的响应。
+
 **Greeum**（发音：gri-eum）是一个可以连接到任何 LLM（大型语言模型）的**通用记忆模块**，提供以下功能：
 - 长期跟踪用户话语、目标、情绪和意图
 - 回忆与当前上下文相关的记忆

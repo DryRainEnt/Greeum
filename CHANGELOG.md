@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 모든 중요한 변경 사항은 이 파일에 기록됩니다.
 

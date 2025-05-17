@@ -17,6 +17,8 @@ Multilingual LLM-independent Memory Management System
 
 The name "Greeum" is inspired by the Korean word "그리움" (longing/reminiscence), perfectly capturing the essence of the memory system.
 
+Greeum is an LLM-independent memory system based on the RAG (Retrieval-Augmented Generation) architecture. It implements key components of RAG including information storage and retrieval (block_manager.py), related memory management (cache_manager.py), and prompt augmentation (prompt_wrapper.py) to generate more accurate and contextually relevant responses.
+
 ## 🔑 Key Features
 
 - **Blockchain-like Long-Term Memory (LTM)**: Block-based memory storage with immutability
