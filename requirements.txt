@@ -28,4 +28,7 @@ psycopg2-binary>=2.9.3; platform_system != "Windows"
 psycopg2>=2.9.3; platform_system == "Windows"
 
 # NLP 처리 (선택 사항)
-spacy>=3.5.0 
+spacy>=3.5.0
+
+# 테스트 도구
+responses>=0.23.0 

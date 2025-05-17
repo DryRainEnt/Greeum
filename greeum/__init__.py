@@ -76,7 +76,10 @@ except ImportError:
     pass
 
 try:
-    from .client import MemoryClient, SimplifiedMemoryClient
+    from .client import (
+        MemoryClient, SimplifiedMemoryClient, 
+        ClientError, ConnectionFailedError, RequestTimeoutError, APIError
+    )
 except ImportError:
     pass
 
@@ -112,12 +115,19 @@ __all__ = [
     # Knowledge graph
     "KnowledgeGraphManager",
 
+    # Text utilities
     "process_user_input",
     "process_text",
     "extract_keywords_from_text",
     "extract_tags_from_text",
     "compute_text_importance",
+    "convert_numpy_types",
+    
+    # Client and exceptions
     "MemoryClient",
     "SimplifiedMemoryClient",
-    "convert_numpy_types"
+    "ClientError",
+    "ConnectionFailedError",
+    "RequestTimeoutError",
+    "APIError"
 ] 
