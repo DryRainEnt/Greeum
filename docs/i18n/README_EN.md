@@ -1,8 +1,8 @@
-# 🧠 Greeum v0.5.0
+# 🧠 Greeum v0.5.2
 
 <p align="center">
   <a href="../../README.md">🇰🇷 한국어</a> |
-  <a href="README_EN.md">🇺🇸 English</a>
+  <a href="README_EN.md">🇺�� English</a>
 </p>
 
 Multilingual LLM-independent Memory Management System
