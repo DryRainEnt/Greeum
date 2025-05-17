@@ -5,7 +5,7 @@ This package contains independent modules to provide a human-like
 memory system for Large Language Models.
 """
 
-__version__ = "0.5.2"
+__version__ = "0.5.3"
 
 # Core components imports
 try:
