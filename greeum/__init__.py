@@ -5,9 +5,20 @@ This package contains independent modules to provide a human-like
 memory system for Large Language Models.
 """
 
-__version__ = "0.5.1"
+__version__ = "0.5.2"
 
 # Core components imports
+try:
+    from .text_utils import process_user_input, extract_keywords_from_text, extract_tags_from_text, compute_text_importance, convert_numpy_types
+except ImportError:
+    pass
+
+# 편의를 위한 별명
+try:
+    process_text = process_user_input
+except NameError:
+    pass
+
 try:
     from .database_manager import DatabaseManager
 except ImportError:
@@ -58,18 +69,16 @@ try:
 except ImportError:
     pass
 
+# numpy 타입 변환 유틸리티를 최상위로 노출
 try:
-    from .text_utils import process_user_input, extract_keywords_from_text, extract_tags_from_text, compute_text_importance, convert_numpy_types
+    from .text_utils import convert_numpy_types
 except ImportError:
     pass
 
-# 편의를 위한 별명
-process_text = process_user_input
-
-# numpy 타입 변환 유틸리티를 최상위로 노출
-from .text_utils import convert_numpy_types
-
-from .client import MemoryClient, SimplifiedMemoryClient
+try:
+    from .client import MemoryClient, SimplifiedMemoryClient
+except ImportError:
+    pass
 
 __all__ = [
     "__version__",
@@ -104,6 +113,7 @@ __all__ = [
     "KnowledgeGraphManager",
 
     "process_user_input",
+    "process_text",
     "extract_keywords_from_text",
     "extract_tags_from_text",
     "compute_text_importance",

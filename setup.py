@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="greeum",
-    version="0.5.1",
+    version="0.5.2",
     author="Greeum Team",
     author_email="playtart@play-t.art",
     description="LLM-Independent Memory System with Multilingual Support",
