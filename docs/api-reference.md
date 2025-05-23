@@ -380,7 +380,7 @@ greeum-mcp --data-dir ./data --port 8000
 또는 Python 모듈로 직접 실행:
 
 ```bash
-python -m memory_engine.mcp_service --data-dir ./data --port 8000
+python -m greeum.mcp_service --data-dir ./data --port 8000
 ```
 
 ---

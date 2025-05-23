@@ -17,7 +17,7 @@
 장기 기억을 블록체인 구조로 저장하고 관리합니다.
 
 ```python
-from memory_engine.block_manager import BlockManager
+from greeum.block_manager import BlockManager
 
 # 초기화
 block_manager = BlockManager(data_dir="./data")
@@ -64,7 +64,7 @@ is_valid = block_manager.verify_chain()
 TTL(Time-To-Live) 기반의 단기 기억을 관리합니다.
 
 ```python
-from memory_engine.stm_manager import STMManager
+from greeum.stm_manager import STMManager
 
 # 초기화
 stm_manager = STMManager(data_dir="./data")
@@ -106,8 +106,8 @@ cleaned_count = stm_manager.cleanup_expired()
 효율적인 기억 검색을 위한 웨이포인트 캐시를 관리합니다.
 
 ```python
-from memory_engine.block_manager import BlockManager
-from memory_engine.cache_manager import CacheManager
+from greeum.block_manager import BlockManager
+from greeum.cache_manager import CacheManager
 
 # 블록 관리자 초기화
 block_manager = BlockManager(data_dir="./data")
@@ -144,10 +144,10 @@ cache_manager.clear_cache()
 기억을 포함한 LLM 프롬프트를 자동 생성합니다.
 
 ```python
-from memory_engine.block_manager import BlockManager
-from memory_engine.cache_manager import CacheManager
-from memory_engine.stm_manager import STMManager
-from memory_engine.prompt_wrapper import PromptWrapper
+from greeum.block_manager import BlockManager
+from greeum.cache_manager import CacheManager
+from greeum.stm_manager import STMManager
+from greeum.prompt_wrapper import PromptWrapper
 
 # 관리자 초기화
 block_manager = BlockManager(data_dir="./data")
@@ -202,8 +202,8 @@ prompt = prompt_wrapper.compose_prompt("새 프로젝트는 어떻게 진행되�
 시간 표현 인식 및 처리를 담당합니다.
 
 ```python
-from memory_engine.block_manager import BlockManager
-from memory_engine.temporal_reasoner import TemporalReasoner
+from greeum.block_manager import BlockManager
+from greeum.temporal_reasoner import TemporalReasoner
 
 # 블록 관리자 초기화
 block_manager = BlockManager(data_dir="./data")
@@ -244,7 +244,7 @@ hybrid_results = temporal_reasoner.hybrid_search(
 텍스트 처리를 위한 유틸리티 함수들입니다.
 
 ```python
-from memory_engine.text_utils import (
+from greeum.text_utils import (
     process_user_input,
     extract_keywords,
     extract_tags,
@@ -286,12 +286,12 @@ importance = estimate_importance("중요도를 계산할 텍스트입니다.")  
 다음은 Greeum의 핵심 구성 요소를 통합하여 사용하는 예제입니다:
 
 ```python
-from memory_engine.block_manager import BlockManager
-from memory_engine.stm_manager import STMManager
-from memory_engine.cache_manager import CacheManager
-from memory_engine.prompt_wrapper import PromptWrapper
-from memory_engine.temporal_reasoner import TemporalReasoner
-from memory_engine.text_utils import process_user_input
+from greeum.block_manager import BlockManager
+from greeum.stm_manager import STMManager
+from greeum.cache_manager import CacheManager
+from greeum.prompt_wrapper import PromptWrapper
+from greeum.temporal_reasoner import TemporalReasoner
+from greeum.text_utils import process_user_input
 
 # 기본 경로 설정
 data_dir = "./data"

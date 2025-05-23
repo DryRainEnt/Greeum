@@ -106,7 +106,7 @@ Greeum v0.4.0부터는 MCP를 통해 다양한 외부 도구와 연동할 수 �
 greeum-mcp --port 8000 --data-dir ./data
 
 # 또는 Python 모듈로 직접 실행
-python -m memory_engine.mcp_service --port 8000 --data-dir ./data
+python -m greeum.mcp_service --port 8000 --data-dir ./data
 ```
 
 ### 환경 변수 설정 (선택사항)
@@ -146,7 +146,7 @@ Greeum이 올바르게 설치되었는지 확인하려면 다음 명령을 실�
 python -c "from greeum import BlockManager; print('Greeum 설치 성공!')"
 
 # MCP 설치 확인
-python -c "from memory_engine.mcp_client import MCPClient; print('MCP 설치 성공!')"
+python -c "from greeum.mcp_client import MCPClient; print('MCP 설치 성공!')"
 ```
 
 설치가 성공적이면 "Greeum 설치 성공!" 또는 "MCP 설치 성공!" 메시지가 표시됩니다.
