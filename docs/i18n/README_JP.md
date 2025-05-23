@@ -1,4 +1,4 @@
-# 🧠 Greeum v0.5.0
+# 🧠 Greeum v0.6.0
 
 <p align="center">
   <a href="../../README.md">🇰🇷 한국어</a> |
