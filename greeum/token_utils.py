@@ -13,4 +13,4 @@ def truncate_by_tokens(text: str, max_tokens: int) -> str:
     tokens = text.strip().split()
     if len(tokens) <= max_tokens:
         return text
-    return " ".join(tokens[:max_tokens]) + " …" 
+    return " ".join(tokens[:max_tokens]) + "…" 

@@ -463,8 +463,6 @@ class SimplifiedMemoryClient:
         """
         try:
             response = self.client.add_memory(content, importance=importance)
-            
-            # 응답 표준화
             return {
                 "success": True,
                 "block_index": response.get("block_index"),
@@ -472,8 +470,12 @@ class SimplifiedMemoryClient:
                 "timestamp": response.get("data", {}).get("timestamp")
             }
         except ClientError as e:
-            logger.error(f"SimplifiedMemoryClient: {e.__class__.__name__} 발생 - {str(e)}")
-            raise
+            logger.error("SimplifiedMemoryClient.add 실패: %s", e)
+            return {
+                "success": False,
+                "error": str(e),
+                "block_index": None
+            }
     
     def search(self, query: str, limit: int = 3) -> List[Dict[str, Any]]:
         """
@@ -589,8 +591,12 @@ class SimplifiedMemoryClient:
                 "success": True
             }
         except Exception as e:
-            logger.error(f"SimplifiedMemoryClient: {e.__class__.__name__} 발생 - {str(e)}")
-            raise
+            logger.error("SimplifiedMemoryClient.get_health 실패: %s", e)
+            return {
+                "status": "offline",
+                "success": False,
+                "error": str(e)
+            }
             # 이 경우 SimplifiedClientOperationError 클래스 정의 필요
             # raise SimplifiedClientOperationError(f"서버 상태 확인 실패: {str(e)}", original_exception=e)
             # 이 경우 SimplifiedClientOperationError 클래스 정의 필요 

@@ -24,7 +24,8 @@ class CacheManager:
         """
         self.data_path = data_path
         self.block_manager = block_manager or BlockManager()
-        self.stm_manager = stm_manager or STMManager()
+        # STMManager 는 DatabaseManager 의존성이 필요
+        self.stm_manager = stm_manager or STMManager(self.block_manager.db_manager)
         self._ensure_data_file()
         self.cache_data = self._load_cache()
         

@@ -167,7 +167,7 @@ class MemoryEvolutionManager:
             return None
             
         # 간단한 방법 - 최근 블록 1개만 가져와서 인덱스 확인
-        blocks = self.db_manager.get_blocks(limit=1)
+        blocks = self.db_manager.get_blocks(limit=1, sort_by='block_index', order='desc')
         if not blocks:
             return None
             

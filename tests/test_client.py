@@ -67,7 +67,7 @@ class TestMemoryClient(unittest.TestCase):
         
         # 검증
         self.assertEqual(result["status"], "success")
-        self.assertEqual(responses.calls.count, 2)  # 두 번 호출되었는지 확인
+        self.assertEqual(len(responses.calls), 2)  # 두 번 호출되었는지 확인
     
     @responses.activate
     def test_api_error(self):
