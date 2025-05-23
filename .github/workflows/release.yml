@@ -23,12 +23,20 @@ jobs:
       - name: Twine check
         run: |
           twine check dist/*
-      - name: Upload to TestPyPI
+      - name: Upload to TestPyPI (rc/prerelease)
+        if: contains(github.ref, 'rc')
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: |
+          twine upload --repository-url https://test.pypi.org/legacy/ --non-interactive dist/*
+      - name: Upload to PyPI (GA)
+        if: "!contains(github.ref, 'rc')"
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          twine upload --repository-url https://test.pypi.org/legacy/ --non-interactive dist/*
+          twine upload --non-interactive dist/*
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
