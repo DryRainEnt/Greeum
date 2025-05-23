@@ -9,8 +9,8 @@ import os
 parent_dir = str(Path(__file__).resolve().parent.parent)
 sys.path.append(parent_dir)
 
-from memory_engine import BlockManager, STMManager, CacheManager, PromptWrapper
-from memory_engine.text_utils import process_user_input, extract_keywords, generate_simple_embedding
+from greeum import BlockManager, STMManager, CacheManager, PromptWrapper
+from greeum.text_utils import process_user_input, extract_keywords, generate_simple_embedding
 
 app = Flask(__name__, 
            static_folder='static',

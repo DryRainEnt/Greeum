@@ -3,6 +3,7 @@ from datetime import datetime
 
 from .cache_manager import CacheManager
 from .stm_manager import STMManager
+from .token_utils import count_tokens
 
 class PromptWrapper:
     """프롬프트 조합기 클래스"""
@@ -77,61 +78,62 @@ class PromptWrapper:
         else:
             return f"[{timestamp}] {content}"
     
-    def compose_prompt(self, user_input: str, system_prompt: str = "") -> str:
+    def compose_prompt(self, user_input: str, system_prompt: str = "", *, token_budget: int | None = None) -> str:
         """
-        LLM에 전달할 프롬프트 생성
-        
+        LLM에 전달할 프롬프트 생성 (토큰 budget 기반 가변 길이)
         Args:
             user_input: 사용자 입력
-            system_prompt: 시스템 프롬프트 (기본 지시사항)
-            
-        Returns:
-            조합된 최종 프롬프트
+            system_prompt: 시스템 지침
+            token_budget: 최종 프롬프트 토큰 상한(미지정 시 무제한)
         """
-        # 캐시에서 웨이포인트 블록 가져오기
+        # 기존 로직 유지하되, token_budget 사용하여 메모리 블록 포함 개수 조절
         waypoints = self.cache_manager.get_waypoints()
-        waypoint_blocks = []
-        
+        # relevance 기준 정렬된 상태라고 가정
+        waypoint_blocks: List[Dict[str, Any]] = []
         for waypoint in waypoints:
             block_index = waypoint.get("block_index")
             if block_index is not None:
                 block = self.cache_manager.block_manager.get_block_by_index(block_index)
                 if block:
-                    # 관련성 점수 추가
                     block["relevance"] = waypoint.get("relevance", 0)
                     waypoint_blocks.append(block)
-        
-        # 단기 기억 가져오기
+        # 단기 기억 5개
         recent_memories = self.stm_manager.get_recent_memories(count=5)
-        
-        # 프롬프트 조합 시작
-        prompt_parts = []
-        
-        # 1. 시스템 프롬프트 추가
-        if system_prompt:
-            prompt_parts.append(system_prompt)
-        else:
-            # 기본 시스템 프롬프트
-            prompt_parts.append("""당신은 사용자와의 대화 내용과 기억을 가지고 있는 AI 어시스턴트입니다.
+        prompt_parts: List[str] = []
+        prompt_parts.append(system_prompt or """당신은 사용자와의 대화 내용과 기억을 가지고 있는 AI 어시스턴트입니다.
 아래에 제공된 기억과 대화 기록을 바탕으로 사용자의 질문에 자연스럽게 답변해주세요.
 기억은 '기억'으로 표시되어 있으며, 과거 대화는 시간과 함께 제공됩니다.""")
-        
-        # 2. 웨이포인트 블록 추가 (중요 장기 기억)
-        if waypoint_blocks:
-            prompt_parts.append("\n## 관련 기억:")
+        # Memory inclusion with budget
+        def append_and_check(text: str):
+            prompt_parts.append(text)
+        # 먼저 사용자 입력 추가 예정이므로 사용자 입력 토큰을 미리 계산
+        user_segment = f"\n## 현재 입력:\n{user_input}"
+        base_tokens = count_tokens("\n".join(prompt_parts)) + count_tokens(user_segment)
+        remaining = None if token_budget is None else max(token_budget - base_tokens, 0)
+        # 웨이포인트 블록 추가, 중요도/관련성 높은 순
+        if waypoint_blocks and (remaining is None or remaining > 0):
+            append_and_check("\n## 관련 기억:")
             for block in waypoint_blocks:
-                prompt_parts.append(self._format_memory_block(block))
-        
-        # 3. 단기 기억 (최근 대화) 추가
-        if recent_memories:
-            prompt_parts.append("\n## 최근 대화:")
+                formatted = self._format_memory_block(block)
+                tokens_needed = count_tokens(formatted)
+                if remaining is not None and tokens_needed > remaining:
+                    break
+                append_and_check(formatted)
+                if remaining is not None:
+                    remaining -= tokens_needed
+        # 단기 기억 추가
+        if recent_memories and (remaining is None or remaining > 0):
+            append_and_check("\n## 최근 대화:")
             for memory in recent_memories:
-                prompt_parts.append(self._format_stm_memory(memory))
-        
-        # 4. 현재 사용자 입력 추가
-        prompt_parts.append(f"\n## 현재 입력:\n{user_input}")
-        
-        # 최종 프롬프트 조합
+                mem_text = self._format_stm_memory(memory)
+                tokens_needed = count_tokens(mem_text)
+                if remaining is not None and tokens_needed > remaining:
+                    break
+                append_and_check(mem_text)
+                if remaining is not None:
+                    remaining -= tokens_needed
+        # 사용자 입력
+        append_and_check(user_segment)
         return "\n".join(prompt_parts)
     
     def compose_prompt_with_custom_blocks(self, 

@@ -5,11 +5,11 @@ This package contains independent modules to provide a human-like
 memory system for Large Language Models.
 """
 
-__version__ = "0.5.2"
+__version__ = "0.6.0rc1"
 
 # Core components imports
 try:
-    from .text_utils import process_user_input, extract_keywords_from_text, extract_tags_from_text, compute_text_importance, convert_numpy_types
+    from .text_utils import process_user_input, extract_keywords_from_text, extract_tags_from_text, compute_text_importance, convert_numpy_types, extract_keywords_advanced
 except ImportError:
     pass
 
@@ -83,6 +83,16 @@ try:
 except ImportError:
     pass
 
+try:
+    from .working_memory import STMWorkingSet
+except ImportError:
+    pass
+
+try:
+    from .search_engine import SearchEngine, BertReranker
+except ImportError:
+    pass
+
 __all__ = [
     "__version__",
     # Core components
@@ -129,5 +139,13 @@ __all__ = [
     "ClientError",
     "ConnectionFailedError",
     "RequestTimeoutError",
-    "APIError"
+    "APIError",
+
+    # Working memory
+    "STMWorkingSet",
+
+    # Search engine
+    "SearchEngine",
+    "BertReranker",
+    "extract_keywords_advanced"
 ] 

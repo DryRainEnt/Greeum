@@ -10,6 +10,7 @@ from flask_cors import CORS
 from flask_restx import Api, Resource, fields, reqparse
 from datetime import datetime
 import logging
+import sys
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -30,6 +31,23 @@ ns_knowledge = api.namespace('knowledge', description='지식 그래프 작업')
 # 전역 데이터베이스 관리자
 db_manager = None
 
+sys.path.append(parent_dir) # greeum 패키지를 찾기 위함
+
+# from memory_engine import DatabaseManager
+# from memory_engine.embedding_models import SimpleEmbeddingModel, register_embedding_model
+# from memory_engine.text_utils import process_user_input
+# from memory_engine import get_embedding
+# from memory_engine import TemporalReasoner
+# from memory_engine import MemoryEvolutionManager
+# from memory_engine import KnowledgeGraphManager
+
+from greeum import DatabaseManager # 수정
+from greeum.embedding_models import SimpleEmbeddingModel, register_embedding_model, get_embedding # 수정 (get_embedding 위치 변경)
+from greeum.text_utils import process_user_input # 수정
+from greeum.temporal_reasoner import TemporalReasoner # 수정
+from greeum import MemoryEvolutionManager # 수정 (greeum/__init__.py 에 노출 가정)
+from greeum import KnowledgeGraphManager # 수정 (greeum/__init__.py 에 노출 가정)
+
 def get_db():
     """데이터베이스 매니저 초기화 및 반환"""
     global db_manager
@@ -42,17 +60,16 @@ def get_db():
                 os.makedirs(data_dir)
                 
             # 데이터베이스 매니저 초기화
-            from memory_engine import DatabaseManager
-            db_manager = DatabaseManager(db_path)
+            # db_manager = DatabaseManager(db_path)
             
             # 임베딩 모델 초기화
-            try:
-                from memory_engine.embedding_models import SimpleEmbeddingModel, register_embedding_model
-                model = SimpleEmbeddingModel()
-                register_embedding_model("default", model, set_as_default=True)
-                logger.info("임베딩 모델 초기화 완료")
-            except ImportError:
-                logger.warning("임베딩 모델 초기화 실패")
+            # try:
+            #     from memory_engine.embedding_models import SimpleEmbeddingModel, register_embedding_model
+            #     model = SimpleEmbeddingModel()
+            #     register_embedding_model("default", model, set_as_default=True)
+            #     logger.info("임베딩 모델 초기화 완료")
+            # except ImportError:
+            #     logger.warning("임베딩 모델 초기화 실패")
             
             logger.info(f"데이터베이스 매니저 초기화 완료 ({db_path})")
         except Exception as e:
@@ -130,7 +147,7 @@ class MemoryList(Resource):
                 }), 400
             
             # 텍스트 처리
-            from memory_engine.text_utils import process_user_input
+            # from memory_engine.text_utils import process_user_input
             
             # 사용자 입력 처리
             result = process_user_input(data['context'])
@@ -255,7 +272,7 @@ class SearchMemory(Resource):
             if mode == 'embedding':
                 # 임베딩 검색
                 try:
-                    from memory_engine import get_embedding
+                    # from memory_engine import get_embedding
                     embedding = get_embedding(query)
                     blocks = db.search_blocks_by_embedding(embedding, top_k=limit)
                     search_info = {'type': 'embedding'}
@@ -272,7 +289,7 @@ class SearchMemory(Resource):
             elif mode == 'temporal':
                 # 시간적 검색
                 try:
-                    from memory_engine import TemporalReasoner
+                    # from memory_engine import TemporalReasoner
                     reasoner = TemporalReasoner(db)
                     result = reasoner.search_by_time_reference(query)
                     blocks = result.get('blocks', [])
@@ -289,7 +306,7 @@ class SearchMemory(Resource):
             elif mode == 'hybrid':
                 # 하이브리드 검색
                 try:
-                    from memory_engine import TemporalReasoner, get_embedding
+                    # from memory_engine import TemporalReasoner, get_embedding
                     reasoner = TemporalReasoner(db)
                     embedding = get_embedding(query)
                     keywords = query.split()
@@ -350,7 +367,7 @@ class MemoryRevision(Resource):
             db = get_db()
             
             try:
-                from memory_engine import MemoryEvolutionManager
+                # from memory_engine import MemoryEvolutionManager
                 evolution_manager = MemoryEvolutionManager(db)
                 
                 revision = evolution_manager.create_memory_revision(
@@ -392,7 +409,7 @@ class RevisionChain(Resource):
             db = get_db()
             
             try:
-                from memory_engine import MemoryEvolutionManager
+                # from memory_engine import MemoryEvolutionManager
                 evolution_manager = MemoryEvolutionManager(db)
                 
                 revisions = evolution_manager.get_revision_chain(block_index)
@@ -437,7 +454,7 @@ class Entities(Resource):
             db = get_db()
             
             try:
-                from memory_engine import KnowledgeGraphManager
+                # from memory_engine import KnowledgeGraphManager
                 kg_manager = KnowledgeGraphManager(db)
                 
                 entities = kg_manager.search_entities(
@@ -485,7 +502,7 @@ class Entities(Resource):
             db = get_db()
             
             try:
-                from memory_engine import KnowledgeGraphManager
+                # from memory_engine import KnowledgeGraphManager
                 kg_manager = KnowledgeGraphManager(db)
                 
                 entity_id = kg_manager.add_entity_to_graph(
@@ -529,7 +546,7 @@ class Entity(Resource):
             db = get_db()
             
             try:
-                from memory_engine import KnowledgeGraphManager
+                # from memory_engine import KnowledgeGraphManager
                 kg_manager = KnowledgeGraphManager(db)
                 
                 result = kg_manager.get_entity_relationships(entity_id)

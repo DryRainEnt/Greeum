@@ -235,3 +235,20 @@ MIT License
 
 이메일: playtart@play-t.art 
 
+## 🚀 v0.6.0 하이라이트 (Python 3.12 지원)
+
+| 항목 | 설명 |
+|------|------|
+| Python 호환성 | 3.10 / 3.11 / **3.12** 테스트 통과(Tox & CI) |
+| Working Memory | `STMWorkingSet` 로 활성 슬롯 관리 |
+| 검색 성능 | FAISS 벡터 인덱스 + BERT Cross-Encoder 재랭크 |
+| 프롬프트 | 토큰-Budget 기반 기억 삽입, KeyBERT 고급 키워드 |
+| Evolution | 블록 요약/병합, 상충 노트 API |
+
+빠른 설치 (Python 3.12 + 모든 확장 의존성)
+```bash
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install --upgrade pip
+pip install greeum[all]  # faiss + transformers + keybert + openai 지원
+```
+

@@ -4,6 +4,14 @@ import numpy as np
 from collections import Counter
 import json
 from datetime import datetime
+import logging
+try:
+    from keybert import KeyBERT  # type: ignore
+    _kw_model = KeyBERT(model="all-MiniLM-L6-v2")
+except Exception:
+    _kw_model = None
+
+logger = logging.getLogger(__name__)
 
 # numpy 타입을 Python 기본 타입으로 변환하는 유틸리티 함수 추가
 def convert_numpy_types(obj: Any) -> Any:
@@ -342,4 +350,16 @@ def simple_hash_embedding(text: str, dimension: int = 128) -> List[float]:
     if norm > 0:
         embedding = embedding / norm
         
-    return embedding.tolist() 
+    return embedding.tolist()
+
+def extract_keywords_advanced(text: str, max_keywords: int = 5) -> List[str]:
+    """KeyBERT 기반 고급 키워드 추출 (모델이 없으면 기본 extract_keywords fallback)"""
+    if _kw_model is None:
+        logger.debug("KeyBERT 모델을 찾을 수 없어 기본 키워드 추출로 대체")
+        return extract_keywords(text, max_keywords=max_keywords)
+    try:
+        keywords = _kw_model.extract_keywords(text, top_n=max_keywords, stop_words="korean")
+        return [kw for kw, _ in keywords]
+    except Exception as e:
+        logger.warning("KeyBERT 추출 실패: %s", e)
+        return extract_keywords(text, max_keywords=max_keywords) 

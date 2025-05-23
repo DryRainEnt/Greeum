@@ -11,6 +11,31 @@
 - **사용 편의성**: 기술적 복잡성 없이 강력한 기능 제공
 
 ## 📅 로드맵
+### 🚀 단기 스프린트 – v0.6.0 (2025-06 목표)
+
+| 범주 | 작업 항목 | 자동 검증 | 담당 |
+|------|-----------|-----------|------|
+| Core | `STMWorkingSet`(활성 메모리 슬롯) 구현 | pytest 단위 테스트 | Core Team |
+| Core | 블록 자동 요약·병합 모듈 `memory_evolution` 확장 | end-to-end 시나리오 테스트 | Core Team |
+| 검색 | 벡터 인덱스 `faiss` 서브엔진 + BERT Re-Ranker 통합 | recall/precision 벤치마크 ≥ +20% | Search TF |
+| 프롬프트 | 토큰-budget 기반 적응형 삽입 정책 | 프롬프트 길이 회수 통계 | Prompt TF |
+| NLP | KeyBERT 기반 키워드·태그 추출(다국어 spaCy 파이프) | multilingual f-score ≥ 0.75 | NLP TF |
+| DevOps | 네임스페이스 일관화(`memory_engine`→`greeum`) | 전체 pytest green | DevOps |
+| DevOps | GitHub Action: lint+pytest+coverage>85% | CI 성공 | DevOps |
+| Packaging | `pyproject.toml`로 마이그레이션, `greeum==0.6.0` 빌드 | build+twine dry-run | Release Mgr |
+| Release | GitHub Release Draft + PyPI 업로드 준비 | `twine check` 통과 | Release Mgr |
+
+#### 배포 프로세스
+1. `dev` 브랜치에서 모든 체크리스트 완료 → `main` 병합  
+2. GitHub Actions `release.yml` : 태그 `v0.6.0` 생성 시  
+   ① sdist/wheel 빌드 → `twine upload --repository testpypi`  
+   ② change-log 자동 추출 → Release 노트 생성  
+3. TestPyPI 설치 smoke-test 후 **PyPI 실배포**(`--non-interactive`)  
+
+> **성공지표** :  
+> • 검색 정확도 +20% / latency -30%  
+> • 프롬프트 토큰 평균 -25%  
+> • 커버리지 ≥ 85%, CI 100% pass
 
 ### Phase 1: 오픈소스 기반 구축 (2025 Q2-Q3)
 

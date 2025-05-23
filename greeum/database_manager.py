@@ -4,6 +4,9 @@ import json
 import numpy as np
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
+import logging
+
+logger = logging.getLogger(__name__)
 
 class DatabaseManager:
     """데이터베이스 연결 및 관리 클래스"""
@@ -21,6 +24,7 @@ class DatabaseManager:
         self._ensure_data_dir()
         self._setup_connection()
         self._create_schemas()
+        logger.info(f"DatabaseManager 초기화 완료: {self.connection_string} (type: {self.db_type})")
     
     def _ensure_data_dir(self):
         """데이터 디렉토리 존재 확인"""
@@ -132,6 +136,7 @@ class DatabaseManager:
             추가된 블록의 인덱스
         """
         cursor = self.conn.cursor()
+        logger.debug(f"새 블록 추가 시도: index={block_data.get('block_index')}")
         
         # 1. 블록 기본 정보 삽입
         cursor.execute('''
@@ -192,6 +197,7 @@ class DatabaseManager:
             ))
         
         self.conn.commit()
+        logger.info(f"블록 추가 완료: index={block_index}")
         return block_index
     
     def get_block(self, block_index: int) -> Optional[Dict[str, Any]]:
@@ -205,6 +211,7 @@ class DatabaseManager:
             블록 데이터 (없으면 None)
         """
         cursor = self.conn.cursor()
+        logger.debug(f"블록 조회 시도: index={block_index}")
         
         # 1. 기본 블록 데이터 조회
         cursor.execute('''
@@ -213,6 +220,7 @@ class DatabaseManager:
         
         row = cursor.fetchone()
         if not row:
+            logger.warning(f"블록 조회 실패: index={block_index} 찾을 수 없음")
             return None
             
         # dict로 변환
@@ -263,10 +271,12 @@ class DatabaseManager:
             block['embedding'] = embedding_array.tolist()
             block['embedding_model'] = embedding_model
         
+        logger.debug(f"블록 조회 성공: index={block_index}")
         return block
     
     def get_blocks(self, start_idx: Optional[int] = None, end_idx: Optional[int] = None,
-                  limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+                  limit: int = 100, offset: int = 0,
+                  sort_by: str = 'block_index', order: str = 'asc') -> List[Dict[str, Any]]:
         """
         블록 목록 조회
         
@@ -275,42 +285,64 @@ class DatabaseManager:
             end_idx: 종료 인덱스
             limit: 최대 반환 개수
             offset: 시작 오프셋
+            sort_by: 정렬 기준 필드 (예: 'block_index', 'timestamp', 'importance')
+            order: 정렬 순서 ('asc' 또는 'desc')
             
         Returns:
             블록 목록
         """
         cursor = self.conn.cursor()
         
-        query = "SELECT block_index FROM blocks"
-        params = []
-        
-        # 범위 조건 추가
-        if start_idx is not None or end_idx is not None:
+        # 유효한 정렬 필드 및 순서인지 확인 (SQL Injection 방지)
+        valid_sort_fields = ['block_index', 'timestamp', 'importance']
+        if sort_by not in valid_sort_fields:
+            sort_by = 'block_index' # 기본값
+        if order.lower() not in ['asc', 'desc']:
+            order = 'asc' # 기본값
+
+        if sort_by == 'importance':
+            # JOIN 없이 importance로 정렬된 block_index를 가져오려면 blocks 테이블에 직접 접근
+            query = f"SELECT block_index FROM blocks"
+            params_build = [] # 임시 파라미터 리스트
             conditions = []
             if start_idx is not None:
                 conditions.append("block_index >= ?")
-                params.append(start_idx)
+                params_build.append(start_idx)
             if end_idx is not None:
                 conditions.append("block_index <= ?")
-                params.append(end_idx)
-                
+                params_build.append(end_idx)
+            
             if conditions:
                 query += " WHERE " + " AND ".join(conditions)
+            
+            query += f" ORDER BY importance {order.upper()} LIMIT ? OFFSET ?"
+            params_build.extend([limit, offset])
+            params = params_build
+
+        else:
+            query = f"SELECT block_index FROM blocks"
+            params = [] # params 초기화 위치 변경
+            if start_idx is not None or end_idx is not None:
+                conditions = []
+                if start_idx is not None:
+                    conditions.append("block_index >= ?")
+                    params.append(start_idx)
+                if end_idx is not None:
+                    conditions.append("block_index <= ?")
+                    params.append(end_idx)
+                if conditions:
+                    query += " WHERE " + " AND ".join(conditions)
+            query += f" ORDER BY {sort_by} {order.upper()} LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
         
-        # 정렬 및 페이지네이션
-        query += " ORDER BY block_index LIMIT ? OFFSET ?"
-        params.extend([limit, offset])
-        
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
+        cursor.execute(query, tuple(params))
         
         blocks = []
-        for row in cursor.fetchall():
-            block_index = row[0]
+        block_indices = [row[0] for row in cursor.fetchall()]
+        for block_index in block_indices:
             block = self.get_block(block_index)
             if block:
                 blocks.append(block)
-        
         return blocks
     
     def search_blocks_by_keyword(self, keywords: List[str], limit: int = 100) -> List[Dict[str, Any]]:
@@ -573,7 +605,9 @@ class DatabaseManager:
         import json
         
         if not os.path.exists(block_file_path):
+            logger.warning(f"JSONL 마이그레이션 건너뜀: 파일 없음 - {block_file_path}")
             return 0
+        logger.info(f"JSONL 파일 마이그레이션 시작: {block_file_path}")
             
         migrated_count = 0
         with open(block_file_path, 'r', encoding='utf-8') as f:
@@ -589,9 +623,99 @@ class DatabaseManager:
                 except json.JSONDecodeError:
                     continue
                     
+        logger.info(f"JSONL 파일 마이그레이션 완료: {migrated_count}개 블록 이전됨")
         return migrated_count
     
     def close(self):
         """데이터베이스 연결 종료"""
         if self.conn:
-            self.conn.close() 
+            self.conn.close()
+            logger.info(f"데이터베이스 연결 종료: {self.connection_string}")
+
+    def get_short_term_memory_by_id(self, memory_id: str) -> Optional[Dict[str, Any]]:
+        """
+        ID로 단기 기억 조회
+
+        Args:
+            memory_id: 조회할 단기 기억의 ID
+
+        Returns:
+            단기 기억 데이터 (없으면 None)
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("""
+        SELECT id, timestamp, content, speaker, metadata 
+        FROM short_term_memories 
+        WHERE id = ?
+        """, (memory_id,))
+
+        row = cursor.fetchone()
+        if not row:
+            return None
+        
+        memory = dict(row)
+        if 'metadata' in memory and memory['metadata']:
+            try:
+                memory['metadata'] = json.loads(memory['metadata'])
+            except json.JSONDecodeError:
+                memory['metadata'] = {} # 파싱 실패 시 빈 객체
+        return memory
+
+    def get_last_block_info(self) -> Optional[Dict[str, Any]]:
+        """
+        가장 마지막으로 추가된 블록의 인덱스와 해시를 반환합니다.
+        블록이 없을 경우 None을 반환합니다.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("""
+        SELECT block_index, hash FROM blocks 
+        ORDER BY block_index DESC 
+        LIMIT 1
+        """)
+        row = cursor.fetchone()
+        if row:
+            return dict(row) # {'block_index': ..., 'hash': ...}
+        return None
+
+    def filter_blocks_by_importance(self, threshold: float, limit: int = 100, 
+                                   sort_by: str = 'importance', order: str = 'desc') -> List[Dict[str, Any]]:
+        """
+        중요도 기준으로 블록 필터링 및 정렬
+
+        Args:
+            threshold: 중요도 최소값
+            limit: 반환할 최대 블록 수
+            sort_by: 정렬 기준 필드
+            order: 정렬 순서
+
+        Returns:
+            필터링 및 정렬된 블록 목록
+        """
+        cursor = self.conn.cursor()
+
+        valid_sort_fields = ['block_index', 'timestamp', 'importance']
+        if sort_by not in valid_sort_fields:
+            sort_by = 'importance'
+        if order.lower() not in ['asc', 'desc']:
+            order = 'desc'
+
+        # importance 필드로 필터링하고, 지정된 기준으로 정렬하여 block_index 목록을 가져옴
+        query = f"""
+            SELECT block_index 
+            FROM blocks 
+            WHERE importance >= ? 
+            ORDER BY {sort_by} {order.upper()} 
+            LIMIT ?
+        """
+        params = (threshold, limit)
+        
+        cursor.execute(query, params)
+        block_indices = [row[0] for row in cursor.fetchall()]
+        
+        blocks = []
+        for block_index in block_indices:
+            block = self.get_block(block_index) # N+1 문제가 발생할 수 있음
+            if block:
+                blocks.append(block)
+        
+        return blocks 

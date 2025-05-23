@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Union
 import json
+from .text_utils import extract_keywords_advanced, calculate_importance, generate_simple_embedding
 
 class MemoryEvolutionManager:
     """기억 진화 및 재해석 관리 클래스"""
@@ -55,7 +56,7 @@ class MemoryEvolutionManager:
         
         # 키워드 및 태그 처리
         try:
-            from memory_engine.text_utils import process_user_input
+            from .text_utils import process_user_input
             processed = process_user_input(new_context)
         except ImportError:
             # 텍스트 처리 유틸리티가 없는 경우 간단한 처리
@@ -505,4 +506,38 @@ class MemoryEvolutionManager:
             return self.db_manager.get_block(block_index)
         except Exception as e:
             print(f"블록 추가 중 오류 발생: {e}")
-            return None 
+            return None
+    
+    def summarize_blocks(self, block_indices: List[int], summary_reason: str = "auto_summary") -> Optional[Dict[str, Any]]:
+        """여러 블록을 요약해 하나의 요약 블록을 생성한다 (간단 heuristic).
+        Args:
+            block_indices: 요약 대상 블록 ids
+            summary_reason: metadata reason
+        Returns: 새 요약 블록 dict
+        """
+        if not self.db_manager or not block_indices:
+            return None
+        # 컨텍스트 연결 후 앞 120자만 유지 (간단 요약)
+        contexts = []
+        for idx in block_indices:
+            b = self.db_manager.get_block(idx)
+            if b:
+                contexts.append(b.get("context", ""))
+        if not contexts:
+            return None
+        merged_context = " ".join(contexts)
+        summary_text = merged_context[:120] + ("…" if len(merged_context) > 120 else "")
+        # 키워드/태그 재추출
+        keywords = extract_keywords_advanced(summary_text, max_keywords=5)
+        tags = ["summary"]
+        embedding = generate_simple_embedding(summary_text)
+        importance = calculate_importance(summary_text)
+        return self.create_memory_revision(
+            original_block_index=block_indices[0],
+            new_context=summary_text,
+            reason=summary_reason,
+            keywords=keywords,
+            tags=tags,
+            embedding=embedding,
+            importance=importance,
+        ) 

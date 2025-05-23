@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "greeum"
+version = "0.6.0-dev"
+description = "Universal memory module for LLMs"
+authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+keywords = ["memory", "LLM", "RAG"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = []
+long_description_content_type = "text/markdown"
+
+[project.optional-dependencies]
+faiss = ["faiss-cpu>=1.7.4"]
+openai = ["openai>=1.0.0"]
+transformers = ["transformers>=4.40.0", "sentence-transformers>=2.2.0", "keybert>=0.7.0"]
+all = ["faiss-cpu>=1.7.4", "openai>=1.0.0", "transformers>=4.40.0", "sentence-transformers>=2.2.0", "keybert>=0.7.0"]
+
+[tool.setuptools.packages.find]
+include = ["greeum*"]
+
+[tool.setuptools.package-data]
+"greeum" = ["py.typed"] 

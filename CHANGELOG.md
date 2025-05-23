@@ -110,3 +110,27 @@
 - 장기 기억 블록 관리자
 - 단기 기억 관리자
 - 기본 검색 기능 
+
+## v0.6.0 (2025-06-??)
+
+### 주요 변경
+- Python 3.10 / 3.11 / 3.12 완전 호환 (tox & CI 매트릭스)
+- Working-Memory 계층 `STMWorkingSet` 도입
+- FAISS 벡터 인덱스 + BERT Cross-Encoder 재랭크 검색엔진
+- 토큰-Budget 프롬프트 생성, KeyBERT 고급 키워드 추출
+- MemoryEvolution 요약/병합 API 추가
+- GitHub Actions CI + Release(TestPyPI) 파이프라인 구축
+
+### API 안정성
+- `BlockManager.add_block`, `STMManager.add_memory` 시그니처 유지
+- 향후 변경 시 DeprecationWarning 예정
+
+### 패키징
+- PEP 621 `pyproject.toml` 기반 빌드
+- `py.typed` 포함 → 타입체크 지원
+- extras: `faiss`, `openai`, `transformers`, `all`
+
+### 기타
+- README/Dockerfile 업데이트
+- 테스트 커버리지 ≥ 85 %(pytest + tox)
+- 내부 벤치마크 스크립트 추가 (latency, CPU idle)

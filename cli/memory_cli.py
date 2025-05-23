@@ -12,8 +12,9 @@ import os
 parent_dir = str(Path(__file__).resolve().parent.parent)
 sys.path.append(parent_dir)
 
-from memory_engine import BlockManager, STMManager, CacheManager, PromptWrapper
-from memory_engine.text_utils import process_user_input, extract_keywords, generate_simple_embedding
+from greeum import BlockManager, STMManager, CacheManager, PromptWrapper
+from greeum.text_utils import process_user_input, extract_keywords
+from greeum.embedding_models import get_embedding
 
 def print_colored(text, color="white"):
     """색상 있는 텍스트 출력"""
@@ -149,26 +150,29 @@ def get_stm(args):
 
 def generate_prompt(args):
     """프롬프트 생성하기"""
-    prompt_wrapper = PromptWrapper()
+    db_path = args.db_path or os.path.join(parent_dir, "data", "memory.db")
+    if not os.path.exists(os.path.dirname(db_path)):
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+
+    from greeum import DatabaseManager
+    db_m = DatabaseManager(db_path)
+    bm = BlockManager(db_m)
+    sm = STMManager(db_m)
+    cache_m = CacheManager(block_manager=bm, stm_manager=sm)
+    prompt_wrapper = PromptWrapper(cache_manager=cache_m, stm_manager=sm)
     
     if not args.input:
         print_colored("입력 텍스트를 지정해주세요.", "red")
         return
     
-    # 입력 텍스트 처리
     user_input = args.input
     
-    # 임시 임베딩 생성
-    embedding = generate_simple_embedding(user_input)
+    embedding = get_embedding(user_input)
     
-    # 키워드 추출
     keywords = extract_keywords(user_input)
     
-    # 캐시 업데이트
-    cache_manager = CacheManager()
-    blocks = cache_manager.update_cache(user_input, embedding, keywords)
+    cache_m.update_cache(query_text=user_input, query_embedding=embedding, query_keywords=keywords)
     
-    # 프롬프트 생성
     prompt = prompt_wrapper.compose_prompt(user_input)
     
     if args.output:
@@ -253,6 +257,7 @@ def main():
     prompt_parser = subparsers.add_parser("prompt", help="현재 컨텍스트에 맞는 프롬프트 생성")
     prompt_parser.add_argument("-i", "--input", help="사용자 입력 텍스트")
     prompt_parser.add_argument("-o", "--output", help="출력 파일 경로 (지정하지 않으면 화면에 출력)")
+    prompt_parser.add_argument("--db-path", default=None, help="데이터베이스 경로 (기본: data/memory.db)")
     
     # 메모리 초기화 커맨드
     clear_parser = subparsers.add_parser("clear", help="메모리 초기화")

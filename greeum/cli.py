@@ -41,26 +41,26 @@ def init_command(db_path, use_embedding, openai_key):
             console.print(f"[green]데이터 디렉토리 생성: {data_dir}[/green]")
         
         # 데이터베이스 초기화
-        from memory_engine import DatabaseManager
+        from greeum import DatabaseManager
         db_path = db_path or os.path.join("data", "memory.db")
         db_manager = DatabaseManager(db_path)
         console.print(f"[green]데이터베이스 초기화 완료: {db_path}[/green]")
         
         # 임베딩 모델 초기화
         if use_embedding == "simple":
-            from memory_engine import SimpleEmbeddingModel, register_embedding_model
+            from greeum.embedding_models import SimpleEmbeddingModel, register_embedding_model
             model = SimpleEmbeddingModel()
             register_embedding_model("default", model, set_as_default=True)
             console.print("[green]간단한 임베딩 모델 초기화 완료[/green]")
         elif use_embedding == "sentence-transformer":
-            from memory_engine import init_sentence_transformer
+            from greeum.embedding_models import init_sentence_transformer
             init_sentence_transformer()
             console.print("[green]SentenceTransformer 임베딩 모델 초기화 완료[/green]")
         elif use_embedding == "openai":
             if not openai_key:
                 console.print("[yellow]OpenAI API 키가 필요합니다. --openai-key 옵션을 사용하세요.[/yellow]")
                 return
-            from memory_engine import init_openai
+            from greeum.embedding_models import init_openai
             init_openai(api_key=openai_key)
             console.print("[green]OpenAI 임베딩 모델 초기화 완료[/green]")
         else:
@@ -81,12 +81,12 @@ def add_memory_command(text, db_path, keywords, tags, importance):
     """새 기억 추가"""
     try:
         # 데이터베이스 연결
-        from memory_engine import DatabaseManager
+        from greeum import DatabaseManager
         db_path = db_path or os.path.join("data", "memory.db")
         db_manager = DatabaseManager(db_path)
         
         # 텍스트 처리
-        from memory_engine.text_utils import process_user_input
+        from greeum.text_utils import process_user_input
         
         # 사용자가 제공한 키워드와 태그 처리
         user_keywords = keywords.split(",") if keywords else None
@@ -167,7 +167,7 @@ def search_command(query, db_path, limit, mode):
     """기억 검색"""
     try:
         # 데이터베이스 연결
-        from memory_engine import DatabaseManager
+        from greeum import DatabaseManager
         db_path = db_path or os.path.join("data", "memory.db")
         db_manager = DatabaseManager(db_path)
         
@@ -176,7 +176,7 @@ def search_command(query, db_path, limit, mode):
         # 검색 모드에 따라 다른 방법 사용
         if mode == "embedding":
             # 임베딩 검색
-            from memory_engine import get_embedding
+            from greeum.embedding_models import get_embedding
             embedding = get_embedding(query)
             blocks = db_manager.search_blocks_by_embedding(embedding, top_k=limit)
             console.print(f"[blue]임베딩 검색 결과:[/blue]")
@@ -187,7 +187,7 @@ def search_command(query, db_path, limit, mode):
             console.print(f"[blue]키워드 검색 결과:[/blue]")
         elif mode == "temporal":
             # 시간적 검색
-            from memory_engine import TemporalReasoner
+            from greeum.temporal_reasoner import TemporalReasoner
             reasoner = TemporalReasoner(db_manager)
             result = reasoner.search_by_time_reference(query)
             blocks = result.get("blocks", [])
@@ -203,7 +203,7 @@ def search_command(query, db_path, limit, mode):
             console.print(f"[blue]시간적 검색 결과:[/blue]")
         elif mode == "hybrid":
             # 하이브리드 검색 (기본값)
-            from memory_engine import TemporalReasoner, get_embedding
+            from greeum.temporal_reasoner import TemporalReasoner, get_embedding
             reasoner = TemporalReasoner(db_manager)
             embedding = get_embedding(query)
             keywords = query.split()
@@ -273,7 +273,7 @@ def get_block_command(block_index, db_path):
     """특정 블록 상세 정보 조회"""
     try:
         # 데이터베이스 연결
-        from memory_engine import DatabaseManager
+        from greeum import DatabaseManager
         db_path = db_path or os.path.join("data", "memory.db")
         db_manager = DatabaseManager(db_path)
         
@@ -304,7 +304,7 @@ def get_block_command(block_index, db_path):
         
         # 수정 이력 확인
         try:
-            from memory_engine import MemoryEvolutionManager
+            from greeum.memory_evolution import MemoryEvolutionManager
             evolution_manager = MemoryEvolutionManager(db_manager)
             revisions = evolution_manager.get_revision_chain(block_index)
             
@@ -329,7 +329,7 @@ def update_memory_command(block_index, new_text, db_path, reason):
     """기존 기억 업데이트"""
     try:
         # 데이터베이스 연결
-        from memory_engine import DatabaseManager, MemoryEvolutionManager
+        from greeum import DatabaseManager, MemoryEvolutionManager
         db_path = db_path or os.path.join("data", "memory.db")
         db_manager = DatabaseManager(db_path)
         
@@ -363,7 +363,7 @@ def recent_memories_command(limit, db_path):
     """최근 기억 목록 조회"""
     try:
         # 데이터베이스 연결
-        from memory_engine import DatabaseManager
+        from greeum import DatabaseManager
         db_path = db_path or os.path.join("data", "memory.db")
         db_manager = DatabaseManager(db_path)
         

@@ -50,15 +50,8 @@ try:
     from greeum.embedding_models import get_embedding
     logger.info("Greeum 패키지에서 모듈을 임포트했습니다.")
 except ImportError:
-    try:
-        from memory_engine import DatabaseManager, STMManager, CacheManager, PromptWrapper
-        from memory_engine.temporal_reasoner import TemporalReasoner
-        from memory_engine.knowledge_graph import KnowledgeGraphManager
-        from memory_engine.embedding_models import get_embedding
-        logger.info("memory_engine 패키지에서 모듈을 임포트했습니다.")
-    except ImportError:
-        logger.error("필수 모듈을 가져올 수 없습니다. Greeum이 올바르게 설치되었는지 확인하세요.")
-        sys.exit(1)
+    logger.error("필수 모듈을 가져올 수 없습니다. Greeum이 올바르게 설치되었는지 확인하세요.")
+    sys.exit(1)
 
 # 테스트 설정
 TEST_CONFIG = {

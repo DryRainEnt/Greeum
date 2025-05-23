@@ -17,15 +17,21 @@ parent_dir = str(Path(__file__).resolve().parent.parent)
 sys.path.append(parent_dir)
 
 # 개선된 메모리 엔진 임포트
-from memory_engine import (
+# from memory_engine import (
+# DatabaseManager, BlockManager, STMManager, CacheManager, PromptWrapper,
+# SimpleEmbeddingModel, embedding_registry, get_embedding,
+# TemporalReasoner
+# )
+from greeum import (
     DatabaseManager, BlockManager, STMManager, CacheManager, PromptWrapper,
-    SimpleEmbeddingModel, embedding_registry, get_embedding,
     TemporalReasoner
 )
+from greeum.embedding_models import SimpleEmbeddingModel, embedding_registry, get_embedding
 
 # 개선된 모듈은 try-except로 임포트 (존재하지 않을 수 있음)
 try:
-    from memory_engine import MemoryEvolutionManager, KnowledgeGraphManager
+    # from memory_engine import MemoryEvolutionManager, KnowledgeGraphManager # 수정
+    from greeum import MemoryEvolutionManager, KnowledgeGraphManager # 수정
 except ImportError:
     MemoryEvolutionManager = None
     KnowledgeGraphManager = None
@@ -37,12 +43,11 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 class MemoryEngineValidator:
     """메모리 엔진 개선 검증 클래스"""
     
-    def __init__(self, use_db=True, db_path=None):
+    def __init__(self, db_path=None):
         """
         검증 초기화
         
         Args:
-            use_db: 데이터베이스 사용 여부
             db_path: 데이터베이스 경로 (기본: data/test_memory.db)
         """
         self.results = {
@@ -50,46 +55,40 @@ class MemoryEngineValidator:
             "tests": {}
         }
         
-        # 테스트 데이터베이스 설정
         if db_path is None:
             db_path = os.path.join(parent_dir, "data", "test_memory.db")
-            
-        # 이전 테스트 데이터베이스 제거
         if os.path.exists(db_path):
             os.remove(db_path)
             
-        # 매니저 초기화
-        if use_db:
-            self.db_manager = DatabaseManager(db_path)
-            # 임베딩 모델 등록
-            simple_model = SimpleEmbeddingModel(dimension=256)
-            embedding_registry.register_model("test_model", simple_model, set_as_default=True)
-            
-            # 매니저 초기화
-            self.block_manager = None  # 사용하지 않음 (DB 매니저로 대체)
-            self.stm_manager = None  # 사용하지 않음 (DB 매니저로 대체)
-            self.temporal_reasoner = TemporalReasoner(self.db_manager)
-            
-            # 옵션 구성요소 초기화 (있는 경우에만)
-            if MemoryEvolutionManager is not None:
-                self.memory_evolution = MemoryEvolutionManager(self.db_manager)
-            else:
-                self.memory_evolution = None
-                
-            if KnowledgeGraphManager is not None:
-                self.knowledge_graph = KnowledgeGraphManager(self.db_manager)
-            else:
-                self.knowledge_graph = None
+        # 매니저 초기화 (항상 DB 사용)
+        self.db_manager = DatabaseManager(db_path)
+        simple_model = SimpleEmbeddingModel(dimension=256)
+        embedding_registry.register_model("test_model", simple_model, set_as_default=True)
+        
+        # BlockManager와 STMManager는 이제 DatabaseManager를 통해 데이터를 관리하므로,
+        # 이 클래스에서 직접 인스턴스화할 필요는 없을 수 있음.
+        # 필요하다면 self.db_manager를 전달하여 생성.
+        # 단, BlockManager/STMManager가 파일 I/O를 완전히 버렸다면, 생성자에서 db_manager를 필수로 받아야 함.
+        # 현재 리팩토링된 BlockManager/STMManager는 db_manager를 필수로 받음.
+        self.block_manager = BlockManager(self.db_manager) 
+        self.stm_manager = STMManager(self.db_manager) 
+        
+        self.temporal_reasoner = TemporalReasoner(self.db_manager)
+        
+        if MemoryEvolutionManager is not None:
+            self.memory_evolution = MemoryEvolutionManager(self.db_manager)
         else:
-            self.db_manager = None
-            self.block_manager = BlockManager()
-            self.stm_manager = STMManager()
-            self.temporal_reasoner = None
             self.memory_evolution = None
-            self.knowledge_graph = None
             
-        self.cache_manager = CacheManager()
-        self.prompt_wrapper = PromptWrapper(self.cache_manager)
+        if KnowledgeGraphManager is not None:
+            self.knowledge_graph = KnowledgeGraphManager(self.db_manager)
+        else:
+            self.knowledge_graph = None
+        
+        # BlockManager가 DB를 쓰므로, CacheManager도 db_manager나 혹은 db_manager를 쓰는 block_manager를 받아야함.
+        # 현재 CacheManager는 block_manager, stm_manager를 인자로 받음.
+        self.cache_manager = CacheManager(block_manager=self.block_manager, stm_manager=self.stm_manager) 
+        self.prompt_wrapper = PromptWrapper(cache_manager=self.cache_manager, stm_manager=self.stm_manager)
     
     def run_all_tests(self):
         """모든 테스트 실행"""
@@ -150,16 +149,15 @@ class MemoryEngineValidator:
             block_data = self._generate_random_memory(i)
             
             # 데이터베이스에 추가
-            if self.db_manager:
-                self.db_manager.add_block(block_data)
-            else:
-                self.block_manager.add_block(
-                    context=block_data["context"],
-                    keywords=block_data["keywords"],
-                    tags=block_data["tags"],
-                    embedding=block_data["embedding"],
-                    importance=block_data["importance"]
-                )
+            self.block_manager.add_block(
+                context=block_data["context"],
+                keywords=block_data["keywords"],
+                tags=block_data["tags"],
+                embedding=block_data["embedding"],
+                importance=block_data["importance"],
+                metadata=block_data.get("metadata", {}),
+                embedding_model=block_data.get("embedding_model", "test_model")
+            )
         
         # 시간 측정 종료
         end_time = time.time()
@@ -201,29 +199,21 @@ class MemoryEngineValidator:
             embedding = get_embedding(query)
             
             # 임베딩 기반 검색
-            if self.db_manager:
-                start_time = time.time()
-                blocks = self.db_manager.search_blocks_by_embedding(embedding, top_k=5)
-                duration = time.time() - start_time
-                
-                # 키워드 추출 및 키워드 기반 검색
-                keywords = query.split()
-                keyword_blocks = self.db_manager.search_blocks_by_keyword(keywords)
-                
-                # 하이브리드 검색 (개선된 기능)
-                if self.temporal_reasoner:
-                    hybrid_results = self.temporal_reasoner.hybrid_search(
-                        query, embedding, keywords
-                    )
-                    hybrid_blocks = hybrid_results.get("blocks", [])
-                else:
-                    hybrid_blocks = []
+            start_time = time.time()
+            blocks = self.db_manager.search_blocks_by_embedding(embedding, top_k=5)
+            duration = time.time() - start_time
+            
+            # 키워드 추출 및 키워드 기반 검색
+            keywords = query.split()
+            keyword_blocks = self.db_manager.search_blocks_by_keyword(keywords)
+            
+            # 하이브리드 검색 (개선된 기능)
+            if self.temporal_reasoner:
+                hybrid_results = self.temporal_reasoner.hybrid_search(
+                    query, embedding, keywords
+                )
+                hybrid_blocks = hybrid_results.get("blocks", [])
             else:
-                start_time = time.time()
-                blocks = self.block_manager.search_by_embedding(embedding, top_k=5)
-                duration = time.time() - start_time
-                
-                keyword_blocks = self.block_manager.search_by_keywords(query.split())
                 hybrid_blocks = []
             
             # 결과 기록
@@ -341,6 +331,7 @@ class MemoryEngineValidator:
             embedding_time = time.time() - start_time
             
             # 임베딩 기반 검색
+            search_start = time.time()
             if self.db_manager:
                 search_start = time.time()
                 blocks = self.db_manager.search_blocks_by_embedding(embedding, top_k=10)
@@ -500,7 +491,9 @@ class MemoryEngineValidator:
             "embedding": embedding,
             "importance": importance,
             "prev_hash": f"prev_hash_{index-1}" if index > 0 else "",
-            "hash": hash_value
+            "hash": hash_value,
+            "metadata": {"source": "random_test_generation", "test_index": index},
+            "embedding_model": "test_model"
         }
     
     def _summarize_block(self, block):

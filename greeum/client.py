@@ -22,6 +22,10 @@ class ConnectionFailedError(ClientError):
     """서버 연결 실패 예외"""
     pass
 
+class AuthenticationError(ClientError):
+    """API 인증 실패 예외 (401, 403 등)"""
+    pass
+
 class APIError(ClientError):
     """API 오류 응답 예외"""
     def __init__(self, status_code: int, message: str, response: Optional[Dict[str, Any]] = None):
@@ -144,14 +148,19 @@ class MemoryClient:
                     continue
                     
                 # 처리할 수 없는 API 오류
+                original_error_message = response.text
+                error_details = None
                 try:
                     error_response = response.json()
-                    error_msg = error_response.get("message", response.text)
+                    original_error_message = error_response.get("message", response.text)
+                    error_details = error_response # 전체 응답을 details로 저장
                 except ValueError:
-                    error_response = None
-                    error_msg = response.text
-                    
-                raise APIError(response.status_code, error_msg, error_response)
+                    pass # JSON 파싱 실패 시 original_error_message는 response.text 유지
+                
+                if response.status_code == 401 or response.status_code == 403:
+                    raise AuthenticationError(f"인증 실패 (코드: {response.status_code}): {original_error_message}")
+                else:
+                    raise APIError(response.status_code, original_error_message, response=error_details)
                 
             except (ConnectionError, requests.exceptions.ProxyError) as e:
                 last_exception = e
@@ -463,13 +472,8 @@ class SimplifiedMemoryClient:
                 "timestamp": response.get("data", {}).get("timestamp")
             }
         except ClientError as e:
-            logger.error(f"기억 추가 실패: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e),
-                "block_index": None,
-                "keywords": []
-            }
+            logger.error(f"SimplifiedMemoryClient: {e.__class__.__name__} 발생 - {str(e)}")
+            raise
     
     def search(self, query: str, limit: int = 3) -> List[Dict[str, Any]]:
         """
@@ -508,8 +512,8 @@ class SimplifiedMemoryClient:
                 
             return results
         except ClientError as e:
-            logger.error(f"검색 실패: {str(e)}")
-            return []
+            logger.error(f"SimplifiedMemoryClient: {e.__class__.__name__} 발생 - {str(e)}")
+            raise
     
     def remember(self, query: str, limit: int = 3) -> str:
         """
@@ -537,8 +541,8 @@ class SimplifiedMemoryClient:
                 
             return "\n\n".join(memory_strings)
         except Exception as e:
-            logger.error(f"기억 검색 문자열 생성 실패: {str(e)}")
-            return f"기억 검색 중 오류 발생: {str(e)}"
+            logger.error(f"SimplifiedMemoryClient: {e.__class__.__name__} 발생 - {str(e)}")
+            raise
             
     def update(self, block_index: int, new_content: str, reason: str = "내용 업데이트") -> Dict[str, Any]:
         """
@@ -567,13 +571,8 @@ class SimplifiedMemoryClient:
                 "timestamp": response.get("data", {}).get("timestamp")
             }
         except ClientError as e:
-            logger.error(f"기억 업데이트 실패: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e),
-                "block_index": None,
-                "original_block_index": block_index
-            }
+            logger.error(f"SimplifiedMemoryClient: {e.__class__.__name__} 발생 - {str(e)}")
+            raise
     
     def get_health(self) -> Dict[str, Any]:
         """
@@ -590,9 +589,8 @@ class SimplifiedMemoryClient:
                 "success": True
             }
         except Exception as e:
-            logger.error(f"서버 상태 확인 실패: {str(e)}")
-            return {
-                "status": "offline",
-                "error": str(e),
-                "success": False
-            } 
+            logger.error(f"SimplifiedMemoryClient: {e.__class__.__name__} 발생 - {str(e)}")
+            raise
+            # 이 경우 SimplifiedClientOperationError 클래스 정의 필요
+            # raise SimplifiedClientOperationError(f"서버 상태 확인 실패: {str(e)}", original_exception=e)
+            # 이 경우 SimplifiedClientOperationError 클래스 정의 필요 
