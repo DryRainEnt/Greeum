@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "greeum"
-version = "0.6.0-dev"
+version = "0.6.0rc1"
 description = "Universal memory module for LLMs"
 authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
 readme = "README.md"
@@ -16,7 +16,10 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
 ]
-dependencies = []
+dependencies = [
+    "rich>=13.4.0",
+    "click>=8.1.0"
+]
 long_description_content_type = "text/markdown"
 
 [project.optional-dependencies]
@@ -29,4 +32,16 @@ all = ["faiss-cpu>=1.7.4", "openai>=1.0.0", "transformers>=4.40.0", "sentence-tr
 include = ["greeum*"]
 
 [tool.setuptools.package-data]
-"greeum" = ["py.typed"] 
+"greeum" = ["py.typed"]
+
+[tool.ruff]
+line-length = 120
+# Ignore some low-priority or legacy issues temporarily
+extend-ignore = [
+    "F401", # unused imports
+    "F841", # unused variables
+    "F541", # extraneous f-string
+    "E402", # module level import not at top
+    "E722", # bare except
+    "F811"  # redefinition of variable
+] 

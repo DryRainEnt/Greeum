@@ -2,6 +2,7 @@ import sys
 import platform
 import importlib
 import logging
+from typing import Optional
 
 # from . import __version__ as greeum_version # 패키지 루트의 __init__.py에서 버전을 가져오도록 수정 필요
 # 임시로 greeum.__version__ 접근 시도. 실제로는 패키지 구조에 따라 달라짐.

@@ -9,6 +9,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
+import click
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -179,12 +180,12 @@ def search_command(query, db_path, limit, mode):
             from greeum.embedding_models import get_embedding
             embedding = get_embedding(query)
             blocks = db_manager.search_blocks_by_embedding(embedding, top_k=limit)
-            console.print(f"[blue]임베딩 검색 결과:[/blue]")
+            console.print("[blue]임베딩 검색 결과:[/blue]")
         elif mode == "keyword":
             # 키워드 검색
             keywords = query.split()
             blocks = db_manager.search_blocks_by_keyword(keywords, limit=limit)
-            console.print(f"[blue]키워드 검색 결과:[/blue]")
+            console.print("[blue]키워드 검색 결과:[/blue]")
         elif mode == "temporal":
             # 시간적 검색
             from greeum.temporal_reasoner import TemporalReasoner
@@ -200,7 +201,7 @@ def search_command(query, db_path, limit, mode):
                 to_date = time_ref.get("to_date")
                 if from_date and to_date:
                     console.print(f"[blue]검색 범위: {from_date} ~ {to_date}[/blue]")
-            console.print(f"[blue]시간적 검색 결과:[/blue]")
+            console.print("[blue]시간적 검색 결과:[/blue]")
         elif mode == "hybrid":
             # 하이브리드 검색 (기본값)
             from greeum.temporal_reasoner import TemporalReasoner, get_embedding
@@ -209,7 +210,7 @@ def search_command(query, db_path, limit, mode):
             keywords = query.split()
             result = reasoner.hybrid_search(query, embedding, keywords, top_k=limit)
             blocks = result.get("blocks", [])
-            console.print(f"[blue]하이브리드 검색 결과:[/blue]")
+            console.print("[blue]하이브리드 검색 결과:[/blue]")
         else:
             console.print(f"[red]지원하지 않는 검색 모드: {mode}[/red]")
             return

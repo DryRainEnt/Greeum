@@ -302,7 +302,7 @@ class DatabaseManager:
 
         if sort_by == 'importance':
             # JOIN 없이 importance로 정렬된 block_index를 가져오려면 blocks 테이블에 직접 접근
-            query = f"SELECT block_index FROM blocks"
+            query = "SELECT block_index FROM blocks"
             params_build = [] # 임시 파라미터 리스트
             conditions = []
             if start_idx is not None:
@@ -320,7 +320,7 @@ class DatabaseManager:
             params = params_build
 
         else:
-            query = f"SELECT block_index FROM blocks"
+            query = "SELECT block_index FROM blocks"
             params = [] # params 초기화 위치 변경
             if start_idx is not None or end_idx is not None:
                 conditions = []
