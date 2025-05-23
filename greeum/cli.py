@@ -261,7 +261,7 @@ def search_command(query, db_path, limit, mode):
         
         # 블록 상세 보기 안내
         console.print("\n[bold]블록 상세 정보를 보려면:[/bold]")
-        console.print(f"memory-engine get-block <블록 번호>")
+        console.print("memory-engine get-block <블록 번호>")
         
     except Exception as e:
         console.print(f"[bold red]검색 오류: {str(e)}[/bold red]")
@@ -351,7 +351,7 @@ def update_memory_command(block_index, new_text, db_path, reason):
                 f"[bold]새 내용:[/bold] {new_text}\n"
             ))
         else:
-            console.print(f"[red]기억 업데이트 실패[/red]")
+            console.print("[red]기억 업데이트 실패[/red]")
             
     except Exception as e:
         console.print(f"[bold red]업데이트 오류: {str(e)}[/bold red]")
