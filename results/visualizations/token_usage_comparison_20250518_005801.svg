@@ -1,0 +1,1697 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="864pt" height="432pt" viewBox="0 0 864 432" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2025-05-18T00:58:02.541626</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.7.0, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 432 
+L 864 432 
+L 864 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 47.765 362.521234 
+L 853.2 362.521234 
+L 853.2 26.16 
+L 47.765 26.16 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 84.375682 362.521234 
+L 110.795761 362.521234 
+L 110.795761 42.177202 
+L 84.375682 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #f08080"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 159.861624 362.521234 
+L 186.281703 362.521234 
+L 186.281703 42.177202 
+L 159.861624 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #f08080"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 235.347566 362.521234 
+L 261.767645 362.521234 
+L 261.767645 42.177202 
+L 235.347566 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #f08080"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 310.833507 362.521234 
+L 337.253587 362.521234 
+L 337.253587 42.177202 
+L 310.833507 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #f08080"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 386.319449 362.521234 
+L 412.739529 362.521234 
+L 412.739529 42.177202 
+L 386.319449 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #f08080"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 461.805391 362.521234 
+L 488.225471 362.521234 
+L 488.225471 42.177202 
+L 461.805391 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #f08080"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 537.291333 362.521234 
+L 563.711413 362.521234 
+L 563.711413 42.177202 
+L 537.291333 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #f08080"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 612.777275 362.521234 
+L 639.197355 362.521234 
+L 639.197355 42.177202 
+L 612.777275 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #f08080"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 688.263217 362.521234 
+L 714.683297 362.521234 
+L 714.683297 42.177202 
+L 688.263217 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #f08080"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 763.749159 362.521234 
+L 790.169239 362.521234 
+L 790.169239 42.177202 
+L 763.749159 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #f08080"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 110.795761 362.521234 
+L 137.215841 362.521234 
+L 137.215841 42.177202 
+L 110.795761 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #4682b4"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 186.281703 362.521234 
+L 212.701783 362.521234 
+L 212.701783 42.177202 
+L 186.281703 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #4682b4"/>
+   </g>
+   <g id="patch_15">
+    <path d="M 261.767645 362.521234 
+L 288.187725 362.521234 
+L 288.187725 42.177202 
+L 261.767645 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #4682b4"/>
+   </g>
+   <g id="patch_16">
+    <path d="M 337.253587 362.521234 
+L 363.673667 362.521234 
+L 363.673667 42.177202 
+L 337.253587 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #4682b4"/>
+   </g>
+   <g id="patch_17">
+    <path d="M 412.739529 362.521234 
+L 439.159609 362.521234 
+L 439.159609 42.177202 
+L 412.739529 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #4682b4"/>
+   </g>
+   <g id="patch_18">
+    <path d="M 488.225471 362.521234 
+L 514.645551 362.521234 
+L 514.645551 42.177202 
+L 488.225471 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #4682b4"/>
+   </g>
+   <g id="patch_19">
+    <path d="M 563.711413 362.521234 
+L 590.131493 362.521234 
+L 590.131493 42.177202 
+L 563.711413 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #4682b4"/>
+   </g>
+   <g id="patch_20">
+    <path d="M 639.197355 362.521234 
+L 665.617434 362.521234 
+L 665.617434 42.177202 
+L 639.197355 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #4682b4"/>
+   </g>
+   <g id="patch_21">
+    <path d="M 714.683297 362.521234 
+L 741.103376 362.521234 
+L 741.103376 42.177202 
+L 714.683297 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #4682b4"/>
+   </g>
+   <g id="patch_22">
+    <path d="M 790.169239 362.521234 
+L 816.589318 362.521234 
+L 816.589318 42.177202 
+L 790.169239 42.177202 
+z
+" clip-path="url(#pf20064dcf0)" style="fill: #4682b4"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="mc91b996f79" d="M 0 0 
+L 0 3.5 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mc91b996f79" x="110.795761" y="362.521234" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <!-- simple_qa -->
+      <g transform="translate(77.383861 406.629977) rotate(-45) scale(0.1 -0.1)">
+       <defs>
+        <path id="MalgunGothic-73" d="M 331 669 
+Q 763 350 1278 350 
+Q 1978 350 1978 822 
+Q 1978 1025 1825 1158 
+Q 1672 1291 1222 1459 
+Q 703 1666 520 1878 
+Q 338 2091 338 2416 
+Q 338 2834 700 3096 
+Q 1063 3359 1584 3359 
+Q 2003 3359 2341 3213 
+L 2341 2697 
+Q 1975 2934 1506 2934 
+Q 1200 2934 1025 2798 
+Q 850 2663 850 2459 
+Q 850 2241 979 2125 
+Q 1109 2009 1544 1838 
+Q 2131 1609 2309 1390 
+Q 2488 1172 2488 869 
+Q 2488 431 2127 176 
+Q 1766 -78 1203 -78 
+Q 694 -78 331 122 
+L 331 669 
+z
+" transform="scale(0.015625)"/>
+        <path id="MalgunGothic-69" d="M 472 4466 
+Q 472 4606 565 4701 
+Q 659 4797 794 4797 
+Q 934 4797 1029 4700 
+Q 1125 4603 1125 4466 
+Q 1125 4325 1029 4231 
+Q 934 4138 794 4138 
+Q 659 4138 565 4230 
+Q 472 4322 472 4466 
+z
+M 541 0 
+L 541 3284 
+L 1034 3284 
+L 1034 0 
+L 541 0 
+z
+" transform="scale(0.015625)"/>
+        <path id="MalgunGothic-6d" d="M 5166 0 
+L 4669 0 
+L 4669 1884 
+Q 4669 2463 4495 2702 
+Q 4322 2941 3922 2941 
+Q 3584 2941 3342 2623 
+Q 3100 2306 3100 1875 
+L 3100 0 
+L 2606 0 
+L 2606 1953 
+Q 2606 2941 1844 2941 
+Q 1497 2941 1265 2642 
+Q 1034 2344 1034 1875 
+L 1034 0 
+L 538 0 
+L 538 3284 
+L 1034 3284 
+L 1034 2763 
+L 1047 2763 
+Q 1391 3359 2063 3359 
+Q 2381 3359 2636 3176 
+Q 2891 2994 2991 2675 
+Q 3356 3359 4081 3359 
+Q 5166 3359 5166 2022 
+L 5166 0 
+z
+" transform="scale(0.015625)"/>
+        <path id="MalgunGothic-70" d="M 1034 481 
+L 1034 -1513 
+L 538 -1513 
+L 538 3284 
+L 1034 3284 
+L 1034 2703 
+L 1047 2703 
+Q 1438 3359 2184 3359 
+Q 2809 3359 3171 2920 
+Q 3534 2481 3534 1738 
+Q 3534 906 3126 414 
+Q 2719 -78 2034 -78 
+Q 1394 -78 1047 481 
+L 1034 481 
+z
+M 1034 1331 
+Q 1034 922 1307 633 
+Q 1581 344 1991 344 
+Q 2475 344 2751 716 
+Q 3028 1088 3028 1753 
+Q 3028 2300 2767 2620 
+Q 2506 2941 2072 2941 
+Q 1619 2941 1326 2619 
+Q 1034 2297 1034 1806 
+L 1034 1331 
+z
+" transform="scale(0.015625)"/>
+        <path id="MalgunGothic-6c" d="M 541 0 
+L 541 4859 
+L 1034 4859 
+L 1034 0 
+L 541 0 
+z
+" transform="scale(0.015625)"/>
+        <path id="MalgunGothic-65" d="M 3156 1519 
+L 828 1519 
+Q 844 950 1133 648 
+Q 1422 347 1909 347 
+Q 2472 347 2934 719 
+L 2934 244 
+Q 2494 -78 1794 -78 
+Q 1100 -78 708 376 
+Q 316 831 316 1634 
+Q 316 2381 747 2870 
+Q 1178 3359 1816 3359 
+Q 2453 3359 2804 2942 
+Q 3156 2525 3156 1788 
+L 3156 1519 
+z
+M 2644 1956 
+Q 2644 2416 2423 2675 
+Q 2203 2934 1809 2934 
+Q 1438 2934 1169 2667 
+Q 900 2400 834 1956 
+L 2644 1956 
+z
+" transform="scale(0.015625)"/>
+        <path id="MalgunGothic-5f" d="M 2725 -953 
+L 0 -953 
+L 0 -569 
+L 2725 -569 
+L 2725 -953 
+z
+" transform="scale(0.015625)"/>
+        <path id="MalgunGothic-71" d="M 3313 -1513 
+L 2822 -1513 
+L 2822 569 
+L 2809 569 
+Q 2466 -78 1681 -78 
+Q 1056 -78 686 361 
+Q 316 800 316 1566 
+Q 316 2384 725 2871 
+Q 1134 3359 1825 3359 
+Q 2503 3359 2809 2822 
+L 2822 2822 
+L 2822 3284 
+L 3313 3284 
+L 3313 -1513 
+z
+M 2822 1966 
+Q 2822 2363 2555 2652 
+Q 2288 2941 1869 2941 
+Q 1384 2941 1101 2583 
+Q 819 2225 819 1575 
+Q 819 1003 1089 673 
+Q 1359 344 1791 344 
+Q 2272 344 2547 672 
+Q 2822 1000 2822 1472 
+L 2822 1966 
+z
+" transform="scale(0.015625)"/>
+        <path id="MalgunGothic-61" d="M 616 3050 
+Q 1097 3359 1722 3359 
+Q 2866 3359 2866 2147 
+L 2866 0 
+L 2369 0 
+L 2369 516 
+L 2350 516 
+Q 2009 -78 1341 -78 
+Q 859 -78 576 180 
+Q 294 438 294 869 
+Q 294 1784 1375 1934 
+L 2366 2078 
+Q 2366 2934 1684 2934 
+Q 1084 2934 616 2525 
+L 616 3050 
+z
+M 1563 1559 
+Q 1178 1509 993 1371 
+Q 809 1234 809 903 
+Q 809 653 986 500 
+Q 1163 347 1450 347 
+Q 1847 347 2106 628 
+Q 2366 909 2366 1334 
+L 2366 1666 
+L 1563 1559 
+z
+" transform="scale(0.015625)"/>
+       </defs>
+       <use xlink:href="#MalgunGothic-73"/>
+       <use xlink:href="#MalgunGothic-69" x="43.310547"/>
+       <use xlink:href="#MalgunGothic-6d" x="67.919922"/>
+       <use xlink:href="#MalgunGothic-70" x="155.908203"/>
+       <use xlink:href="#MalgunGothic-6c" x="215.966797"/>
+       <use xlink:href="#MalgunGothic-65" x="240.576172"/>
+       <use xlink:href="#MalgunGothic-5f" x="294.091797"/>
+       <use xlink:href="#MalgunGothic-71" x="336.669922"/>
+       <use xlink:href="#MalgunGothic-61" x="396.875"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#mc91b996f79" x="186.281703" y="362.521234" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <!-- simple_qa -->
+      <g transform="translate(152.869803 406.629977) rotate(-45) scale(0.1 -0.1)">
+       <use xlink:href="#MalgunGothic-73"/>
+       <use xlink:href="#MalgunGothic-69" x="43.310547"/>
+       <use xlink:href="#MalgunGothic-6d" x="67.919922"/>
+       <use xlink:href="#MalgunGothic-70" x="155.908203"/>
+       <use xlink:href="#MalgunGothic-6c" x="215.966797"/>
+       <use xlink:href="#MalgunGothic-65" x="240.576172"/>
+       <use xlink:href="#MalgunGothic-5f" x="294.091797"/>
+       <use xlink:href="#MalgunGothic-71" x="336.669922"/>
+       <use xlink:href="#MalgunGothic-61" x="396.875"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#mc91b996f79" x="261.767645" y="362.521234" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <!-- simple_qa -->
+      <g transform="translate(228.355745 406.629977) rotate(-45) scale(0.1 -0.1)">
+       <use xlink:href="#MalgunGothic-73"/>
+       <use xlink:href="#MalgunGothic-69" x="43.310547"/>
+       <use xlink:href="#MalgunGothic-6d" x="67.919922"/>
+       <use xlink:href="#MalgunGothic-70" x="155.908203"/>
+       <use xlink:href="#MalgunGothic-6c" x="215.966797"/>
+       <use xlink:href="#MalgunGothic-65" x="240.576172"/>
+       <use xlink:href="#MalgunGothic-5f" x="294.091797"/>
+       <use xlink:href="#MalgunGothic-71" x="336.669922"/>
+       <use xlink:href="#MalgunGothic-61" x="396.875"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#mc91b996f79" x="337.253587" y="362.521234" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <!-- simple_qa -->
+      <g transform="translate(303.841687 406.629977) rotate(-45) scale(0.1 -0.1)">
+       <use xlink:href="#MalgunGothic-73"/>
+       <use xlink:href="#MalgunGothic-69" x="43.310547"/>
+       <use xlink:href="#MalgunGothic-6d" x="67.919922"/>
+       <use xlink:href="#MalgunGothic-70" x="155.908203"/>
+       <use xlink:href="#MalgunGothic-6c" x="215.966797"/>
+       <use xlink:href="#MalgunGothic-65" x="240.576172"/>
+       <use xlink:href="#MalgunGothic-5f" x="294.091797"/>
+       <use xlink:href="#MalgunGothic-71" x="336.669922"/>
+       <use xlink:href="#MalgunGothic-61" x="396.875"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#mc91b996f79" x="412.739529" y="362.521234" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <!-- simple_qa -->
+      <g transform="translate(379.327629 406.629977) rotate(-45) scale(0.1 -0.1)">
+       <use xlink:href="#MalgunGothic-73"/>
+       <use xlink:href="#MalgunGothic-69" x="43.310547"/>
+       <use xlink:href="#MalgunGothic-6d" x="67.919922"/>
+       <use xlink:href="#MalgunGothic-70" x="155.908203"/>
+       <use xlink:href="#MalgunGothic-6c" x="215.966797"/>
+       <use xlink:href="#MalgunGothic-65" x="240.576172"/>
+       <use xlink:href="#MalgunGothic-5f" x="294.091797"/>
+       <use xlink:href="#MalgunGothic-71" x="336.669922"/>
+       <use xlink:href="#MalgunGothic-61" x="396.875"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#mc91b996f79" x="488.225471" y="362.521234" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <!-- simple_qa -->
+      <g transform="translate(454.813571 406.629977) rotate(-45) scale(0.1 -0.1)">
+       <use xlink:href="#MalgunGothic-73"/>
+       <use xlink:href="#MalgunGothic-69" x="43.310547"/>
+       <use xlink:href="#MalgunGothic-6d" x="67.919922"/>
+       <use xlink:href="#MalgunGothic-70" x="155.908203"/>
+       <use xlink:href="#MalgunGothic-6c" x="215.966797"/>
+       <use xlink:href="#MalgunGothic-65" x="240.576172"/>
+       <use xlink:href="#MalgunGothic-5f" x="294.091797"/>
+       <use xlink:href="#MalgunGothic-71" x="336.669922"/>
+       <use xlink:href="#MalgunGothic-61" x="396.875"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#mc91b996f79" x="563.711413" y="362.521234" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <!-- simple_qa -->
+      <g transform="translate(530.299513 406.629977) rotate(-45) scale(0.1 -0.1)">
+       <use xlink:href="#MalgunGothic-73"/>
+       <use xlink:href="#MalgunGothic-69" x="43.310547"/>
+       <use xlink:href="#MalgunGothic-6d" x="67.919922"/>
+       <use xlink:href="#MalgunGothic-70" x="155.908203"/>
+       <use xlink:href="#MalgunGothic-6c" x="215.966797"/>
+       <use xlink:href="#MalgunGothic-65" x="240.576172"/>
+       <use xlink:href="#MalgunGothic-5f" x="294.091797"/>
+       <use xlink:href="#MalgunGothic-71" x="336.669922"/>
+       <use xlink:href="#MalgunGothic-61" x="396.875"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#mc91b996f79" x="639.197355" y="362.521234" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <!-- simple_qa -->
+      <g transform="translate(605.785454 406.629977) rotate(-45) scale(0.1 -0.1)">
+       <use xlink:href="#MalgunGothic-73"/>
+       <use xlink:href="#MalgunGothic-69" x="43.310547"/>
+       <use xlink:href="#MalgunGothic-6d" x="67.919922"/>
+       <use xlink:href="#MalgunGothic-70" x="155.908203"/>
+       <use xlink:href="#MalgunGothic-6c" x="215.966797"/>
+       <use xlink:href="#MalgunGothic-65" x="240.576172"/>
+       <use xlink:href="#MalgunGothic-5f" x="294.091797"/>
+       <use xlink:href="#MalgunGothic-71" x="336.669922"/>
+       <use xlink:href="#MalgunGothic-61" x="396.875"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_9">
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#mc91b996f79" x="714.683297" y="362.521234" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <!-- simple_qa -->
+      <g transform="translate(681.271396 406.629977) rotate(-45) scale(0.1 -0.1)">
+       <use xlink:href="#MalgunGothic-73"/>
+       <use xlink:href="#MalgunGothic-69" x="43.310547"/>
+       <use xlink:href="#MalgunGothic-6d" x="67.919922"/>
+       <use xlink:href="#MalgunGothic-70" x="155.908203"/>
+       <use xlink:href="#MalgunGothic-6c" x="215.966797"/>
+       <use xlink:href="#MalgunGothic-65" x="240.576172"/>
+       <use xlink:href="#MalgunGothic-5f" x="294.091797"/>
+       <use xlink:href="#MalgunGothic-71" x="336.669922"/>
+       <use xlink:href="#MalgunGothic-61" x="396.875"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_10">
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#mc91b996f79" x="790.169239" y="362.521234" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <!-- simple_qa -->
+      <g transform="translate(756.757338 406.629977) rotate(-45) scale(0.1 -0.1)">
+       <use xlink:href="#MalgunGothic-73"/>
+       <use xlink:href="#MalgunGothic-69" x="43.310547"/>
+       <use xlink:href="#MalgunGothic-6d" x="67.919922"/>
+       <use xlink:href="#MalgunGothic-70" x="155.908203"/>
+       <use xlink:href="#MalgunGothic-6c" x="215.966797"/>
+       <use xlink:href="#MalgunGothic-65" x="240.576172"/>
+       <use xlink:href="#MalgunGothic-5f" x="294.091797"/>
+       <use xlink:href="#MalgunGothic-71" x="336.669922"/>
+       <use xlink:href="#MalgunGothic-61" x="396.875"/>
+      </g>
+     </g>
+    </g>
+    <g id="text_11">
+     <!-- 시나리오 -->
+     <g transform="translate(430.4825 419.893809) scale(0.1 -0.1)">
+      <defs>
+       <path id="MalgunGothic-c2dc" d="M 4947 -563 
+L 4947 5466 
+L 5416 5466 
+L 5416 -563 
+L 4947 -563 
+z
+M 3769 966 
+Q 3263 1353 2820 1939 
+Q 2378 2525 2259 2950 
+Q 2116 2463 1687 1872 
+Q 1259 1281 756 891 
+L 397 1203 
+Q 1141 1703 1581 2479 
+Q 2022 3256 2022 4063 
+L 2022 5050 
+L 2484 5050 
+L 2484 4084 
+Q 2484 3303 2920 2556 
+Q 3356 1809 4097 1331 
+L 3769 966 
+z
+" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-b098" d="M 5094 2600 
+L 5094 -563 
+L 4628 -563 
+L 4628 5466 
+L 5094 5466 
+L 5094 3016 
+L 6138 3016 
+L 6138 2600 
+L 5094 2600 
+z
+M 4122 1375 
+Q 3816 1300 3300 1279 
+Q 2784 1259 844 1259 
+L 844 4966 
+L 1313 4966 
+L 1313 1678 
+L 2456 1672 
+Q 3066 1672 3456 1698 
+Q 3847 1725 4056 1766 
+L 4122 1375 
+z
+" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-b9ac" d="M 4884 -563 
+L 4884 5466 
+L 5350 5466 
+L 5350 -563 
+L 4884 -563 
+z
+M 856 738 
+L 856 3128 
+L 3150 3128 
+L 3150 4519 
+L 856 4519 
+L 856 4934 
+L 3616 4934 
+L 3616 2725 
+L 1325 2725 
+L 1325 1153 
+Q 3597 1153 4197 1281 
+L 4250 878 
+Q 3500 738 856 738 
+z
+" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-c624" d="M 403 391 
+L 403 800 
+L 2963 800 
+L 2963 2016 
+Q 2103 2081 1634 2479 
+Q 1166 2878 1166 3525 
+Q 1166 4228 1727 4629 
+Q 2288 5031 3200 5031 
+Q 4113 5031 4670 4632 
+Q 5228 4234 5228 3525 
+Q 5228 2878 4759 2479 
+Q 4291 2081 3438 2016 
+L 3438 800 
+L 5997 800 
+L 5997 391 
+L 403 391 
+z
+M 1650 3525 
+Q 1650 3016 2079 2720 
+Q 2509 2425 3200 2425 
+Q 3891 2425 4317 2722 
+Q 4744 3019 4744 3525 
+Q 4744 4028 4317 4325 
+Q 3891 4622 3200 4622 
+Q 2506 4622 2078 4325 
+Q 1650 4028 1650 3525 
+z
+" transform="scale(0.015625)"/>
+      </defs>
+      <use xlink:href="#MalgunGothic-c2dc"/>
+      <use xlink:href="#MalgunGothic-b098" x="100"/>
+      <use xlink:href="#MalgunGothic-b9ac" x="200"/>
+      <use xlink:href="#MalgunGothic-c624" x="300"/>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_11">
+      <defs>
+       <path id="m2796010c0e" d="M 0 0 
+L -3.5 0 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m2796010c0e" x="47.765" y="362.521234" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <!-- 0 -->
+      <g transform="translate(35.257188 366.317328) scale(0.1 -0.1)">
+       <defs>
+        <path id="MalgunGothic-30" d="M 278 2206 
+Q 278 3425 675 4050 
+Q 1072 4675 1819 4675 
+Q 3253 4675 3253 2319 
+Q 3253 1156 2854 539 
+Q 2456 -78 1716 -78 
+Q 1016 -78 647 520 
+Q 278 1119 278 2206 
+z
+M 784 2231 
+Q 784 344 1769 344 
+Q 2747 344 2747 2259 
+Q 2747 4250 1794 4250 
+Q 784 4250 784 2231 
+z
+" transform="scale(0.015625)"/>
+       </defs>
+       <use xlink:href="#MalgunGothic-30"/>
+      </g>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m2796010c0e" x="47.765" y="298.452427" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <!-- 20 -->
+      <g transform="translate(29.749375 302.248521) scale(0.1 -0.1)">
+       <defs>
+        <path id="MalgunGothic-32" d="M 2519 3372 
+Q 2519 3784 2275 4018 
+Q 2031 4253 1628 4253 
+Q 1341 4253 1053 4104 
+Q 766 3956 534 3697 
+L 534 4234 
+Q 981 4675 1691 4675 
+Q 2281 4675 2642 4334 
+Q 3003 3994 3003 3416 
+Q 3003 2919 2772 2545 
+Q 2541 2172 1984 1775 
+Q 1459 1406 1254 1215 
+Q 1050 1025 967 854 
+Q 884 684 884 450 
+L 3116 450 
+L 3116 0 
+L 356 0 
+L 356 225 
+Q 356 603 461 870 
+Q 566 1138 811 1392 
+Q 1056 1647 1597 2022 
+Q 2091 2363 2305 2670 
+Q 2519 2978 2519 3372 
+z
+" transform="scale(0.015625)"/>
+       </defs>
+       <use xlink:href="#MalgunGothic-32"/>
+       <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+      </g>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#m2796010c0e" x="47.765" y="234.383621" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <!-- 40 -->
+      <g transform="translate(29.749375 238.179715) scale(0.1 -0.1)">
+       <defs>
+        <path id="MalgunGothic-34" d="M 2703 4600 
+L 2703 1563 
+L 3309 1563 
+L 3309 1113 
+L 2703 1113 
+L 2703 0 
+L 2213 0 
+L 2213 1113 
+L 50 1113 
+L 50 1534 
+Q 728 2297 1295 3109 
+Q 1863 3922 2172 4600 
+L 2703 4600 
+z
+M 625 1563 
+L 2213 1563 
+L 2213 3831 
+Q 1613 2788 959 1981 
+L 625 1563 
+z
+" transform="scale(0.015625)"/>
+       </defs>
+       <use xlink:href="#MalgunGothic-34"/>
+       <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+      </g>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m2796010c0e" x="47.765" y="170.314814" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <!-- 60 -->
+      <g transform="translate(29.749375 174.110908) scale(0.1 -0.1)">
+       <defs>
+        <path id="MalgunGothic-36" d="M 2981 4069 
+Q 2619 4250 2228 4250 
+Q 1591 4250 1228 3689 
+Q 866 3128 869 2213 
+L 884 2213 
+Q 1203 2872 1938 2872 
+Q 2547 2872 2903 2478 
+Q 3259 2084 3259 1450 
+Q 3259 797 2857 359 
+Q 2456 -78 1825 -78 
+Q 1116 -78 736 478 
+Q 356 1034 356 2019 
+Q 356 3181 847 3928 
+Q 1338 4675 2222 4675 
+Q 2700 4675 2981 4544 
+L 2981 4069 
+z
+M 906 1506 
+Q 906 1022 1165 683 
+Q 1425 344 1844 344 
+Q 2247 344 2498 645 
+Q 2750 947 2750 1388 
+Q 2750 1888 2509 2167 
+Q 2269 2447 1838 2447 
+Q 1444 2447 1175 2173 
+Q 906 1900 906 1506 
+z
+" transform="scale(0.015625)"/>
+       </defs>
+       <use xlink:href="#MalgunGothic-36"/>
+       <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+      </g>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#m2796010c0e" x="47.765" y="106.246008" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <!-- 80 -->
+      <g transform="translate(29.749375 110.042102) scale(0.1 -0.1)">
+       <defs>
+        <path id="MalgunGothic-38" d="M 303 1281 
+Q 303 1669 539 2011 
+Q 775 2353 1153 2494 
+Q 856 2647 675 2915 
+Q 494 3184 494 3500 
+Q 494 3828 659 4098 
+Q 825 4369 1122 4522 
+Q 1419 4675 1778 4675 
+Q 2334 4675 2700 4342 
+Q 3066 4009 3066 3500 
+Q 3066 3181 2881 2914 
+Q 2697 2647 2413 2494 
+Q 2788 2350 3022 2009 
+Q 3256 1669 3256 1281 
+Q 3256 672 2843 297 
+Q 2431 -78 1778 -78 
+Q 1131 -78 717 301 
+Q 303 681 303 1281 
+z
+M 809 1328 
+Q 809 878 1081 611 
+Q 1353 344 1781 344 
+Q 2206 344 2482 619 
+Q 2759 894 2759 1328 
+Q 2759 1731 2482 2011 
+Q 2206 2291 1781 2291 
+Q 1372 2291 1090 2020 
+Q 809 1750 809 1328 
+z
+M 1003 3459 
+Q 1003 3125 1234 2900 
+Q 1466 2675 1781 2675 
+Q 2097 2675 2330 2900 
+Q 2563 3125 2563 3459 
+Q 2563 3803 2341 4026 
+Q 2119 4250 1781 4250 
+Q 1450 4250 1226 4029 
+Q 1003 3809 1003 3459 
+z
+" transform="scale(0.015625)"/>
+       </defs>
+       <use xlink:href="#MalgunGothic-38"/>
+       <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+      </g>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m2796010c0e" x="47.765" y="42.177202" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <!-- 100 -->
+      <g transform="translate(24.241563 45.973295) scale(0.1 -0.1)">
+       <defs>
+        <path id="MalgunGothic-31" d="M 2231 0 
+L 1734 0 
+L 1734 3972 
+Q 1591 3828 1266 3661 
+Q 941 3494 672 3428 
+L 672 3959 
+Q 1016 4056 1409 4275 
+Q 1803 4494 2031 4700 
+L 2231 4700 
+L 2231 0 
+z
+" transform="scale(0.015625)"/>
+       </defs>
+       <use xlink:href="#MalgunGothic-31"/>
+       <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+       <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+      </g>
+     </g>
+    </g>
+    <g id="text_18">
+     <!-- 토큰 사용량 -->
+     <g transform="translate(17.8775 221.098429) rotate(-90) scale(0.1 -0.1)">
+      <defs>
+       <path id="MalgunGothic-d1a0" d="M 403 341 
+L 403 756 
+L 2963 756 
+L 2963 2022 
+L 1288 2022 
+L 1288 4903 
+L 5147 4903 
+L 5147 4488 
+L 1747 4488 
+L 1747 3688 
+L 5044 3688 
+L 5044 3278 
+L 1747 3278 
+L 1747 2431 
+L 5247 2431 
+L 5247 2022 
+L 3438 2022 
+L 3438 756 
+L 5997 756 
+L 5997 341 
+L 403 341 
+z
+" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-d070" d="M 403 2203 
+L 403 2619 
+L 4666 2619 
+Q 4688 2822 4703 3641 
+L 1209 3463 
+L 1081 3891 
+L 4703 4025 
+L 4709 4472 
+L 4709 4788 
+L 1344 4788 
+L 1344 5197 
+L 5178 5197 
+Q 5178 3456 5113 2619 
+L 5997 2619 
+L 5997 2203 
+L 403 2203 
+z
+M 1369 -331 
+L 1369 1575 
+L 1838 1575 
+L 1838 91 
+L 5216 91 
+L 5216 -331 
+L 1369 -331 
+z
+" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-20" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-c0ac" d="M 5094 2600 
+L 5094 -563 
+L 4628 -563 
+L 4628 5466 
+L 5094 5466 
+L 5094 3016 
+L 6138 3016 
+L 6138 2600 
+L 5094 2600 
+z
+M 3744 966 
+Q 3234 1356 2800 1936 
+Q 2366 2516 2234 2950 
+Q 2094 2472 1672 1883 
+Q 1250 1294 738 891 
+L 378 1203 
+Q 1116 1703 1556 2479 
+Q 1997 3256 1997 4063 
+L 1997 5050 
+L 2463 5050 
+L 2463 4084 
+Q 2463 3297 2898 2553 
+Q 3334 1809 4072 1331 
+L 3744 966 
+z
+" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-c6a9" d="M 1900 3378 
+Q 1288 3678 1288 4269 
+Q 1288 4803 1784 5095 
+Q 2281 5388 3200 5388 
+Q 4119 5388 4616 5095 
+Q 5113 4803 5113 4269 
+Q 5113 3669 4494 3378 
+L 4494 2522 
+L 5997 2522 
+L 5997 2106 
+L 403 2106 
+L 403 2522 
+L 1900 2522 
+L 1900 3378 
+z
+M 3200 4991 
+Q 1772 4991 1772 4269 
+Q 1772 3928 2126 3737 
+Q 2481 3547 3200 3547 
+Q 3919 3547 4273 3737 
+Q 4628 3928 4628 4269 
+Q 4628 4991 3200 4991 
+z
+M 2369 2522 
+L 4025 2522 
+L 4025 3225 
+Q 3678 3150 3200 3150 
+Q 2756 3150 2369 3231 
+L 2369 2522 
+z
+M 3200 -531 
+Q 2259 -531 1764 -234 
+Q 1269 63 1269 581 
+Q 1269 1106 1767 1404 
+Q 2266 1703 3200 1703 
+Q 4134 1703 4632 1404 
+Q 5131 1106 5131 581 
+Q 5131 63 4636 -234 
+Q 4141 -531 3200 -531 
+z
+M 3200 1306 
+Q 2484 1306 2118 1112 
+Q 1753 919 1753 581 
+Q 1753 244 2117 55 
+Q 2481 -134 3200 -134 
+Q 3916 -134 4281 55 
+Q 4647 244 4647 581 
+Q 4647 922 4280 1114 
+Q 3913 1306 3200 1306 
+z
+" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-b7c9" d="M 5125 2772 
+L 5125 1934 
+L 4659 1934 
+L 4659 5466 
+L 5125 5466 
+L 5125 4475 
+L 6034 4475 
+L 6034 4063 
+L 5125 4063 
+L 5125 3181 
+L 6034 3181 
+L 6034 2772 
+L 5125 2772 
+z
+M 4078 2350 
+Q 3588 2269 3083 2251 
+Q 2578 2234 825 2234 
+L 825 3981 
+L 3053 3981 
+L 3053 4794 
+L 825 4794 
+L 825 5203 
+L 3519 5203 
+L 3519 3578 
+L 1294 3578 
+L 1294 2644 
+Q 2741 2644 3198 2662 
+Q 3656 2681 4000 2747 
+L 4078 2350 
+z
+M 3263 -481 
+Q 2306 -481 1803 -184 
+Q 1300 113 1300 616 
+Q 1300 1122 1808 1419 
+Q 2316 1716 3263 1716 
+Q 4209 1716 4718 1422 
+Q 5228 1128 5228 616 
+Q 5228 106 4725 -187 
+Q 4222 -481 3263 -481 
+z
+M 3263 1319 
+Q 2547 1319 2172 1134 
+Q 1797 950 1797 616 
+Q 1797 278 2175 97 
+Q 2553 -84 3263 -84 
+Q 3981 -84 4359 98 
+Q 4738 281 4738 616 
+Q 4738 947 4363 1133 
+Q 3988 1319 3263 1319 
+z
+" transform="scale(0.015625)"/>
+      </defs>
+      <use xlink:href="#MalgunGothic-d1a0"/>
+      <use xlink:href="#MalgunGothic-d070" x="100"/>
+      <use xlink:href="#MalgunGothic-20" x="200"/>
+      <use xlink:href="#MalgunGothic-c0ac" x="235.15625"/>
+      <use xlink:href="#MalgunGothic-c6a9" x="335.15625"/>
+      <use xlink:href="#MalgunGothic-b7c9" x="435.15625"/>
+     </g>
+    </g>
+   </g>
+   <g id="patch_23">
+    <path d="M 47.765 362.521234 
+L 47.765 26.16 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_24">
+    <path d="M 853.2 362.521234 
+L 853.2 26.16 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_25">
+    <path d="M 47.765 362.521234 
+L 853.2 362.521234 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_26">
+    <path d="M 47.765 26.16 
+L 853.2 26.16 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_19">
+    <!-- 100 -->
+    <g transform="translate(89.324003 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_20">
+    <!-- 100 -->
+    <g transform="translate(164.809945 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_21">
+    <!-- 100 -->
+    <g transform="translate(240.295887 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_22">
+    <!-- 100 -->
+    <g transform="translate(315.781829 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_23">
+    <!-- 100 -->
+    <g transform="translate(391.26777 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_24">
+    <!-- 100 -->
+    <g transform="translate(466.753712 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_25">
+    <!-- 100 -->
+    <g transform="translate(542.239654 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_26">
+    <!-- 100 -->
+    <g transform="translate(617.725596 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_27">
+    <!-- 100 -->
+    <g transform="translate(693.211538 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_28">
+    <!-- 100 -->
+    <g transform="translate(768.69748 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_29">
+    <!-- 100 -->
+    <g transform="translate(115.744083 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_30">
+    <!-- 100 -->
+    <g transform="translate(191.230024 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_31">
+    <!-- 100 -->
+    <g transform="translate(266.715966 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_32">
+    <!-- 100 -->
+    <g transform="translate(342.201908 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_33">
+    <!-- 100 -->
+    <g transform="translate(417.68785 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_34">
+    <!-- 100 -->
+    <g transform="translate(493.173792 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_35">
+    <!-- 100 -->
+    <g transform="translate(568.659734 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_36">
+    <!-- 100 -->
+    <g transform="translate(644.145676 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_37">
+    <!-- 100 -->
+    <g transform="translate(719.631618 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_38">
+    <!-- 100 -->
+    <g transform="translate(795.11756 39.813139) scale(0.1 -0.1)">
+     <use xlink:href="#MalgunGothic-31"/>
+     <use xlink:href="#MalgunGothic-30" x="55.078125"/>
+     <use xlink:href="#MalgunGothic-30" x="110.15625"/>
+    </g>
+   </g>
+   <g id="text_39">
+    <!-- 시나리오별 토큰 사용량 비교 -->
+    <g transform="translate(372.154375 20.16) scale(0.12 -0.12)">
+     <defs>
+      <path id="MalgunGothic-bcc4" d="M 1038 2578 
+L 1038 5288 
+L 1497 5288 
+L 1497 4294 
+L 3366 4294 
+L 3366 5288 
+L 3828 5288 
+L 3828 4666 
+L 4947 4666 
+L 4947 5466 
+L 5416 5466 
+L 5416 2259 
+L 4947 2259 
+L 4947 3128 
+L 3828 3128 
+L 3828 2578 
+L 1038 2578 
+z
+M 3828 4263 
+L 3828 3525 
+L 4947 3525 
+L 4947 4263 
+L 3828 4263 
+z
+M 3366 3884 
+L 1497 3884 
+L 1497 2994 
+L 3366 2994 
+L 3366 3884 
+z
+M 1728 -488 
+L 1728 947 
+L 4953 947 
+L 4953 1516 
+L 1728 1516 
+L 1728 1925 
+L 5416 1925 
+L 5416 550 
+L 2194 550 
+L 2194 -72 
+L 5581 -72 
+L 5581 -488 
+L 1728 -488 
+z
+" transform="scale(0.015625)"/>
+      <path id="MalgunGothic-be44" d="M 4884 -563 
+L 4884 5466 
+L 5350 5466 
+L 5350 -563 
+L 4884 -563 
+z
+M 825 1081 
+L 825 5013 
+L 1294 5013 
+L 1294 3469 
+L 3244 3469 
+L 3244 5013 
+L 3713 5013 
+L 3713 1081 
+L 825 1081 
+z
+M 3244 3053 
+L 1294 3053 
+L 1294 1497 
+L 3244 1497 
+L 3244 3053 
+z
+" transform="scale(0.015625)"/>
+      <path id="MalgunGothic-ad50" d="M 5088 1631 
+L 4628 1684 
+Q 4716 2581 4716 3597 
+L 4716 4475 
+L 1131 4475 
+L 1131 4897 
+L 5197 4897 
+L 5197 3597 
+Q 5197 2713 5088 1631 
+z
+M 403 459 
+L 403 884 
+L 1850 884 
+L 1850 2931 
+L 2309 2931 
+L 2309 884 
+L 3378 884 
+L 3378 2931 
+L 3841 2931 
+L 3841 884 
+L 5997 884 
+L 5997 459 
+L 403 459 
+z
+" transform="scale(0.015625)"/>
+     </defs>
+     <use xlink:href="#MalgunGothic-c2dc"/>
+     <use xlink:href="#MalgunGothic-b098" x="100"/>
+     <use xlink:href="#MalgunGothic-b9ac" x="200"/>
+     <use xlink:href="#MalgunGothic-c624" x="300"/>
+     <use xlink:href="#MalgunGothic-bcc4" x="400"/>
+     <use xlink:href="#MalgunGothic-20" x="500"/>
+     <use xlink:href="#MalgunGothic-d1a0" x="535.15625"/>
+     <use xlink:href="#MalgunGothic-d070" x="635.15625"/>
+     <use xlink:href="#MalgunGothic-20" x="735.15625"/>
+     <use xlink:href="#MalgunGothic-c0ac" x="770.3125"/>
+     <use xlink:href="#MalgunGothic-c6a9" x="870.3125"/>
+     <use xlink:href="#MalgunGothic-b7c9" x="970.3125"/>
+     <use xlink:href="#MalgunGothic-20" x="1070.3125"/>
+     <use xlink:href="#MalgunGothic-be44" x="1105.46875"/>
+     <use xlink:href="#MalgunGothic-ad50" x="1205.46875"/>
+    </g>
+   </g>
+   <g id="legend_1">
+    <g id="patch_27">
+     <path d="M 764.2 64.0725 
+L 846.2 64.0725 
+Q 848.2 64.0725 848.2 62.0725 
+L 848.2 33.16 
+Q 848.2 31.16 846.2 31.16 
+L 764.2 31.16 
+Q 762.2 31.16 762.2 33.16 
+L 762.2 62.0725 
+Q 762.2 64.0725 764.2 64.0725 
+z
+" style="fill: #ffffff; opacity: 0.8; stroke: #cccccc; stroke-linejoin: miter"/>
+    </g>
+    <g id="patch_28">
+     <path d="M 766.2 42.752187 
+L 786.2 42.752187 
+L 786.2 35.752187 
+L 766.2 35.752187 
+z
+" style="fill: #f08080"/>
+    </g>
+    <g id="text_40">
+     <!-- 베이스라인 -->
+     <g transform="translate(794.2 42.752187) scale(0.1 -0.1)">
+      <defs>
+       <path id="MalgunGothic-bca0" d="M 5069 -563 
+L 5069 5466 
+L 5544 5466 
+L 5544 -563 
+L 5069 -563 
+z
+M 769 1038 
+L 769 5081 
+L 1228 5081 
+L 1228 3481 
+L 2741 3481 
+L 2741 5081 
+L 3200 5081 
+L 3200 3219 
+L 4006 3219 
+L 4006 5344 
+L 4475 5344 
+L 4475 -378 
+L 4006 -378 
+L 4006 2803 
+L 3200 2803 
+L 3200 1038 
+L 769 1038 
+z
+M 2741 3066 
+L 1228 3066 
+L 1228 1453 
+L 2741 1453 
+L 2741 3066 
+z
+" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-c774" d="M 4947 -563 
+L 4947 5466 
+L 5416 5466 
+L 5416 -563 
+L 4947 -563 
+z
+M 2284 959 
+Q 1597 959 1173 1514 
+Q 750 2069 750 3016 
+Q 750 3975 1169 4522 
+Q 1588 5069 2284 5069 
+Q 2978 5069 3403 4522 
+Q 3828 3975 3828 3016 
+Q 3828 2063 3401 1511 
+Q 2975 959 2284 959 
+z
+M 2284 4653 
+Q 1803 4653 1503 4204 
+Q 1203 3756 1203 3016 
+Q 1203 2278 1506 1826 
+Q 1809 1375 2284 1375 
+Q 2756 1375 3061 1828 
+Q 3366 2281 3366 3016 
+Q 3366 3759 3067 4206 
+Q 2769 4653 2284 4653 
+z
+" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-c2a4" d="M 3194 3897 
+Q 2969 3416 2328 2930 
+Q 1688 2444 959 2247 
+L 641 2619 
+Q 1703 2841 2329 3472 
+Q 2956 4103 2956 4659 
+L 2956 4978 
+L 3438 4978 
+L 3438 4659 
+Q 3438 4094 4073 3476 
+Q 4709 2859 5759 2625 
+L 5428 2253 
+Q 4694 2481 4058 2956 
+Q 3422 3431 3194 3897 
+z
+M 5997 447 
+L 403 447 
+L 403 863 
+L 5997 863 
+L 5997 447 
+z
+" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-b77c" d="M 5094 2503 
+L 5094 -563 
+L 4628 -563 
+L 4628 5466 
+L 5094 5466 
+L 5094 2925 
+L 6138 2925 
+L 6138 2503 
+L 5094 2503 
+z
+M 806 794 
+L 806 3169 
+L 3003 3169 
+L 3003 4506 
+L 806 4506 
+L 806 4922 
+L 3469 4922 
+L 3469 2759 
+L 1275 2759 
+L 1275 1203 
+Q 3419 1203 4063 1338 
+L 4128 928 
+Q 3284 794 806 794 
+z
+" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-c778" d="M 4947 1063 
+L 4947 5466 
+L 5416 5466 
+L 5416 1063 
+L 4947 1063 
+z
+M 2438 2175 
+Q 1763 2175 1309 2601 
+Q 856 3028 856 3706 
+Q 856 4388 1307 4811 
+Q 1759 5234 2438 5234 
+Q 3116 5234 3564 4812 
+Q 4013 4391 4013 3706 
+Q 4013 3028 3563 2601 
+Q 3113 2175 2438 2175 
+z
+M 2438 4819 
+Q 1944 4819 1634 4516 
+Q 1325 4213 1325 3706 
+Q 1325 3200 1633 2895 
+Q 1941 2591 2438 2591 
+Q 2934 2591 3243 2895 
+Q 3553 3200 3553 3706 
+Q 3553 4213 3243 4516 
+Q 2934 4819 2438 4819 
+z
+M 1613 -331 
+L 1613 1625 
+L 2081 1625 
+L 2081 91 
+L 5575 91 
+L 5575 -331 
+L 1613 -331 
+z
+" transform="scale(0.015625)"/>
+      </defs>
+      <use xlink:href="#MalgunGothic-bca0"/>
+      <use xlink:href="#MalgunGothic-c774" x="100"/>
+      <use xlink:href="#MalgunGothic-c2a4" x="200"/>
+      <use xlink:href="#MalgunGothic-b77c" x="300"/>
+      <use xlink:href="#MalgunGothic-c778" x="400"/>
+     </g>
+    </g>
+    <g id="patch_29">
+     <path d="M 766.2 57.708438 
+L 786.2 57.708438 
+L 786.2 50.708438 
+L 766.2 50.708438 
+z
+" style="fill: #4682b4"/>
+    </g>
+    <g id="text_41">
+     <!-- Greeum -->
+     <g transform="translate(794.2 57.708438) scale(0.1 -0.1)">
+      <defs>
+       <path id="MalgunGothic-47" d="M 4022 316 
+Q 3334 -78 2491 -78 
+Q 1525 -78 915 558 
+Q 306 1194 306 2238 
+Q 306 3303 979 3989 
+Q 1653 4675 2681 4675 
+Q 3453 4675 3938 4428 
+L 3938 3856 
+Q 3381 4209 2619 4209 
+Q 1838 4209 1338 3671 
+Q 838 3134 838 2278 
+Q 838 1391 1300 887 
+Q 1763 384 2563 384 
+Q 3128 384 3516 606 
+L 3516 1922 
+L 2503 1922 
+L 2503 2384 
+L 4022 2384 
+L 4022 316 
+z
+" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-72" d="M 2225 2775 
+Q 2084 2881 1828 2881 
+Q 1491 2881 1262 2553 
+Q 1034 2225 1034 1681 
+L 1034 0 
+L 538 0 
+L 538 3284 
+L 1034 3284 
+L 1034 2603 
+L 1047 2603 
+Q 1159 2950 1389 3145 
+Q 1619 3341 1903 3341 
+Q 2109 3341 2225 3297 
+L 2225 2775 
+z
+" transform="scale(0.015625)"/>
+       <path id="MalgunGothic-75" d="M 3166 0 
+L 2669 0 
+L 2669 519 
+L 2656 519 
+Q 2331 -78 1644 -78 
+Q 469 -78 469 1322 
+L 469 3284 
+L 959 3284 
+L 959 1403 
+Q 959 344 1766 344 
+Q 2159 344 2414 636 
+Q 2669 928 2669 1394 
+L 2669 3284 
+L 3166 3284 
+L 3166 0 
+z
+" transform="scale(0.015625)"/>
+      </defs>
+      <use xlink:href="#MalgunGothic-47"/>
+      <use xlink:href="#MalgunGothic-72" x="70.166016"/>
+      <use xlink:href="#MalgunGothic-65" x="104.142578"/>
+      <use xlink:href="#MalgunGothic-65" x="157.658203"/>
+      <use xlink:href="#MalgunGothic-75" x="211.173828"/>
+      <use xlink:href="#MalgunGothic-6d" x="268.986328"/>
+     </g>
+    </g>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pf20064dcf0">
+   <rect x="47.765" y="26.16" width="805.435" height="336.361234"/>
+  </clipPath>
+ </defs>
+</svg>

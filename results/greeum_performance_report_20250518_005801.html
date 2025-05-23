@@ -1,0 +1,303 @@
+
+            <!DOCTYPE html>
+            <html lang="ko">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Greeum 성능 보고서</title>
+                <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.5/jstat.min.js"></script>
+                <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+                <style>
+                    body {
+                        font-family: 'Noto Sans KR', sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                        max-width: 1200px;
+                        margin: 0 auto;
+                        padding: 20px;
+                        background-color: #f5f5f5;
+                    }
+                    .header {
+                        text-align: center;
+                        margin-bottom: 40px;
+                        padding: 20px;
+                        background: linear-gradient(135deg, #3a6ad1, #8a6bd1);
+                        color: white;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    }
+                    h1 {
+                        margin-bottom: 10px;
+                        font-weight: 700;
+                    }
+                    .positive {
+                        color: #4CAF50;
+                    }
+                    .negative {
+                        color: #F44336;
+                    }
+                    .highlight {
+                        font-size: 2.5em;
+                        font-weight: bold;
+                    }
+                    .card {
+                        background-color: white;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                        padding: 20px;
+                        margin-bottom: 20px;
+                    }
+                    .summary {
+                        display: flex;
+                        justify-content: space-between;
+                        flex-wrap: wrap;
+                    }
+                    .summary-card {
+                        flex: 1;
+                        min-width: 250px;
+                        margin: 10px;
+                        padding: 20px;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                        text-align: center;
+                    }
+                    .chart-container {
+                        height: 400px;
+                        margin: 20px 0;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 20px;
+                    }
+                    th, td {
+                        padding: 12px;
+                        text-align: left;
+                        border-bottom: 1px solid #ddd;
+                    }
+                    th {
+                        background-color: #f2f2f2;
+                        font-weight: 500;
+                    }
+                    .significant {
+                        font-weight: bold;
+                        color: #4CAF50;
+                    }
+                    .not-significant {
+                        color: #F44336;
+                    }
+                    footer {
+                        text-align: center;
+                        margin-top: 40px;
+                        color: #666;
+                        font-size: 0.9em;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>Greeum 성능 보고서</h1>
+                    <p>생성 시간: 2025년 05월 18일 00:58</p>
+                </div>
+                
+                <div class="card">
+                    <h2>요약</h2>
+                    <div class="summary">
+                        <div class="summary-card" style="background-color: #e3f2fd;">
+                            <h3>토큰 사용량 감소</h3>
+                            <div class="highlight negative">0.0%</div>
+                            <p>일반 LLM 대비 Greeum의 토큰 사용량 절감률</p>
+                        </div>
+                        <div class="summary-card" style="background-color: #f1f8e9;">
+                            <h3>응답 시간 개선</h3>
+                            <div class="highlight positive">29.4%</div>
+                            <p>일반 LLM 대비 Greeum의 응답 속도 개선률</p>
+                        </div>
+                        <div class="summary-card" style="background-color: #fff3e0;">
+                            <h3>응답 정확도 향상</h3>
+                            <div class="highlight negative">0.0%</div>
+                            <p>일반 LLM 대비 Greeum의 응답 정확도 향상률</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2>시나리오별 성능 비교</h2>
+                    <div id="scenario-chart" class="chart-container"></div>
+                </div>
+                
+                <div class="card">
+                    <h2>품질 메트릭 비교</h2>
+                    <div id="quality-chart" class="chart-container"></div>
+                </div>
+                
+                <div class="card">
+                    <h2>통계적 유의성</h2>
+                    <p>
+                        아래 표는 각 시나리오와 메트릭별 통계적 유의성 검증 결과를 보여줍니다. 
+                        p-값이 0.05 미만인 경우 통계적으로 유의미한 차이가 있다고 간주합니다.
+                    </p>
+                    <table>
+                        <tr>
+                            <th>시나리오</th>
+                            <th>메트릭</th>
+                            <th>개선율</th>
+                            <th>p-값</th>
+                            <th>통계적 유의성</th>
+                            <th>효과 크기</th>
+                        </tr>
+            
+                        <tr>
+                            <td rowspan="2">simple_qa</td>
+                            <td>토큰 사용량</td>
+                            <td class="negative">0.00%</td>
+                            <td>nan</td>
+                            <td class="not-significant">
+                                유의하지 않음
+                            </td>
+                            <td>미미함 (0.00)</td>
+                        </tr>
+                
+                        <tr>
+                            <td>응답 시간</td>
+                            <td class="positive">29.39%</td>
+                            <td>0.5875</td>
+                            <td class="not-significant">
+                                유의하지 않음
+                            </td>
+                            <td>미미함 (0.08)</td>
+                        </tr>
+                
+                        <tr>
+                            <td>simple_qa</td>
+                            <td>accuracy</td>
+                            <td class="negative">0.00%</td>
+                            <td>nan</td>
+                            <td class="not-significant">
+                                유의하지 않음
+                            </td>
+                            <td>미미함 (0.00)</td>
+                        </tr>
+                        
+                        <tr>
+                            <td>simple_qa</td>
+                            <td>consistency</td>
+                            <td class="negative">0.00%</td>
+                            <td>nan</td>
+                            <td class="not-significant">
+                                유의하지 않음
+                            </td>
+                            <td>미미함 (0.00)</td>
+                        </tr>
+                        
+                        <tr>
+                            <td>simple_qa</td>
+                            <td>specificity</td>
+                            <td class="negative">0.00%</td>
+                            <td>1.0000</td>
+                            <td class="not-significant">
+                                유의하지 않음
+                            </td>
+                            <td>미미함 (0.00)</td>
+                        </tr>
+                        
+                        <tr>
+                            <td>simple_qa</td>
+                            <td>hallucination</td>
+                            <td class="positive">0.00%</td>
+                            <td>nan</td>
+                            <td class="not-significant">
+                                유의하지 않음
+                            </td>
+                            <td>미미함 (0.00)</td>
+                        </tr>
+                        
+                    </table>
+                </div>
+                
+                <footer>
+                    <p>© Greeum 성능 테스트 시스템</p>
+                </footer>
+                
+                <script>
+                    // 시나리오별 성능 비교 차트
+                    var scenarioData = [
+            
+                        {
+                            x: ["simple_qa"],
+                            y: [0.0],
+                            name: '토큰 절감률',
+                            type: 'bar',
+                            marker: {
+                                color: 'rgba(58, 106, 209, 0.7)'
+                            }
+                        },
+            
+                        {
+                            x: ["simple_qa"],
+                            y: [29.39236167254147],
+                            name: '시간 개선률',
+                            type: 'bar',
+                            marker: {
+                                color: 'rgba(76, 175, 80, 0.7)'
+                            }
+                        },
+            
+                        {
+                            x: ["simple_qa"],
+                            y: [0],
+                            name: '정확도 향상률',
+                            type: 'bar',
+                            marker: {
+                                color: 'rgba(255, 152, 0, 0.7)'
+                            }
+                        }
+                    ];
+                    
+                    var scenarioLayout = {
+                        title: '시나리오별 성능 개선률',
+                        xaxis: {
+                            title: '시나리오'
+                        },
+                        yaxis: {
+                            title: '개선률 (%)'
+                        },
+                        barmode: 'group'
+                    };
+                    
+                    Plotly.newPlot('scenario-chart', scenarioData, scenarioLayout);
+                    
+                    // 품질 메트릭 비교 차트
+            
+                    var qualityData = [
+                        {
+                            x: ["\uc815\ud655\ub3c4", "\uc77c\uad00\uc131", "\uad6c\uccb4\uc131", "\ud658\uac01 \uac10\uc18c"],
+                            y: [0.0, 0.0, 0.0, -0.0],
+                            type: 'bar',
+                            marker: {
+                                color: [
+                                    'rgba(76, 175, 80, 0.7)',
+                                    'rgba(33, 150, 243, 0.7)',
+                                    'rgba(255, 193, 7, 0.7)',
+                                    'rgba(244, 67, 54, 0.7)'
+                                ]
+                            }
+                        }
+                    ];
+                    
+                    var qualityLayout = {
+                        title: '품질 메트릭별 개선률',
+                        xaxis: {
+                            title: '메트릭'
+                        },
+                        yaxis: {
+                            title: '개선률 (%)'
+                        }
+                    };
+                    
+                    Plotly.newPlot('quality-chart', qualityData, qualityLayout);
+                </script>
+            </body>
+            </html>
+            
