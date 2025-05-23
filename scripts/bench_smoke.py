@@ -1,6 +1,9 @@
 import time, tracemalloc, argparse
 from greeum.block_manager import BlockManager
 from greeum.embedding_models import get_embedding
+import pathlib, sys
+# 로컬 패키지 임포트를 위해 루트 경로 추가
+sys.path.append(str(pathlib.Path(__file__).resolve().parent.parent))
 
 def generate_dummy_blocks(bm: BlockManager, n: int = 10000):
     for i in range(n):
