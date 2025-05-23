@@ -29,7 +29,7 @@ def convert_numpy_types(obj: Any) -> Any:
     elif isinstance(obj, np.integer):
         return int(obj)
     elif isinstance(obj, np.floating):
-        return float(obj)
+        return float(round(obj.item(), 6))
     elif isinstance(obj, np.ndarray):
         return obj.tolist()
     elif isinstance(obj, dict):

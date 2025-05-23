@@ -19,7 +19,15 @@ class PromptWrapper:
             stm_manager: STM 매니저 인스턴스 (없으면 자동 생성)
         """
         self.cache_manager = cache_manager or CacheManager()
-        self.stm_manager = stm_manager or STMManager()
+        if stm_manager is not None:
+            self.stm_manager = stm_manager
+        else:
+            # CacheManager 가 있을 때 그 DB 사용, 없으면 새 DatabaseManager
+            if self.cache_manager:
+                self.stm_manager = STMManager(self.cache_manager.block_manager.db_manager)
+            else:
+                from .database_manager import DatabaseManager
+                self.stm_manager = STMManager(DatabaseManager())
     
     def _format_memory_block(self, block: Dict[str, Any]) -> str:
         """
