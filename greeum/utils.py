@@ -155,9 +155,9 @@ def check_default_embedding_model() -> dict:
         model = SimpleEmbeddingModel() # 초기화 성공 여부
         embedding = model.encode("테스트 문장")
         if isinstance(embedding, list) and len(embedding) > 0:
-             return {"status": "ok", "message": f"기본 임베딩 모델(SimpleEmbeddingModel) 로드 및 테스트 인코딩 성공."}
+             return {"status": "ok", "message": "기본 임베딩 모델(SimpleEmbeddingModel) 로드 및 테스트 인코딩 성공."}
         else:
-            return {"status": "error", "message": f"기본 임베딩 모델(SimpleEmbeddingModel) 테스트 인코딩 실패."}
+            return {"status": "error", "message": "기본 임베딩 모델(SimpleEmbeddingModel) 테스트 인코딩 실패."}
 
     except ImportError:
         return {"status": "error", "message": "embedding_models 모듈을 import할 수 없습니다."}
