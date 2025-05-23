@@ -9,6 +9,9 @@
 - [CacheManager](#cachemanager) - 웨이포인트 캐시
 - [PromptWrapper](#promptwrapper) - 프롬프트 조합
 - [TemporalReasoner](#temporalreasoner) - 시간 기반 추론
+- [FaissVectorIndex](#faissvectorindex) - 벡터 인덱스
+- [STMWorkingSet](#stmworkingset) - 활성 단기 기억
+- [SearchEngine](#searchengine) - BERT 재랭크 검색
 - [MCPClient](#mcpclient) - MCP 클라이언트
 - [MCPService](#mcpservice) - MCP 서비스
 - [MCPIntegrations](#mcpintegrations) - MCP 통합 유틸리티
@@ -260,6 +263,77 @@ TemporalReasoner 객체를 초기화합니다.
 - `top_k` (int, 선택): 상위 k개 결과 반환
 
 **반환**: 하이브리드 검색 결과
+
+---
+
+## FaissVectorIndex
+
+FAISS 기반 벡터 인덱스를 관리하는 헬퍼 클래스입니다. BlockManager와 별도로 대규모 임베딩을 고속으로 검색합니다.
+
+### 주요 메서드
+
+#### `__init__(dimension=384, hnsw_m=32, ef_construction=200)`
+
+- `dimension` (int): 임베딩 차원
+- `hnsw_m` (int): HNSW 그래프 인접 리스트 크기
+- `ef_construction` (int): 인덱스 구축 시 탐색 깊이
+
+#### `add_embeddings(vectors, metadata_list=None)`
+
+- `vectors` (ndarray | List[List[float]]): 추가할 임베딩
+- `metadata_list` (list, 선택): 각 벡터에 매핑될 메타데이터 딕셔너리
+
+#### `search(query_vector, top_k=5)`
+
+- `query_vector` (list): 검색할 임베딩 벡터
+- `top_k` (int): 상위 결과 수
+
+**반환**: `(indices, distances)` 튜플
+
+---
+
+## STMWorkingSet
+
+단기 기억 슬롯을 관리하여 현재 컨텍스트에 가장 관련성 높은 STM을 유지합니다.
+
+### 주요 메서드
+
+#### `__init__(capacity=8)`
+
+- `capacity` (int): 동시에 유지할 최대 STM 개수
+
+#### `add(content, importance=0.5, ttl=3600)`
+
+- 새로운 STM 항목을 추가하며, 용량 초과 시 중요도가 낮은 항목을 제거합니다.
+
+#### `get_recent(limit=5)`
+
+- 가장 최근의 STM 항목을 반환합니다.
+
+#### `prune()`
+
+- 만료되었거나 중요도가 낮은 STM을 정리합니다.
+
+---
+
+## SearchEngine
+
+FAISS 검색 결과를 BERT Cross-Encoder 로 재랭크하여 정확도를 향상시킵니다.
+
+### 주요 메서드
+
+#### `__init__(vector_index, reranker_model="cross-encoder/ms-marco-MiniLM-L-6-v2")`
+
+- `vector_index` (FaissVectorIndex): 벡터 인덱스 인스턴스
+- `reranker_model` (str): HuggingFace Cross-Encoder 모델 명
+
+#### `search(query_text, top_k=5, rerank_k=20)`
+
+- `query_text` (str): 사용자 쿼리 텍스트
+- `top_k` (int): 최종 결과 수
+- `rerank_k` (int): 재랭크 대상 수 (vector 검색 상위 N)
+
+**반환**: 재랭크된 결과 리스트
 
 ---
 

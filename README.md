@@ -1,4 +1,4 @@
-﻿# 🧠 Greeum v0.5.2
+﻿# 🧠 Greeum v0.6.0
 
 <p align="center">
   <a href="README.md">🇰🇷 한국어</a> |
@@ -145,7 +145,6 @@ greeum/
 ├── data/                  # 데이터 저장 디렉토리
 ├── tests/                 # 테스트 스위트
 ```
-
 ## 브랜치 관리 규칙
 
 - **main**: 안정적인 릴리즈 버전 브랜치
@@ -251,4 +250,5 @@ python3.12 -m venv .venv && source .venv/bin/activate
 pip install --upgrade pip
 pip install greeum[all]  # faiss + transformers + keybert + openai 지원
 ```
+
 
