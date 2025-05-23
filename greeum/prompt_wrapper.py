@@ -3,7 +3,7 @@ from datetime import datetime
 
 from .cache_manager import CacheManager
 from .stm_manager import STMManager
-from .token_utils import count_tokens
+from .token_utils import count_tokens, truncate_by_tokens
 
 class PromptWrapper:
     """프롬프트 조합기 클래스"""
@@ -117,6 +117,11 @@ class PromptWrapper:
         # 먼저 사용자 입력 추가 예정이므로 사용자 입력 토큰을 미리 계산
         user_segment = f"\n## 현재 입력:\n{user_input}"
         base_tokens = count_tokens("\n".join(prompt_parts)) + count_tokens(user_segment)
+        if token_budget is not None and base_tokens > token_budget:
+            # 시스템 프롬프트를 잘라서 예산 안에 맞춘다
+            sys_tokens_allow = max(token_budget - count_tokens(user_segment), 0)
+            prompt_parts[0] = truncate_by_tokens(prompt_parts[0], sys_tokens_allow)
+            base_tokens = count_tokens("\n".join(prompt_parts)) + count_tokens(user_segment)
         remaining = None if token_budget is None else max(token_budget - base_tokens, 0)
         # 웨이포인트 블록 추가, 중요도/관련성 높은 순
         if waypoint_blocks and (remaining is None or remaining > 0):
