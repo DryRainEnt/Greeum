@@ -11,7 +11,8 @@
 5. [LLM 통합](#llm-통합)
 6. [CLI 도구](#cli-도구)
 7. [REST API 서버](#rest-api-서버)
-8. [고급 기능](#고급-기능)
+8. [v0.6.0 새로운 기능](#v060-새로운-기능)
+9. [고급 기능](#고급-기능)
 
 ## 시작하기
 
@@ -486,6 +487,235 @@ time_results = search_by_time("어제 연구한 내용", language="ko")
 print(f"시간 검색 결과: {len(time_results.get('blocks', []))} 블록 찾음")
 ```
 
+## v0.6.0 새로운 기능
+
+Greeum v0.6.0에서 새로 추가된 주요 기능들을 소개합니다.
+
+### FaissVectorIndex 사용하기
+
+FAISS 벡터 인덱스를 사용하여 빠른 벡터 유사도 검색을 수행할 수 있습니다.
+
+```python
+from greeum.vector_index import FaissVectorIndex
+import numpy as np
+
+# FAISS 벡터 인덱스 생성 (384차원)
+vector_index = FaissVectorIndex(dim=384)
+
+# 벡터 데이터 준비
+block_indices = [1, 2, 3]
+vectors = [
+    np.random.randn(384).tolist(),  # 블록 1의 임베딩
+    np.random.randn(384).tolist(),  # 블록 2의 임베딩
+    np.random.randn(384).tolist()   # 블록 3의 임베딩
+]
+
+# 벡터를 인덱스에 추가
+vector_index.add_vectors(block_indices, vectors)
+
+# 쿼리 벡터로 유사도 검색
+query_vector = np.random.randn(384).tolist()
+results = vector_index.search(query_vector, top_k=5)
+
+print(f"검색 결과: {len(results)}개 찾음")
+for block_idx, similarity in results:
+    print(f"블록 {block_idx}: 유사도 {similarity:.4f}")
+```
+
+### SearchEngine과 BERT 재랭크 사용하기
+
+새로운 SearchEngine은 벡터 검색과 BERT 기반 재랭크를 결합합니다.
+
+```python
+from greeum import BlockManager
+from greeum.search_engine import SearchEngine, BertReranker
+
+# 블록 매니저에 데이터 추가
+block_manager = BlockManager()
+block_manager.add_block(
+    context="머신러닝 알고리즘을 사용하여 이미지 분류 모델을 개발했습니다.",
+    keywords=["머신러닝", "이미지", "분류", "모델"]
+)
+block_manager.add_block(
+    context="딥러닝 프레임워크를 활용한 자연어 처리 시스템을 구축했습니다.",
+    keywords=["딥러닝", "자연어", "처리", "시스템"]
+)
+
+# BERT 재랭크 초기화 (선택사항)
+try:
+    reranker = BertReranker(model_name="cross-encoder/ms-marco-MiniLM-L-6-v2")
+    print("BERT 재랭크 활성화됨")
+except ImportError:
+    reranker = None
+    print("BERT 재랭크 비활성화 (sentence-transformers 미설치)")
+
+# 검색 엔진 초기화
+search_engine = SearchEngine(block_manager=block_manager, reranker=reranker)
+
+# 검색 실행
+query = "머신러닝으로 이미지를 분석하는 방법"
+results = search_engine.search(query, top_k=3)
+
+print(f"검색 결과: {len(results['blocks'])}개 블록")
+print(f"성능 지표: {results['timing']}")
+
+for block in results["blocks"]:
+    relevance = block.get("relevance_score", "N/A")
+    print(f"[관련도: {relevance}] {block['context'][:50]}...")
+```
+
+### STMWorkingSet으로 작업 기억 관리
+
+인간의 작업 기억을 모사한 STMWorkingSet을 사용할 수 있습니다.
+
+```python
+from greeum import STMWorkingSet
+from datetime import datetime
+
+# 작업 기억 세트 초기화 (최대 8개 슬롯, 10분 TTL)
+working_set = STMWorkingSet(capacity=8, ttl_seconds=600)
+
+# 다양한 유형의 기억 추가
+working_set.add(
+    content="프로젝트 킥오프 미팅이 오후 2시에 예정되어 있습니다.",
+    speaker="user",
+    task_id="project-001",
+    step_id="meeting-setup"
+)
+
+working_set.add(
+    content="클라이언트 요구사항 문서를 검토해야 합니다.",
+    speaker="assistant",
+    task_id="project-001",
+    step_id="requirement-review",
+    metadata={"priority": "high", "deadline": "today"}
+)
+
+working_set.add(
+    content="팀 멤버들에게 작업 분배를 완료했습니다.",
+    speaker="user",
+    task_id="project-001",
+    step_id="task-assignment"
+)
+
+# 최근 기억 조회
+recent_memories = working_set.get_recent(n=5)
+print(f"최근 {len(recent_memories)}개 기억:")
+
+for memory in recent_memories:
+    task_info = f"[{memory.task_id}/{memory.step_id}]" if memory.task_id else ""
+    print(f"{task_info} {memory.speaker}: {memory.content}")
+    if memory.metadata:
+        print(f"  메타데이터: {memory.metadata}")
+    print(f"  시간: {memory.timestamp}")
+    print("-" * 40)
+
+# 전체 기억 조회
+all_memories = working_set.get_recent()
+print(f"\n전체 작업 기억: {len(all_memories)}개")
+```
+
+### 통합 워크플로우 예제
+
+v0.6.0의 새 기능들을 조합한 완전한 워크플로우:
+
+```python
+from greeum import BlockManager, STMWorkingSet
+from greeum.search_engine import SearchEngine, BertReranker
+from greeum.vector_index import FaissVectorIndex
+
+class AdvancedMemorySystem:
+    def __init__(self):
+        # 핵심 컴포넌트 초기화
+        self.block_manager = BlockManager()
+        self.working_set = STMWorkingSet(capacity=10, ttl_seconds=1800)  # 30분
+        
+        # 검색 엔진 설정 (BERT 재랭크 포함)
+        try:
+            reranker = BertReranker()
+            self.search_engine = SearchEngine(self.block_manager, reranker)
+            print("고급 검색 엔진 활성화 (BERT 재랭크 포함)")
+        except ImportError:
+            self.search_engine = SearchEngine(self.block_manager)
+            print("기본 검색 엔진 활성화")
+    
+    def add_conversation_turn(self, user_input: str, assistant_response: str, 
+                            task_id: str = None, step_id: str = None):
+        """대화 턴을 장기/단기 기억에 저장"""
+        # 단기 기억에 대화 저장
+        self.working_set.add(
+            content=user_input,
+            speaker="user",
+            task_id=task_id,
+            step_id=step_id
+        )
+        
+        self.working_set.add(
+            content=assistant_response,
+            speaker="assistant",
+            task_id=task_id,
+            step_id=step_id
+        )
+        
+        # 중요한 정보는 장기 기억에도 저장
+        combined_context = f"사용자: {user_input}\n어시스턴트: {assistant_response}"
+        self.block_manager.add_block(
+            context=combined_context,
+            keywords=["대화", "상호작용"],
+            importance=0.6
+        )
+    
+    def smart_search(self, query: str, include_working_memory: bool = True):
+        """장기 기억과 작업 기억을 모두 고려한 스마트 검색"""
+        # 장기 기억에서 검색
+        long_term_results = self.search_engine.search(query, top_k=5)
+        
+        result = {
+            "long_term": long_term_results["blocks"],
+            "timing": long_term_results["timing"]
+        }
+        
+        # 작업 기억 포함
+        if include_working_memory:
+            working_memories = self.working_set.get_recent(n=5)
+            result["working_memory"] = [
+                {
+                    "content": mem.content,
+                    "speaker": mem.speaker,
+                    "timestamp": mem.timestamp.isoformat(),
+                    "task_info": f"{mem.task_id}/{mem.step_id}" if mem.task_id else None
+                }
+                for mem in working_memories
+            ]
+        
+        return result
+
+# 사용 예제
+memory_system = AdvancedMemorySystem()
+
+# 대화 시뮬레이션
+memory_system.add_conversation_turn(
+    user_input="머신러닝 프로젝트의 데이터 전처리 방법을 알려줘",
+    assistant_response="데이터 전처리에는 결측값 처리, 정규화, 피처 엔지니어링 등이 포함됩니다.",
+    task_id="ml-project",
+    step_id="data-preprocessing"
+)
+
+memory_system.add_conversation_turn(
+    user_input="정규화 방법 중 어떤 것이 가장 효과적인가?",
+    assistant_response="MinMax 스케일링과 Standard 스케일링이 일반적으로 사용되며, 데이터 분포에 따라 선택합니다.",
+    task_id="ml-project",
+    step_id="normalization-discussion"
+)
+
+# 스마트 검색 실행
+search_results = memory_system.smart_search("데이터 정규화 방법")
+
+print(f"장기 기억 검색 결과: {len(search_results['long_term'])}개")
+print(f"작업 기억: {len(search_results['working_memory'])}개")
+print(f"검색 성능: {search_results['timing']}")
+```
+
 ## 고급 기능
 
 Greeum의 고급 기능을 사용하는 방법을 알아봅니다.
@@ -554,4 +784,4 @@ block = block_manager.add_block(
 print(f"임베딩 벡터 길이: {len(block['embedding'])}")
 ```
 
-이 튜토리얼을 통해 Greeum의 기본 기능부터 고급 기능까지 다양한 사용법을 배웠습니다. 더 많은 정보와 세부 사항은 [API 레퍼런스](api-reference.md)를 참조하세요. 
+이 튜토리얼을 통해 Greeum v0.6.0의 기본 기능부터 최신 고급 기능까지 다양한 사용법을 배웠습니다. v0.6.0에서 새로 추가된 FaissVectorIndex, SearchEngine, STMWorkingSet 등의 기능을 활용하여 더욱 강력한 메모리 시스템을 구축할 수 있습니다. 더 많은 정보와 세부 사항은 [API 레퍼런스](api-reference.md)를 참조하세요. 

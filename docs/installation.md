@@ -4,7 +4,7 @@ Greeum은 LLM 독립적인 기억 관리 시스템으로, 다양한 언어 모�
 
 ## 필수 요구사항
 
-- Python 3.8 이상
+- Python 3.10 이상 (v0.6.0부터 최소 버전 상향 조정)
 - pip (Python 패키지 관리자)
 - Git (선택사항, 저장소 복제용)
 
@@ -13,13 +13,19 @@ Greeum은 LLM 독립적인 기억 관리 시스템으로, 다양한 언어 모�
 ### 1. PyPI에서 직접 설치 (권장)
 
 ```bash
-# 기본 설치
+# 기본 설치 (v0.6.0)
 pip install greeum
 
-# MCP(Model Control Protocol) 기능 포함 설치
-pip install greeum[mcp]
+# FAISS 벡터 인덱스 기능 포함
+pip install greeum[faiss]
 
-# 모든 기능 포함 설치
+# OpenAI 임베딩 모델 지원
+pip install greeum[openai]
+
+# Transformers 및 BERT 재랭크 기능
+pip install greeum[transformers]
+
+# 모든 기능 포함 설치 (추천)
 pip install greeum[all]
 ```
 
@@ -29,14 +35,17 @@ pip install greeum[all]
 git clone https://github.com/DryRainEnt/Greeum.git
 cd Greeum
 
-# 기본 설치
+# 기본 의존성 설치
 pip install -r requirements.txt
 
 # 개발 모드로 설치
 pip install -e .
 
-# MCP 기능 포함 개발 모드 설치
-pip install -e ".[mcp]"
+# 모든 기능 포함 개발 모드 설치 (추천)
+pip install -e ".[all]"
+
+# 특정 기능만 포함
+pip install -e ".[faiss,transformers]"
 ```
 
 ### 3. 가상 환경 설정 (선택사항이지만 권장)
@@ -64,7 +73,8 @@ Greeum은 기본적으로 설정 없이도 바로 사용할 수 있지만, 몇 �
 {
   "storage": {
     "path": "./data/memory",
-    "format": "json"
+    "format": "json",
+    "database_url": "sqlite:///data/greeum.db"
   },
   "ttl": {
     "short": 3600,    // 1시간 (초 단위)
@@ -73,16 +83,21 @@ Greeum은 기본적으로 설정 없이도 바로 사용할 수 있지만, 몇 �
   },
   "embedding": {
     "model": "default",
-    "dimension": 384
+    "dimension": 384,
+    "faiss_enabled": true
+  },
+  "search": {
+    "use_bert_reranker": true,
+    "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "vector_search_top_k": 15
+  },
+  "working_memory": {
+    "capacity": 8,
+    "ttl_seconds": 600
   },
   "language": {
     "default": "auto",
     "supported": ["ko", "en", "ja", "zh", "es"]
-  },
-  "mcp": {
-    "enabled": true,
-    "port": 8000,
-    "host": "0.0.0.0"
   }
 }
 ```
@@ -95,47 +110,53 @@ Greeum은 기본적으로 설정 없이도 바로 사용할 수 있지만, 몇 �
 mkdir -p data/memory
 ```
 
-## MCP(Model Control Protocol) 설정
+## v0.6.0 새로운 기능 설정
 
-### MCP 서비스 실행
+### FAISS 벡터 인덱스 설정
 
-Greeum v0.4.0부터는 MCP를 통해 다양한 외부 도구와 연동할 수 있습니다. MCP 서비스를 실행하려면:
+v0.6.0에서 추가된 FAISS 벡터 인덱스를 사용하려면:
 
 ```bash
-# CLI 명령을 통한 MCP 서비스 실행
-greeum-mcp --port 8000 --data-dir ./data
+# FAISS 의존성 설치
+pip install greeum[faiss]
 
-# 또는 Python 모듈로 직접 실행
-python -m greeum.mcp_service --port 8000 --data-dir ./data
+# 또는 직접 설치
+pip install faiss-cpu>=1.7.4
 ```
 
-### 환경 변수 설정 (선택사항)
+### BERT 재랭크 설정
 
-MCP 서비스의 보안을 위해 다음 환경 변수를 설정할 수 있습니다:
+고도화된 검색 기능을 위한 BERT 재랭크를 사용하려면:
 
 ```bash
-# Windows
-set ADMIN_KEY=your_secure_admin_key
+# Transformers 의존성 설치
+pip install greeum[transformers]
 
-# macOS/Linux
-export ADMIN_KEY=your_secure_admin_key
+# 또는 직접 설치
+pip install sentence-transformers>=2.2.0
 ```
 
-### API 키 생성
+### STMWorkingSet 설정
 
-MCP 서비스에 접근하려면 API 키가 필요합니다. 다음 방법으로 API 키를 생성할 수 있습니다:
+작업 기억 기능은 별도의 설치 없이 기본 제공됩니다:
 
-```bash
-# MCP 서비스가 실행 중인 상태에서 API 키 생성 요청
-curl -X POST "http://localhost:8000/api/mcp/admin/api_key" \
-  -H "Content-Type: application/json" \
-  -d '{"action": "create", "admin_key": "your_secure_admin_key", "name": "My API Key"}'
+```python
+from greeum import STMWorkingSet
+
+# 기본 설정으로 사용
+working_set = STMWorkingSet(capacity=8, ttl_seconds=600)
 ```
 
-또는 `examples/mcp_example.py` 스크립트를 사용할 수도 있습니다:
+### OpenAI 임베딩 설정 (선택사항)
+
+OpenAI의 임베딩 모델을 사용하려면:
 
 ```bash
-python examples/mcp_example.py --mode client
+# OpenAI 의존성 설치
+pip install greeum[openai]
+
+# 환경 변수 설정
+export OPENAI_API_KEY="your_openai_api_key"
 ```
 
 ## 설치 검증
@@ -143,32 +164,52 @@ python examples/mcp_example.py --mode client
 Greeum이 올바르게 설치되었는지 확인하려면 다음 명령을 실행하세요:
 
 ```bash
-python -c "from greeum import BlockManager; print('Greeum 설치 성공!')"
+# 기본 설치 확인
+python -c "from greeum import BlockManager; print('Greeum v0.6.0 설치 성공!')"
 
-# MCP 설치 확인
-python -c "from greeum.mcp_client import MCPClient; print('MCP 설치 성공!')"
+# FAISS 기능 확인
+python -c "from greeum.vector_index import FaissVectorIndex; print('FAISS 벡터 인덱스 설치 성공!')"
+
+# SearchEngine 기능 확인
+python -c "from greeum.search_engine import SearchEngine; print('SearchEngine 설치 성공!')"
+
+# STMWorkingSet 기능 확인
+python -c "from greeum import STMWorkingSet; print('STMWorkingSet 설치 성공!')"
+
+# BERT 재랭크 기능 확인 (선택사항)
+python -c "from greeum.search_engine import BertReranker; print('BERT 재랭크 설치 성공!')"
 ```
 
-설치가 성공적이면 "Greeum 설치 성공!" 또는 "MCP 설치 성공!" 메시지가 표시됩니다.
+설치가 성공적이면 각 기능에 대한 성공 메시지가 표시됩니다. FAISS나 BERT 재랭크 기능이 설치되지 않았다면 ImportError가 발생하는데, 이는 해당 선택사항이 설치되지 않았음을 의미합니다.
 
 ## 다음 단계
 
-- [API 레퍼런스](api-reference.md)를 참조하여 Greeum의 다양한 기능을 알아보세요.
-- [튜토리얼](tutorials.md)을 통해 Greeum의 기본 사용법을 배워보세요.
-- [MCP 예제](../examples/README.md)에서 MCP 사용 방법을 확인하세요.
+- [API 레퍼런스](api-reference.md)를 참조하여 Greeum v0.6.0의 다양한 기능을 알아보세요.
+- [튜토리얼](tutorials.md)을 통해 FaissVectorIndex, SearchEngine, STMWorkingSet 등의 새로운 기능을 배워보세요.
+- [examples](../examples/) 디렉토리에서 다양한 사용 예제를 확인하세요.
 
 ## 문제 해결
 
 **ImportError: No module named 'greeum'**
 - 가상 환경이 활성화되었는지 확인하세요.
+- Python 3.10 이상을 사용하고 있는지 확인하세요.
 - `pip install -e .` 명령으로 개발 모드로 설치해 보세요.
 
-**MCP 서비스 오류**
-- `pip install greeum[mcp]` 명령으로 MCP 관련 의존성이 설치되었는지 확인하세요.
-- 포트 충돌이 있는지 확인하고 필요하면 다른 포트를 사용하세요: `greeum-mcp --port 8080`
+**FAISS 관련 오류**
+- `pip install greeum[faiss]` 또는 `pip install faiss-cpu>=1.7.4` 로 FAISS 의존성을 설치하세요.
+- M1/M2 Mac에서는 `conda install faiss-cpu`를 사용하는 것이 안정적입니다.
+
+**BERT 재랭크 오류**
+- `pip install greeum[transformers]` 로 sentence-transformers 의존성을 설치하세요.
+- GPU 메모리 부족 시 CPU 모드로 대체됩니다.
+
+**성능 이슈**
+- 대용량 데이터 사용 시 FAISS 인덱스를 활용하세요.
+- STMWorkingSet의 capacity와 ttl_seconds를 사용 패턴에 맞게 조정하세요.
 
 **권한 오류**
 - 데이터 디렉토리에 대한 쓰기 권한이 있는지 확인하세요.
+- SQLite 데이터베이스 파일 생성 권한을 확인하세요.
 
 ## 지원
 
