@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "greeum"
-version = "0.6.0"
+version = "1.0.0"
 description = "Universal memory module for LLMs"
 authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
 readme = {file = "README.md", content-type = "text/markdown"}
