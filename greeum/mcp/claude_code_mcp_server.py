@@ -157,6 +157,77 @@ class ClaudeCodeMCPServer:
                                     "type": "object",
                                     "properties": {}
                                 }
+                            },
+                            # LTM 전용 도구들
+                            {
+                                "name": "ltm_analyze",
+                                "description": "Analyze long-term memory patterns and trends",
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "trends": {"type": "boolean", "description": "Enable trend analysis", "default": True},
+                                        "period": {"type": "string", "description": "Analysis period (e.g., 6m, 1y)", "default": "6m"},
+                                        "output": {"type": "string", "description": "Output format", "enum": ["text", "json"], "default": "text"}
+                                    }
+                                }
+                            },
+                            {
+                                "name": "ltm_verify",
+                                "description": "Verify blockchain-like LTM integrity",
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "repair": {"type": "boolean", "description": "Attempt to repair issues", "default": False}
+                                    }
+                                }
+                            },
+                            {
+                                "name": "ltm_export",
+                                "description": "Export LTM data in various formats",
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "format": {"type": "string", "description": "Export format", "enum": ["json", "blockchain", "csv"], "default": "json"},
+                                        "limit": {"type": "integer", "description": "Limit number of blocks", "minimum": 1, "maximum": 1000}
+                                    }
+                                }
+                            },
+                            # STM 전용 도구들
+                            {
+                                "name": "stm_add",
+                                "description": "Add content to short-term memory with TTL",
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "content": {"type": "string", "description": "Content to add to STM"},
+                                        "ttl": {"type": "string", "description": "Time to live (e.g., 1h, 30m, 2d)", "default": "1h"},
+                                        "importance": {"type": "number", "description": "Importance score", "default": 0.3, "minimum": 0.0, "maximum": 1.0}
+                                    },
+                                    "required": ["content"]
+                                }
+                            },
+                            {
+                                "name": "stm_promote",
+                                "description": "Promote important STM entries to LTM",
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "threshold": {"type": "number", "description": "Importance threshold", "default": 0.8, "minimum": 0.0, "maximum": 1.0},
+                                        "dry_run": {"type": "boolean", "description": "Show what would be promoted", "default": False}
+                                    }
+                                }
+                            },
+                            {
+                                "name": "stm_cleanup",
+                                "description": "Clean up short-term memory entries",
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "smart": {"type": "boolean", "description": "Use intelligent cleanup", "default": False},
+                                        "expired": {"type": "boolean", "description": "Remove only expired entries", "default": False},
+                                        "threshold": {"type": "number", "description": "Remove below this importance", "default": 0.2, "minimum": 0.0, "maximum": 1.0}
+                                    }
+                                }
                             }
                         ]
                     }
@@ -274,6 +345,159 @@ class ClaudeCodeMCPServer:
                                 "code": -32603,
                                 "message": f"Failed to get stats: {str(e)}"
                             }
+                        }
+                
+                # LTM 도구들
+                elif tool_name == 'ltm_analyze':
+                    trends = arguments.get('trends', True)
+                    period = arguments.get('period', '6m')
+                    output = arguments.get('output', 'text')
+                    
+                    command = ["ltm", "analyze", "--period", period, "--output", output]
+                    if trends:
+                        command.append("--trends")
+                    
+                    result = self._run_cli_command(command)
+                    
+                    if result["success"]:
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "result": {
+                                "content": [{"type": "text", "text": f"📊 LTM Analysis:\n{result['output']}"}]
+                            }
+                        }
+                    else:
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "error": {"code": -32603, "message": f"LTM analysis failed: {result['error']}"}
+                        }
+                
+                elif tool_name == 'ltm_verify':
+                    repair = arguments.get('repair', False)
+                    
+                    command = ["ltm", "verify"]
+                    if repair:
+                        command.append("--repair")
+                    
+                    result = self._run_cli_command(command)
+                    
+                    if result["success"]:
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "result": {
+                                "content": [{"type": "text", "text": f"🔍 LTM Verification:\n{result['output']}"}]
+                            }
+                        }
+                    else:
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "error": {"code": -32603, "message": f"LTM verification failed: {result['error']}"}
+                        }
+                
+                elif tool_name == 'ltm_export':
+                    format_type = arguments.get('format', 'json')
+                    limit = arguments.get('limit')
+                    
+                    command = ["ltm", "export", "--format", format_type]
+                    if limit:
+                        command.extend(["--limit", str(limit)])
+                    
+                    result = self._run_cli_command(command)
+                    
+                    if result["success"]:
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "result": {
+                                "content": [{"type": "text", "text": f"📤 LTM Export:\n{result['output']}"}]
+                            }
+                        }
+                    else:
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "error": {"code": -32603, "message": f"LTM export failed: {result['error']}"}
+                        }
+                
+                # STM 도구들
+                elif tool_name == 'stm_add':
+                    content = arguments.get('content', '')
+                    ttl = arguments.get('ttl', '1h')
+                    importance = arguments.get('importance', 0.3)
+                    
+                    command = ["stm", "add", content, "--ttl", ttl, "--importance", str(importance)]
+                    result = self._run_cli_command(command)
+                    
+                    if result["success"]:
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "result": {
+                                "content": [{"type": "text", "text": f"🧠 STM Add:\n{result['output']}"}]
+                            }
+                        }
+                    else:
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "error": {"code": -32603, "message": f"STM add failed: {result['error']}"}
+                        }
+                
+                elif tool_name == 'stm_promote':
+                    threshold = arguments.get('threshold', 0.8)
+                    dry_run = arguments.get('dry_run', False)
+                    
+                    command = ["stm", "promote", "--threshold", str(threshold)]
+                    if dry_run:
+                        command.append("--dry-run")
+                    
+                    result = self._run_cli_command(command)
+                    
+                    if result["success"]:
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "result": {
+                                "content": [{"type": "text", "text": f"🔝 STM Promote:\n{result['output']}"}]
+                            }
+                        }
+                    else:
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "error": {"code": -32603, "message": f"STM promote failed: {result['error']}"}
+                        }
+                
+                elif tool_name == 'stm_cleanup':
+                    smart = arguments.get('smart', False)
+                    expired = arguments.get('expired', False)
+                    threshold = arguments.get('threshold', 0.2)
+                    
+                    command = ["stm", "cleanup", "--threshold", str(threshold)]
+                    if smart:
+                        command.append("--smart")
+                    if expired:
+                        command.append("--expired")
+                    
+                    result = self._run_cli_command(command)
+                    
+                    if result["success"]:
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "result": {
+                                "content": [{"type": "text", "text": f"🧹 STM Cleanup:\n{result['output']}"}]
+                            }
+                        }
+                    else:
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "error": {"code": -32603, "message": f"STM cleanup failed: {result['error']}"}
                         }
                 
                 # 알 수 없는 도구
