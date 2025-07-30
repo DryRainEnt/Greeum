@@ -151,7 +151,7 @@ class SimpleMCPProtocol:
                         },
                         "serverInfo": {
                             "name": "greeum-simple-bridge",
-                            "version": "2.0.0"
+                            "version": "2.0.1"
                         }
                     }
                 }

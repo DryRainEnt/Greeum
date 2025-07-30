@@ -25,7 +25,7 @@ class ClaudeCodeMCPServer:
         """초기화"""
         self.server_info = {
             "name": "greeum",
-            "version": "2.0.0"
+            "version": "2.0.1"
         }
         self.protocol_version = "2024-11-05"
         self.capabilities = {
@@ -67,8 +67,7 @@ class ClaudeCodeMCPServer:
                 full_command,
                 capture_output=True,
                 text=True,
-                check=True,
-                cwd="/Users/dryrain/DevRoom/Greeum"
+                check=True
             )
             
             return {"success": True, "output": result.stdout.strip()}
@@ -307,8 +306,6 @@ class ClaudeCodeMCPServer:
                     try:
                         # 메모리 통계 직접 수집
                         data_dir = Path.home() / ".greeum"
-                        if not data_dir.exists():
-                            data_dir = Path("/Users/dryrain/DevRoom/Greeum/data")
                         
                         stats = {
                             "data_directory": str(data_dir),

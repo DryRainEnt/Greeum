@@ -10,7 +10,7 @@
 - 문제점: 이중 설치, 복잡한 설정, 문서 분산
 
 **목표 상태**:
-- Greeum v2.0.0: 단일 패키지 + extras 기반 확장
+- Greeum v2.0.1: 단일 패키지 + extras 기반 확장 (경로 문제 해결)
 - 명령어 간소화: `pip install greeum[mcp]` → `greeum mcp serve`
 - 사용자 경험 획기적 개선
 
@@ -35,7 +35,7 @@ GreeumMCP/
 │   └── handlers.py           # MCP 핸들러
 ```
 
-### 목표 구조 (v2.0.0)
+### 목표 구조 (v2.0.1)
 ```
 greeum/
 ├── greeum/
@@ -113,7 +113,7 @@ pip install greeummcp
 python3 /path/to/minimal_mcp_server.py
 ```
 
-### 목표 (v2.0.0)
+### 목표 (v2.0.1)
 ```bash
 # 통합 CLI
 greeum memory add "내용"
@@ -142,7 +142,7 @@ greeum api serve --port 5000
 ```toml
 [project]
 name = "greeum"
-version = "2.0.0"
+version = "2.0.1"
 description = "Universal memory module for LLMs with STM/LTM architecture"
 authors = [{name = "Greeum Team", email = "contact@greeum.dev"}]
 license = {text = "MIT"}

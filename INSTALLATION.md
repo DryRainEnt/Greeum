@@ -159,6 +159,64 @@ export GREEUM_MCP_PORT="3001"
    greeum ltm export --format json
    ```
 
+### MCP 연결 문제 해결
+
+#### 문제: Claude Code에서 "연결 실패" 오류
+
+**원인**: Greeum v2.0.0에서 하드코딩된 경로 문제가 있었습니다.
+
+**해결책**:
+1. **Greeum v2.0.1 이상으로 업데이트**:
+   ```bash
+   pipx upgrade greeum
+   # 또는
+   pipx uninstall greeum && pipx install greeum
+   ```
+
+2. **버전 확인**:
+   ```bash
+   greeum --version
+   # 출력: greeum, version 2.0.1 이상이어야 함
+   ```
+
+3. **MCP 서버 테스트**:
+   ```bash
+   # 서버가 정상 시작하는지 확인
+   greeum mcp serve --transport stdio
+   ```
+
+4. **Claude Code 설정 확인**:
+   ```json
+   // ~/.claude_desktop_config.json에서 확인
+   {
+     "mcpServers": {
+       "greeum": {
+         "command": "greeum",
+         "args": ["mcp", "serve", "--transport", "stdio"]
+       }
+     }
+   }
+   ```
+
+#### 추가 진단 단계
+
+1. **MCP 서버 직접 테스트**:
+   ```bash
+   echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | greeum mcp serve --transport stdio
+   ```
+
+2. **데이터 디렉토리 확인**:
+   ```bash
+   ls -la ~/.greeum/
+   # memory.db 파일이 있어야 함
+   ```
+
+3. **권한 문제 해결**:
+   ```bash
+   # 데이터 디렉토리 권한 확인
+   chmod -R 755 ~/.greeum/
+   ```
+
 ### 디버그 모드 실행
 ```bash
 # 상세한 로그와 함께 실행
