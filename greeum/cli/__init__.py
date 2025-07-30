@@ -111,9 +111,10 @@ def serve(transport: str, port: int):
     click.echo(f"🚀 Starting Greeum MCP server ({transport})...")
     
     if transport == 'stdio':
-        from ..mcp.working_mcp_server import main as mcp_main
+        from ..mcp.claude_code_mcp_server import main as mcp_main
+        import asyncio
         try:
-            mcp_main()
+            asyncio.run(mcp_main())
         except KeyboardInterrupt:
             click.echo("\n👋 MCP server stopped")
     else:

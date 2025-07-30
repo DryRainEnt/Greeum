@@ -82,18 +82,45 @@ class SimpleMCPBridge:
     
     def add_memory(self, content: str, importance: float = 0.5) -> Dict[str, Any]:
         """메모리 추가"""
-        command = ["memory", "add", "-c", content, "-i", str(importance)]
+        command = ["memory", "add", content, "--importance", str(importance)]
         return self._run_greeum_command(command)
     
     def search_memory(self, query: str, limit: int = 5) -> Dict[str, Any]:
         """메모리 검색"""
-        command = ["memory", "search", "-q", query, "-l", str(limit)]
+        command = ["memory", "search", query, "--count", str(limit)]
         return self._run_greeum_command(command)
     
     def get_memory_stats(self) -> Dict[str, Any]:
         """메모리 통계"""
-        command = ["memory", "status"]
-        return self._run_greeum_command(command)
+        # CLI에 status 명령어가 없으므로 직접 구현
+        try:
+            import os
+            from pathlib import Path
+            
+            # Greeum 데이터 디렉토리 확인
+            data_dir = Path.home() / ".greeum"
+            if not data_dir.exists():
+                data_dir = Path("/Users/dryrain/DevRoom/Greeum/data")
+            
+            stats = {
+                "data_directory": str(data_dir),
+                "exists": data_dir.exists(),
+                "files": []
+            }
+            
+            if data_dir.exists():
+                for file in data_dir.glob("*"):
+                    if file.is_file():
+                        stats["files"].append({
+                            "name": file.name,
+                            "size": file.stat().st_size,
+                            "modified": file.stat().st_mtime
+                        })
+            
+            return {"success": True, "stats": stats}
+            
+        except Exception as e:
+            return {"success": False, "error": f"Failed to get stats: {str(e)}"}   
 
 class SimpleMCPProtocol:
     """초간단 MCP 프로토콜"""
@@ -136,33 +163,36 @@ class SimpleMCPProtocol:
                     "result": {
                         "tools": [
                             {
-                                "name": "add_memory",
-                                "description": "Add new memory to Greeum v2.0",
+                                "name": "greeum_add_memory",
+                                "description": "Add new memory to Greeum v2.0 long-term storage",
                                 "inputSchema": {
                                     "type": "object",
                                     "properties": {
-                                        "content": {"type": "string"},
-                                        "importance": {"type": "number", "default": 0.5}
+                                        "content": {"type": "string", "description": "Memory content to store"},
+                                        "importance": {"type": "number", "default": 0.5, "description": "Importance score 0.0-1.0"}
                                     },
                                     "required": ["content"]
                                 }
                             },
                             {
-                                "name": "search_memory", 
-                                "description": "Search memories in Greeum v2.0",
+                                "name": "greeum_search_memory", 
+                                "description": "Search memories in Greeum v2.0 using keywords or semantic similarity",
                                 "inputSchema": {
                                     "type": "object", 
                                     "properties": {
-                                        "query": {"type": "string"},
-                                        "limit": {"type": "number", "default": 5}
+                                        "query": {"type": "string", "description": "Search query or keywords"},
+                                        "limit": {"type": "number", "default": 5, "description": "Maximum number of results"}
                                     },
                                     "required": ["query"]
                                 }
                             },
                             {
-                                "name": "memory_stats",
-                                "description": "Get Greeum v2.0 memory statistics", 
-                                "inputSchema": {"type": "object"}
+                                "name": "greeum_memory_stats",
+                                "description": "Get Greeum v2.0 memory system statistics and status", 
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {}
+                                }
                             }
                         ]
                     }
@@ -174,17 +204,17 @@ class SimpleMCPProtocol:
                 
                 logger.info(f"Calling tool: {tool_name} with args: {arguments}")
                 
-                if tool_name == 'add_memory':
+                if tool_name == 'greeum_add_memory':
                     result = self.bridge.add_memory(
                         content=arguments.get('content', ''),
                         importance=arguments.get('importance', 0.5)
                     )
-                elif tool_name == 'search_memory':
+                elif tool_name == 'greeum_search_memory':
                     result = self.bridge.search_memory(
                         query=arguments.get('query', ''),
                         limit=arguments.get('limit', 5)
                     )
-                elif tool_name == 'memory_stats':
+                elif tool_name == 'greeum_memory_stats':
                     result = self.bridge.get_memory_stats()
                 else:
                     return {
