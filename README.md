@@ -1,4 +1,4 @@
-﻿# 🧠 Greeum v0.6.0
+﻿# 🧠 Greeum v2.0.1
 
 <p align="center">
   <a href="README.md">🇰🇷 한국어</a> |
@@ -33,43 +33,69 @@ Greeum은 RAG(Retrieval-Augmented Generation) 아키텍처에 기반한 LLM 독�
 - **프롬프트 조합기**: 관련 기억을 포함한 LLM 프롬프트 자동 생성
 - **시간적 추론기**: 다국어 환경에서 고급 시간 표현 인식 처리
 - **다국어 지원**: 한국어, 영어 등 자동 언어 감지 및 처리
-- **Model Control Protocol**: [GreeumMCP](https://github.com/DryRainEnt/GreeumMCP) 별도 패키지를 통해 Cursor, Unity, Discord 등 외부 도구 연동 지원
+- **Model Control Protocol**: v2.0.1부터 내장된 MCP 서버로 Claude Code 등 외부 도구와 직접 연동 지원
 
 ## ⚙️ 설치 방법
 
-1. 저장소 복제
-   ```bash
-   git clone https://github.com/DryRainEnt/Greeum.git
-   cd Greeum
-   ```
+### 🚀 권장: pipx 설치 (간편함)
 
-2. 의존성 설치
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+# pipx가 없다면 먼저 설치
+brew install pipx  # macOS
+# 또는 pip install --user pipx
+
+# Greeum v2.0 모든 기능 포함 설치
+pipx install greeum[all]
+
+# 설치 확인
+greeum --version
+```
+
+### 📋 Claude Code MCP 연동
+
+```bash
+# MCP 서버 시작
+greeum mcp serve
+
+# Claude Code에서 사용 가능한 9개 메모리 도구:
+# - add_memory, search_memory, get_memory_stats
+# - ltm_analyze, ltm_verify, ltm_export  
+# - stm_add, stm_promote, stm_cleanup
+```
+
+### 🔧 개발자용: 소스에서 설치
+
+```bash
+git clone https://github.com/DryRainEnt/Greeum.git
+cd Greeum
+pip install -e .
+```
 
 ## 🧪 사용 방법
 
-### CLI 인터페이스
+### CLI 인터페이스 (v2.0.1 통합 명령어)
 
 ```bash
-# 장기 기억 추가
-python cli/memory_cli.py add -c "새로운 프로젝트를 시작했고 정말 흥미로워요"
+# 기본 메모리 기능
+greeum memory add "새로운 프로젝트를 시작했고 정말 흥미로워요"
+greeum memory search "프로젝트"
+greeum memory stats
 
-# 키워드로 기억 검색
-python cli/memory_cli.py search -k "프로젝트,흥미로운"
+# STM (단기 기억) 전용
+greeum stm add "임시 메모" --ttl 1h --importance 0.7
+greeum stm promote --threshold 0.8
+greeum stm cleanup --smart
 
-# 시간 표현으로 기억 검색
-python cli/memory_cli.py search-time -q "3일 전에 무엇을 했지?" -l "ko"
+# LTM (장기 기억) 전용  
+greeum ltm analyze --trends --period 6m
+greeum ltm verify --integrity
+greeum ltm export --format blockchain
 
-# 단기 기억 추가
-python cli/memory_cli.py stm "오늘 날씨가 좋네요"
+# MCP 서버 (Claude Code 연동)
+greeum mcp serve --transport stdio
 
-# 단기 기억 조회
-python cli/memory_cli.py get-stm
-
-# 프롬프트 생성
-python cli/memory_cli.py prompt -i "프로젝트는 어떻게 진행되고 있나요?"
+# API 서버 시작
+greeum api serve --port 5000
 ```
 
 ### REST API 서버
