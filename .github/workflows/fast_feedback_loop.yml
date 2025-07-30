@@ -1,0 +1,412 @@
+name: Fast Feedback Loop
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:  # 수동 실행 (즉시 테스트 가능)
+    inputs:
+      test_level:
+        description: 'Test Level'
+        required: true
+        default: 'quick'
+        type: choice
+        options:
+        - quick      # 30초 이내
+        - standard   # 3분 이내  
+        - full       # 10분 이내
+      debug_mode:
+        description: 'Enable Debug Mode'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  # Phase 1: 초고속 검증 (30초 이내)
+  quick-validation:
+    runs-on: ubuntu-latest
+    name: "⚡ Quick Validation (30s)"
+    timeout-minutes: 2
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'  # pip 캐시로 설치 시간 단축
+        
+    - name: Install minimal dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e . --no-deps  # 의존성 없이 빠른 설치
+        pip install pytest psutil bandit safety
+        
+    - name: Syntax Check (5초)
+      run: |
+        python -m py_compile greeum/__init__.py
+        python -m py_compile greeum/core/*.py
+        python -m py_compile greeum/mcp/*.py
+        
+    - name: Import Test (5초)
+      run: |
+        python -c "import greeum; print('✅ Import OK')"
+        python -c "from greeum.core import BlockManager; print('✅ Core Import OK')"
+        python -c "from greeum.mcp import claude_code_mcp_server; print('✅ MCP Import OK')"
+        
+    - name: Basic Function Test (10초)
+      run: |
+        python -c "
+        from greeum.text_utils import process_user_input
+        result = process_user_input('테스트')
+        assert 'keywords' in result
+        print('✅ Text Processing OK')
+        "
+        
+    - name: Security Quick Scan (5초)
+      run: |
+        bandit -r greeum/ -ll --format=custom --msg-template='{relpath}:{line}: {severity}: {msg}' | head -20
+        
+    - name: Quick Summary
+      if: always()
+      run: |
+        echo "## ⚡ Quick Validation Results" >> $GITHUB_STEP_SUMMARY
+        echo "- Syntax Check: ${{ job.status == 'success' && '✅ PASS' || '❌ FAIL' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Import Test: ${{ job.status == 'success' && '✅ PASS' || '❌ FAIL' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Basic Functions: ${{ job.status == 'success' && '✅ PASS' || '❌ FAIL' }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Duration:** ~30 seconds" >> $GITHUB_STEP_SUMMARY
+
+  # Phase 2: 표준 검증 (3분 이내) - quick-validation 성공 시에만 실행
+  standard-validation:
+    runs-on: ubuntu-latest
+    name: "🔍 Standard Validation (3m)"
+    needs: quick-validation
+    if: success()
+    timeout-minutes: 4
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        
+    - name: Install full dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        pip install pytest psutil bandit safety
+        
+    - name: Core Unit Tests (60초)
+      run: |
+        python -m pytest tests/test_v204_core.py -v --tb=short --maxfail=3
+        
+    - name: Integration Tests (60초)
+      run: |
+        python -m pytest tests/test_v204_integration.py -v --tb=short --maxfail=3
+        
+    - name: Security Tests (30초)
+      run: |
+        python -m pytest tests/test_v204_security.py -v --tb=short --maxfail=3
+        
+    - name: Performance Quick Check (30초)
+      run: |
+        python -c "
+        import time
+        from greeum.text_utils import process_user_input
+        
+        # 성능 기준선 체크 (빠른 버전)
+        start = time.time()
+        for i in range(50):
+            result = process_user_input(f'Performance test {i}')
+        duration = time.time() - start
+        
+        print(f'50 operations in {duration:.2f}s ({duration/50*1000:.1f}ms per operation)')
+        
+        # 기준: 50개 처리가 5초 이내
+        if duration > 5:
+            print('❌ Performance regression detected!')
+            exit(1)
+        else:
+            print('✅ Performance OK')
+        "
+        
+    - name: Standard Summary
+      if: always()
+      run: |
+        echo "## 🔍 Standard Validation Results" >> $GITHUB_STEP_SUMMARY
+        echo "- Unit Tests: ${{ job.status == 'success' && '✅ PASS' || '❌ FAIL' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Integration Tests: ${{ job.status == 'success' && '✅ PASS' || '❌ FAIL' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Security Tests: ${{ job.status == 'success' && '✅ PASS' || '❌ FAIL' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Performance Check: ${{ job.status == 'success' && '✅ PASS' || '❌ FAIL' }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Duration:** ~3 minutes" >> $GITHUB_STEP_SUMMARY
+
+  # Phase 3: 심화 검증 (10분 이내) - 수동 트리거 또는 main 브랜치 푸시 시에만
+  deep-validation:
+    runs-on: ubuntu-latest
+    name: "🔬 Deep Validation (10m)"
+    needs: standard-validation
+    if: |
+      success() && (
+        github.event_name == 'workflow_dispatch' && 
+        github.event.inputs.test_level == 'full'
+      ) || (
+        github.ref == 'refs/heads/main' && 
+        github.event_name == 'push'
+      )
+    timeout-minutes: 12
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        pip install pytest psutil bandit safety
+        
+    - name: Mini Stress Test (5분)
+      run: |
+        python -c "
+        import time
+        from greeum.core.database_manager import DatabaseManager
+        from greeum.text_utils import process_user_input
+        from pathlib import Path
+        import tempfile
+        import shutil
+        
+        # 임시 데이터베이스
+        test_dir = Path(tempfile.mkdtemp())
+        db = DatabaseManager(str(test_dir / 'stress.db'))
+        
+        try:
+            print('Mini stress test: 1000 operations...')
+            start = time.time()
+            
+            for i in range(1000):
+                content = f'Stress test content {i} with some details'
+                result = process_user_input(content)
+                
+                block_data = {
+                    'block_index': i,
+                    'timestamp': '2025-07-30T12:00:00',
+                    'context': content,
+                    'keywords': result.get('keywords', []),
+                    'tags': result.get('tags', []),
+                    'embedding': result.get('embedding', []),
+                    'importance': 0.5,
+                    'hash': f'stress_{i}',
+                    'prev_hash': f'stress_{i-1}' if i > 0 else ''
+                }
+                db.add_block(block_data)
+                
+                if i % 200 == 0:
+                    print(f'  Progress: {i}/1000')
+            
+            duration = time.time() - start
+            print(f'✅ 1000 operations completed in {duration:.2f}s')
+            
+            # 검색 테스트
+            results = db.search_blocks_by_keyword(['stress'], limit=10)
+            print(f'✅ Search returned {len(results)} results')
+            
+        finally:
+            shutil.rmtree(test_dir)
+        "
+        
+    - name: Memory Leak Check (3분)
+      run: |
+        python -c "
+        import gc
+        import psutil
+        import time
+        from greeum.text_utils import process_user_input
+        
+        process = psutil.Process()
+        
+        # 초기 메모리
+        gc.collect()
+        initial_memory = process.memory_info().rss / 1024 / 1024
+        print(f'Initial memory: {initial_memory:.1f}MB')
+        
+        # 메모리 집약적 작업
+        for cycle in range(5):
+            print(f'Memory cycle {cycle + 1}/5')
+            
+            for i in range(200):
+                content = 'Memory test content ' * 100  # ~2KB per item
+                result = process_user_input(content)
+                # 결과를 즉시 버림 (메모리 해제 테스트)
+                del result, content
+            
+            gc.collect()
+            current_memory = process.memory_info().rss / 1024 / 1024
+            print(f'  After cycle {cycle + 1}: {current_memory:.1f}MB')
+        
+        # 최종 메모리
+        final_memory = process.memory_info().rss / 1024 / 1024
+        memory_increase = final_memory - initial_memory
+        
+        print(f'Final memory: {final_memory:.1f}MB')
+        print(f'Memory increase: {memory_increase:.1f}MB')
+        
+        # 메모리 누수 기준: 20MB 이하
+        if memory_increase > 20:
+            print('❌ Potential memory leak detected!')
+            exit(1)
+        else:
+            print('✅ Memory usage OK')
+        "
+        
+    - name: Dependency Security Scan (1분)
+      run: |
+        safety check --json --output safety-report.json || true
+        python -c "
+        import json
+        from pathlib import Path
+        
+        if Path('safety-report.json').exists():
+            with open('safety-report.json') as f:
+                report = json.load(f)
+            
+            if 'vulnerabilities' in report and report['vulnerabilities']:
+                print(f'❌ Found {len(report[\"vulnerabilities\"])} vulnerabilities')
+                for vuln in report['vulnerabilities'][:3]:  # 최대 3개만 표시
+                    print(f'  - {vuln.get(\"package\", \"Unknown\")}: {vuln.get(\"vulnerability\", \"Unknown\")}')
+                exit(1)
+            else:
+                print('✅ No security vulnerabilities found')
+        else:
+            print('✅ Security scan completed')
+        "
+        
+    - name: Deep Summary
+      if: always()
+      run: |
+        echo "## 🔬 Deep Validation Results" >> $GITHUB_STEP_SUMMARY
+        echo "- Mini Stress Test: ${{ job.status == 'success' && '✅ PASS' || '❌ FAIL' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Memory Leak Check: ${{ job.status == 'success' && '✅ PASS' || '❌ FAIL' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Security Scan: ${{ job.status == 'success' && '✅ PASS' || '❌ FAIL' }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Duration:** ~10 minutes" >> $GITHUB_STEP_SUMMARY
+
+  # Debug 정보 수집 (실패 시에만)
+  debug-info:
+    runs-on: ubuntu-latest
+    name: "🐛 Debug Info Collection"
+    if: |
+      always() && (
+        needs.quick-validation.result == 'failure' ||
+        needs.standard-validation.result == 'failure' ||
+        needs.deep-validation.result == 'failure' ||
+        github.event.inputs.debug_mode == 'true'
+      )
+    needs: [quick-validation, standard-validation, deep-validation]
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Collect System Info
+      run: |
+        echo "## 🐛 Debug Information" >> $GITHUB_STEP_SUMMARY
+        echo "### System Information" >> $GITHUB_STEP_SUMMARY
+        echo "- OS: $(uname -a)" >> $GITHUB_STEP_SUMMARY
+        echo "- Python: $(python --version)" >> $GITHUB_STEP_SUMMARY
+        echo "- Pip: $(pip --version)" >> $GITHUB_STEP_SUMMARY
+        echo "### Disk Space" >> $GITHUB_STEP_SUMMARY
+        df -h >> $GITHUB_STEP_SUMMARY
+        echo "### Memory" >> $GITHUB_STEP_SUMMARY
+        free -h >> $GITHUB_STEP_SUMMARY
+        
+    - name: Check Greeum Installation
+      run: |
+        python -c "
+        try:
+            import greeum
+            print('✅ Greeum import successful')
+            print(f'Version: {getattr(greeum, \"__version__\", \"Unknown\")}')
+            
+            from greeum.core import BlockManager, DatabaseManager
+            print('✅ Core modules import successful')
+            
+            from greeum.mcp import claude_code_mcp_server
+            print('✅ MCP modules import successful')
+            
+        except Exception as e:
+            print(f'❌ Import failed: {e}')
+            import traceback
+            traceback.print_exc()
+        "
+        
+    - name: List Installed Packages
+      run: |
+        echo "### Installed Packages" >> $GITHUB_STEP_SUMMARY
+        pip list >> $GITHUB_STEP_SUMMARY
+
+  # 최종 상태 리포트
+  final-report:
+    runs-on: ubuntu-latest
+    name: "📊 Final Report"
+    if: always()
+    needs: [quick-validation, standard-validation, deep-validation, debug-info]
+    
+    steps:
+    - name: Generate Final Report
+      run: |
+        echo "# 🚀 Greeum CI/CD Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # 각 단계 결과
+        quick_result="${{ needs.quick-validation.result }}"
+        standard_result="${{ needs.standard-validation.result }}"
+        deep_result="${{ needs.deep-validation.result }}"
+        
+        echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Phase | Status | Duration |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|----------|" >> $GITHUB_STEP_SUMMARY
+        echo "| ⚡ Quick Validation | ${quick_result} | ~30s |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔍 Standard Validation | ${standard_result:-skipped} | ~3m |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔬 Deep Validation | ${deep_result:-skipped} | ~10m |" >> $GITHUB_STEP_SUMMARY
+        
+        # 전체 상태 결정
+        if [ "$quick_result" = "success" ] && [ "$standard_result" = "success" ]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Overall Status: PASS" >> $GITHUB_STEP_SUMMARY
+          echo "All critical tests passed. Ready for deployment!" >> $GITHUB_STEP_SUMMARY
+        elif [ "$quick_result" = "success" ]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ⚠️ Overall Status: PARTIAL" >> $GITHUB_STEP_SUMMARY
+          echo "Basic functionality OK, but some advanced tests failed." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ❌ Overall Status: FAIL" >> $GITHUB_STEP_SUMMARY
+          echo "Critical issues detected. Immediate attention required!" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # 다음 단계 가이드
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## 🔄 Next Steps" >> $GITHUB_STEP_SUMMARY
+        if [ "$quick_result" != "success" ]; then
+          echo "1. 🚨 Fix syntax/import errors first" >> $GITHUB_STEP_SUMMARY
+          echo "2. Re-run quick validation" >> $GITHUB_STEP_SUMMARY
+        elif [ "$standard_result" != "success" ]; then
+          echo "1. 🔍 Check unit/integration test failures" >> $GITHUB_STEP_SUMMARY
+          echo "2. Fix failing tests" >> $GITHUB_STEP_SUMMARY
+          echo "3. Re-run standard validation" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "1. ✅ All tests passing!" >> $GITHUB_STEP_SUMMARY
+          echo "2. Ready for merge/deployment" >> $GITHUB_STEP_SUMMARY
+        fi
