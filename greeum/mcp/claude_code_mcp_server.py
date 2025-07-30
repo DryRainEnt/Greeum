@@ -14,6 +14,15 @@ import subprocess
 import os
 from pathlib import Path
 
+# Greeum 모듈 직접 import
+try:
+    from greeum.core.block_manager import BlockManager
+    from greeum.core.database_manager import DatabaseManager  
+    from greeum.core.stm_manager import STMManager
+    GREEUM_AVAILABLE = True
+except ImportError:
+    GREEUM_AVAILABLE = False
+
 # 로깅 설정 (stderr로만)
 logging.basicConfig(level=logging.INFO, stream=sys.stderr, format='%(levelname)s:%(name)s:%(message)s')
 logger = logging.getLogger("claude_code_mcp")
@@ -35,9 +44,24 @@ class ClaudeCodeMCPServer:
             "logging": {}
         }
         
-        # Greeum CLI 경로 설정
-        self.greeum_cli = self._find_greeum_cli()
-        logger.info(f"Claude Code MCP Server initialized with CLI: {self.greeum_cli}")
+        # Greeum 컴포넌트 직접 초기화
+        if GREEUM_AVAILABLE:
+            try:
+                self.db_manager = DatabaseManager()
+                self.block_manager = BlockManager(self.db_manager)
+                self.stm_manager = STMManager(self.db_manager)
+                self.direct_mode = True
+                logger.info("Claude Code MCP Server initialized with direct Greeum modules")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Greeum modules: {e}")
+                self.direct_mode = False
+        else:
+            self.direct_mode = False
+            
+        # Fallback: CLI 경로 설정  
+        if not self.direct_mode:
+            self.greeum_cli = self._find_greeum_cli()
+            logger.info(f"Claude Code MCP Server initialized with CLI fallback: {self.greeum_cli}")
         
     def _find_greeum_cli(self) -> str:
         """Greeum CLI 경로 자동 감지"""
@@ -63,11 +87,20 @@ class ClaudeCodeMCPServer:
             full_command = self.greeum_cli.split() + command
             logger.info(f"Running: {' '.join(full_command)}")
             
+            # 보안: 허용된 명령어만 실행
+            allowed_commands = ["memory", "add", "search", "stats", "--version", "--help"]
+            for cmd_part in command:
+                if cmd_part not in allowed_commands and not cmd_part.startswith(('-', '=')):
+                    # 명령어 인젝션 방지: 안전한 텍스트만 허용
+                    if not all(c.isalnum() or c in ' .-_가-힣ㄱ-ㅎㅏ-ㅣ' for c in cmd_part):
+                        raise ValueError(f"Unsafe command detected: {cmd_part}")
+            
             result = subprocess.run(
                 full_command,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                timeout=30  # 보안: 타임아웃 설정
             )
             
             return {"success": True, "output": result.stdout.strip()}
@@ -78,6 +111,77 @@ class ClaudeCodeMCPServer:
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
             return {"success": False, "error": str(e)}
+    
+    def _add_memory_direct(self, content: str, importance: float = 0.5) -> Dict[str, Any]:
+        """CLI와 동일한 패턴으로 메모리 추가"""
+        from greeum.text_utils import process_user_input
+        from datetime import datetime
+        import json
+        import hashlib
+        
+        # 텍스트 처리
+        result = process_user_input(content)
+        result["importance"] = importance
+        
+        # 타임스탬프 추가
+        timestamp = datetime.now().isoformat()
+        result["timestamp"] = timestamp
+        
+        # 블록 인덱스 생성 (마지막 블록 + 1)
+        last_block_info = self.db_manager.get_last_block_info()
+        if last_block_info is None:
+            last_block_info = {"block_index": -1}
+        block_index = last_block_info.get("block_index", -1) + 1
+        
+        # 이전 해시 가져오기
+        prev_hash = ""
+        if block_index > 0:
+            prev_block = self.db_manager.get_block(block_index - 1)
+            if prev_block:
+                prev_hash = prev_block.get("hash", "")
+        
+        # 해시 계산
+        hash_data = {
+            "block_index": block_index,
+            "timestamp": timestamp,
+            "context": content,
+            "prev_hash": prev_hash
+        }
+        hash_str = json.dumps(hash_data, sort_keys=True)
+        hash_value = hashlib.sha256(hash_str.encode()).hexdigest()
+        
+        # 최종 블록 데이터
+        block_data = {
+            "block_index": block_index,
+            "timestamp": timestamp,
+            "context": content,
+            "keywords": result.get("keywords", []),
+            "tags": result.get("tags", []),
+            "embedding": result.get("embedding", []),
+            "importance": result.get("importance", 0.5),
+            "hash": hash_value,
+            "prev_hash": prev_hash
+        }
+        
+        # 데이터베이스에 추가
+        self.db_manager.add_block(block_data)
+        
+        return block_data
+    
+    def _search_memory_direct(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """CLI와 동일한 패턴으로 메모리 검색"""
+        from greeum.embedding_models import get_embedding
+        
+        try:
+            # 임베딩 검색 시도
+            embedding = get_embedding(query)
+            blocks = self.db_manager.search_blocks_by_embedding(embedding, top_k=limit)
+        except Exception:
+            # 임베딩 실패시 키워드 검색
+            keywords = query.split()
+            blocks = self.db_manager.search_blocks_by_keyword(keywords, limit=limit)
+        
+        return blocks
 
     async def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """MCP 요청 처리 (Claude Code 규격 준수)"""
@@ -244,62 +348,130 @@ class ClaudeCodeMCPServer:
                     content = arguments.get('content', '')
                     importance = arguments.get('importance', 0.5)
                     
-                    command = ["memory", "add", content, "--importance", str(importance)]
-                    result = self._run_cli_command(command)
-                    
-                    if result["success"]:
-                        return {
-                            "jsonrpc": "2.0",
-                            "id": request_id,
-                            "result": {
-                                "content": [
-                                    {
-                                        "type": "text",
-                                        "text": f"✅ Memory added successfully: {result['output']}"
-                                    }
-                                ]
+                    if self.direct_mode:
+                        try:
+                            # 직접 모듈 사용 - CLI와 동일한 패턴
+                            block_data = self._add_memory_direct(content, importance)
+                            result_text = f"✅ Memory added (Block #{block_data['block_index']})"
+                            
+                            return {
+                                "jsonrpc": "2.0",
+                                "id": request_id,
+                                "result": {
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": result_text
+                                        }
+                                    ]
+                                }
                             }
-                        }
+                        except Exception as e:
+                            logger.error(f"Direct memory add failed: {e}")
+                            return {
+                                "jsonrpc": "2.0",
+                                "id": request_id,
+                                "error": {
+                                    "code": -32603,
+                                    "message": f"Failed to add memory: {str(e)}"
+                                }
+                            }
                     else:
-                        return {
-                            "jsonrpc": "2.0",
-                            "id": request_id,
-                            "error": {
-                                "code": -32603,
-                                "message": f"Failed to add memory: {result['error']}"
+                        # CLI fallback
+                        command = ["memory", "add", content, "--importance", str(importance)]
+                        result = self._run_cli_command(command)
+                        
+                        if result["success"]:
+                            return {
+                                "jsonrpc": "2.0",
+                                "id": request_id,
+                                "result": {
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": f"✅ Memory added successfully: {result['output']}"
+                                        }
+                                    ]
+                                }
                             }
-                        }
+                        else:
+                            return {
+                                "jsonrpc": "2.0",
+                                "id": request_id,
+                                "error": {
+                                    "code": -32603,
+                                    "message": f"Failed to add memory: {result['error']}"
+                                }
+                            }
                 
                 # search_memory 도구
                 elif tool_name == 'search_memory':
                     query = arguments.get('query', '')
                     limit = arguments.get('limit', 5)
                     
-                    command = ["memory", "search", query, "--count", str(limit)]
-                    result = self._run_cli_command(command)
-                    
-                    if result["success"]:
-                        return {
-                            "jsonrpc": "2.0",
-                            "id": request_id,
-                            "result": {
-                                "content": [
-                                    {
-                                        "type": "text",
-                                        "text": f"🔍 Search results:\n{result['output']}"
-                                    }
-                                ]
+                    if self.direct_mode:
+                        try:
+                            # 직접 모듈 사용 - CLI와 동일한 패턴
+                            results = self._search_memory_direct(query, limit)
+                            
+                            if results:
+                                result_text = f"🔍 Found {len(results)} memories:\n"
+                                for i, memory in enumerate(results, 1):
+                                    timestamp = memory.get('timestamp', 'Unknown')
+                                    content = memory.get('context', '')[:100] + ('...' if len(memory.get('context', '')) > 100 else '')
+                                    result_text += f"{i}. [{timestamp}] {content}\n"
+                            else:
+                                result_text = "❌ No memories found"
+                            
+                            return {
+                                "jsonrpc": "2.0",
+                                "id": request_id,
+                                "result": {
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": result_text
+                                        }
+                                    ]
+                                }
                             }
-                        }
+                        except Exception as e:
+                            logger.error(f"Direct memory search failed: {e}")
+                            return {
+                                "jsonrpc": "2.0",
+                                "id": request_id,
+                                "error": {
+                                    "code": -32603,
+                                    "message": f"Failed to search memory: {str(e)}"
+                                }
+                            }
                     else:
-                        return {
-                            "jsonrpc": "2.0",
-                            "id": request_id,
-                            "error": {
-                                "code": -32603,
-                                "message": f"Failed to search memory: {result['error']}"
+                        # CLI fallback
+                        command = ["memory", "search", query, "--count", str(limit)]
+                        result = self._run_cli_command(command)
+                        
+                        if result["success"]:
+                            return {
+                                "jsonrpc": "2.0",
+                                "id": request_id,
+                                "result": {
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": f"🔍 Search results:\n{result['output']}"
+                                        }
+                                    ]
+                                }
                             }
-                        }
+                        else:
+                            return {
+                                "jsonrpc": "2.0",
+                                "id": request_id,
+                                "error": {
+                                    "code": -32603,
+                                    "message": f"Failed to search memory: {result['error']}"
+                                }
+                            }
                 
                 # get_memory_stats 도구
                 elif tool_name == 'get_memory_stats':

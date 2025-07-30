@@ -52,12 +52,20 @@ class SimpleMCPBridge:
             full_command = self.greeum_cli.split() + command
             logger.info(f"Running command: {' '.join(full_command)}")
             
+            # 보안: 허용된 명령어만 실행
+            allowed_commands = ["memory", "add", "search", "stats", "--version", "--help"]
+            for cmd_part in command:
+                if cmd_part not in allowed_commands and not cmd_part.startswith(('-', '=')):
+                    # 명령어 인젝션 방지: 안전한 텍스트만 허용
+                    if not all(c.isalnum() or c in ' .-_가-힣ㄱ-ㅎㅏ-ㅣ' for c in cmd_part):
+                        raise ValueError(f"Unsafe command detected: {cmd_part}")
+            
             result = subprocess.run(
                 full_command,
                 capture_output=True,
                 text=True,
                 check=True,
-                cwd="/Users/dryrain/DevRoom/Greeum"
+                timeout=30  # 보안: 타임아웃 설정
             )
             
             if result.stdout:
@@ -151,7 +159,7 @@ class SimpleMCPProtocol:
                         },
                         "serverInfo": {
                             "name": "greeum-simple-bridge",
-                            "version": "2.0.2"
+                            "version": "2.0.3"
                         }
                     }
                 }

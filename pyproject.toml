@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "greeum"
-version = "2.0.2"
+version = "2.0.4"
 description = "Universal memory module for LLMs"
 authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -26,28 +26,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-api = [
-    "fastapi>=0.100.0",
-    "uvicorn>=0.15.0",
-]
-search = [
-    "faiss-cpu>=1.7.0",
-    "transformers>=4.20.0",
-]
-ai = [
-    "openai>=1.0.0",
-    "anthropic>=0.3.0",
-]
-all = [
-    "greeum[api,search,ai]"
-]
 test = ["pytest", "pytest-cov"]
 dev = ["black", "isort", "flake8"]
-
-# Legacy compatibility (v1.0 style)
-faiss = ["faiss-cpu>=1.7.4"]
-openai = ["openai>=1.0.0"]
-transformers = ["transformers>=4.40.0", "sentence-transformers>=2.2.0", "keybert>=0.7.0"]
 
 [tool.setuptools.packages.find]
 include = ["greeum*"]

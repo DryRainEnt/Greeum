@@ -5,7 +5,7 @@ This package contains independent modules to provide a human-like
 memory system for Large Language Models.
 """
 
-__version__ = "2.0.2"
+__version__ = "2.0.4"
 
 # Core components imports
 try:
@@ -24,7 +24,7 @@ try:
     from .core import (
         BlockManager, STMManager, CacheManager, PromptWrapper,
         DatabaseManager, SearchEngine, BertReranker, 
-        FaissVectorIndex, STMWorkingSet
+        STMWorkingSet
     )
 except ImportError:
     pass
@@ -37,9 +37,8 @@ except ImportError:
 
 try:
     from .embedding_models import (
-        SimpleEmbeddingModel, SentenceTransformerEmbedding, OpenAIEmbedding,
-        EmbeddingRegistry, get_embedding, register_embedding_model,
-        init_sentence_transformer, init_openai
+        SimpleEmbeddingModel,
+        EmbeddingRegistry, get_embedding, register_embedding_model
     )
 except ImportError:
     pass
@@ -125,13 +124,9 @@ __all__ = [
     # Embedding models
     "EmbeddingModel",
     "SimpleEmbeddingModel", 
-    "SentenceTransformerEmbedding",
-    "OpenAIEmbedding",
     "embedding_registry",
     "get_embedding",
     "register_embedding_model",
-    "init_sentence_transformer",
-    "init_openai",
     
     # Temporal reasoning
     "TemporalReasoner",

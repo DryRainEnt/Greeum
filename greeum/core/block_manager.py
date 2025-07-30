@@ -7,30 +7,19 @@ import numpy as np
 from pathlib import Path
 from .database_manager import DatabaseManager
 import logging
-from .vector_index import FaissVectorIndex
 
 logger = logging.getLogger(__name__)
 
 class BlockManager:
     """장기 기억 블록을 관리하는 클래스 (DatabaseManager 사용)"""
     
-    def __init__(self, db_manager: Optional[DatabaseManager] = None, use_faiss: bool = True):
+    def __init__(self, db_manager: Optional[DatabaseManager] = None):
         """BlockManager 초기화
         Args:
             db_manager: DatabaseManager (없으면 기본 SQLite 파일 생성)
-            use_faiss: faiss 서브인덱스를 사용할지 여부
         """
         self.db_manager = db_manager or DatabaseManager()
-        self._faiss_enabled = False
-        self.vector_index: Optional[FaissVectorIndex] = None
-        if use_faiss:
-            try:
-                import faiss  # type: ignore
-                _ = faiss.__version__  # noqa
-                self._faiss_enabled = True
-            except Exception:
-                self._faiss_enabled = False
-        logger.info("BlockManager 초기화 완료 (faiss=%s)", self._faiss_enabled)
+        logger.info("BlockManager 초기화 완료")
         
     def _compute_hash(self, block_data: Dict[str, Any]) -> str:
         """블록의 해시값 계산. 해시 계산에 포함되지 않아야 할 필드는 이 함수 호출 전에 정리되어야 함."""
@@ -92,16 +81,6 @@ class BlockManager:
             # 현재 DatabaseManager.add_block은 전달된 block_data.get('block_index')를 사용하므로, added_idx는 new_block_index와 같음.
             added_block = self.db_manager.get_block(new_block_index)
             logger.info(f"블록 추가 성공: index={new_block_index}, hash={current_hash[:10]}...")
-            # ----- faiss 인덱스 업데이트 -----
-            if self._faiss_enabled and embedding:
-                try:
-                    if self.vector_index is None:
-                        # 첫 벡터 차원으로 인덱스 초기화
-                        self.vector_index = FaissVectorIndex(len(embedding))
-                    self.vector_index.add_vectors([new_block_index], [embedding])
-                except Exception as faiss_err:
-                    logger.warning("FAISS 인덱스 업데이트 실패: %s", faiss_err)
-            # ---------------------------------
             return added_block
         except Exception as e:
             logger.error(f"BlockManager: DB에 블록 추가 오류 - {e}", exc_info=True)
@@ -156,20 +135,7 @@ class BlockManager:
         return self.db_manager.search_blocks_by_keyword(keywords, limit=limit)
     
     def search_by_embedding(self, query_embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
-        """임베딩 유사도로 블록 검색 (faiss 우선, 실패 시 DB)"""
-        if self._faiss_enabled and self.vector_index is not None:
-            try:
-                results = self.vector_index.search(query_embedding, top_k=top_k)
-                blocks = []
-                for block_index, sim in results:
-                    block = self.get_block_by_index(block_index)
-                    if block:
-                        block["similarity"] = sim
-                        blocks.append(block)
-                return blocks
-            except Exception as e:
-                logger.warning("FAISS 검색 실패 – DB fallback: %s", e)
-        # fallback
+        """임베딩 유사도로 블록 검색"""
         return self.db_manager.search_blocks_by_embedding(query_embedding, top_k=top_k)
     
     def filter_by_importance(self, threshold: float = 0.7, limit: int = 100) -> List[Dict[str, Any]]:

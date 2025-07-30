@@ -43,10 +43,6 @@ try:
 except ImportError:
     pass
 
-try:
-    from .vector_index import FaissVectorIndex
-except ImportError:
-    pass
 
 try:
     from .working_memory import STMWorkingSet
@@ -61,6 +57,5 @@ __all__ = [
     "DatabaseManager",
     "SearchEngine",
     "BertReranker",
-    "FaissVectorIndex",
     "STMWorkingSet"
 ]
