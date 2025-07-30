@@ -24,7 +24,11 @@ class SimpleMCPBridge:
     
     def __init__(self):
         """초기화 - 최소한의 설정"""
-        self.greeum_cli = self._find_greeum_cli()
+        try:
+            self.greeum_cli = self._find_greeum_cli()
+        except Exception as e:
+            logger.warning(f"Failed to find Greeum CLI: {e}")
+            self.greeum_cli = "python3 -m greeum.cli"  # 안전한 기본값
         logger.info(f"Simple MCP Bridge initialized with CLI: {self.greeum_cli}")
         
     def _find_greeum_cli(self) -> str:

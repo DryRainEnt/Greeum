@@ -59,7 +59,12 @@ class ClaudeCodeMCPServer:
             self.direct_mode = False
             
         # CLI 경로 설정 (일부 명령어는 CLI 필요)
-        self.greeum_cli = self._find_greeum_cli()
+        try:
+            self.greeum_cli = self._find_greeum_cli()
+        except Exception as e:
+            logger.warning(f"Failed to find Greeum CLI: {e}")
+            self.greeum_cli = "python3 -m greeum.cli"  # 안전한 기본값
+            
         if not self.direct_mode:
             logger.info(f"Claude Code MCP Server initialized with CLI fallback: {self.greeum_cli}")
         else:
@@ -86,10 +91,12 @@ class ClaudeCodeMCPServer:
     def _run_cli_command(self, command: List[str]) -> Dict[str, Any]:
         """CLI 명령어 실행"""
         try:
-            if not hasattr(self, 'greeum_cli') or not self.greeum_cli:
+            # 안전한 CLI 경로 가져오기
+            greeum_cli = getattr(self, 'greeum_cli', None)
+            if not greeum_cli:
                 return {"success": False, "error": "CLI path not configured"}
                 
-            full_command = self.greeum_cli.split() + command
+            full_command = greeum_cli.split() + command
             logger.info(f"Running: {' '.join(full_command)}")
             
             # 보안: 허용된 명령어만 실행
