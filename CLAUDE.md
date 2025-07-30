@@ -205,6 +205,117 @@ The system provides both REST API and Python client interfaces:
 - Python client with retry logic and error handling
 - MCP (Model Control Protocol) support via separate GreeumMCP package
 
+## Claude Code MCP Integration
+
+### Setting up GreeumMCP with Claude Code
+
+**Prerequisites:**
+- Greeum v1.0.0+ installed
+- GreeumMCP v1.0.0+ installed
+- Claude Desktop application
+
+#### Step 1: Install Dependencies
+```bash
+# Install core packages
+pip install greeum>=1.0.0
+pip install greeummcp>=1.0.0
+
+# Install required dependencies for MCP server
+pip install numpy>=1.24.0
+```
+
+#### Step 2: Configure Claude Desktop
+Edit `~/.config/claude-desktop/claude_desktop_config.json` (Linux/macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "greeum_mcp": {
+      "command": "python3",
+      "args": [
+        "/path/to/GreeumMCP/minimal_mcp_server.py"
+      ],
+      "env": {
+        "GREEUM_DATA_DIR": "/path/to/greeum-global",
+        "GREEUM_LOG_LEVEL": "INFO",
+        "PYTHONPATH": "/path/to/Greeum:/path/to/GreeumMCP"
+      }
+    }
+  }
+}
+```
+
+#### Step 3: Create MCP Server Script
+Ensure your GreeumMCP installation includes `minimal_mcp_server.py` or `working_mcp_server.py`:
+
+```python
+# Example minimal_mcp_server.py structure
+import asyncio
+import json
+from mcp.server import Server
+from greeum import BlockManager, DatabaseManager
+
+async def main():
+    server = Server("greeum-memory")
+    
+    # Initialize Greeum components
+    db_manager = DatabaseManager()
+    block_manager = BlockManager(db_manager)
+    
+    # Define MCP tools
+    @server.list_tools()
+    async def list_tools():
+        return [
+            {"name": "add_memory", "description": "Add memory to Greeum"},
+            {"name": "search_memory", "description": "Search Greeum memories"}
+        ]
+    
+    # Run server
+    await server.run()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+#### Step 4: Verify Connection
+```bash
+# Check MCP server status
+claude mcp list
+
+# Should show:
+# greeum_mcp: python3 /path/to/minimal_mcp_server.py - ✓ Connected
+```
+
+#### Step 5: Test MCP Functions
+In Claude Code, you can now use:
+- `add_memory(content)` - Add new memory blocks
+- `search_memory(query)` - Search existing memories
+
+### Troubleshooting
+
+**Common Issues:**
+
+1. **"Failed to connect" error:**
+   - Verify PYTHONPATH includes both Greeum and GreeumMCP directories
+   - Check that numpy is installed in the Python environment
+   - Ensure file paths are absolute, not relative
+
+2. **Import errors:**
+   - Install missing dependencies: `pip install numpy mcp`
+   - Verify Greeum v1.0.0+ is properly installed
+   - Check Python version compatibility (3.10+)
+
+3. **Permission errors:**
+   - Ensure GREEUM_DATA_DIR is writable
+   - Check file permissions on MCP server script
+
+**Successful Configuration Indicators:**
+- `claude mcp list` shows "✓ Connected"
+- MCP tools appear in Claude Code interface
+- Memory operations work without errors
+
+This setup enables seamless integration between Claude Code and Greeum's memory system, allowing persistent context across conversations.
+
 ## Internationalization
 
 Documentation available in multiple languages:
