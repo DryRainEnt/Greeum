@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "greeum"
-version = "2.0.1"
+version = "2.0.2"
 description = "Universal memory module for LLMs"
 authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -22,12 +22,10 @@ dependencies = [
     "numpy>=1.24.0",
     "sqlalchemy>=2.0.0",
     "pydantic>=2.0.0",
+    "mcp>=1.0.0",
 ]
 
 [project.optional-dependencies]
-mcp = [
-    "mcp>=1.0.0",
-]
 api = [
     "fastapi>=0.100.0",
     "uvicorn>=0.15.0",
@@ -41,7 +39,7 @@ ai = [
     "anthropic>=0.3.0",
 ]
 all = [
-    "greeum[mcp,api,search,ai]"
+    "greeum[api,search,ai]"
 ]
 test = ["pytest", "pytest-cov"]
 dev = ["black", "isort", "flake8"]

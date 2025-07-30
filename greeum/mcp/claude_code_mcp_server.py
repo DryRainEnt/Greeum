@@ -25,7 +25,7 @@ class ClaudeCodeMCPServer:
         """초기화"""
         self.server_info = {
             "name": "greeum",
-            "version": "2.0.1"
+            "version": "2.0.2"
         }
         self.protocol_version = "2024-11-05"
         self.capabilities = {
