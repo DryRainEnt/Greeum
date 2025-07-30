@@ -1,4 +1,4 @@
-# 🧠 Greeum v0.6.0
+# 🧠 Greeum v2.0.1
 
 <p align="center">
   <a href="../../README.md">🇰🇷 한국어</a> |
@@ -28,20 +28,43 @@ Greeum is an LLM-independent memory system based on the RAG (Retrieval-Augmented
 - **Prompt Composer**: Automatic generation of LLM prompts with relevant memories
 - **Temporal Reasoner**: Advanced temporal expression recognition in multilingual environments
 - **Multilingual Support**: Automatic language detection and processing for Korean, English, etc.
-- **Model Control Protocol**: External tool integration support for Cursor, Unity, Discord, etc. via separate [GreeumMCP](https://github.com/DryRainEnt/GreeumMCP) package
+- **Model Control Protocol**: Built-in MCP server from v2.0.1 for direct integration with Claude Code and other external tools
 
 ## ⚙️ Installation
 
-1. Clone the repository
-   ```bash
-   git clone https://github.com/DryRainEnt/Greeum.git
-   cd Greeum
-   ```
+### 🚀 Recommended: pipx Installation
 
-2. Install dependencies
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+# Install pipx if you don't have it
+brew install pipx  # macOS
+# or pip install --user pipx
+
+# Install Greeum v2.0 with all features
+pipx install greeum[all]
+
+# Verify installation
+greeum --version
+```
+
+### 📋 Claude Code MCP Integration
+
+```bash
+# Start MCP server
+greeum mcp serve
+
+# Available 9 memory tools in Claude Code:
+# - add_memory, search_memory, get_memory_stats
+# - ltm_analyze, ltm_verify, ltm_export  
+# - stm_add, stm_promote, stm_cleanup
+```
+
+### 🔧 For Developers: Install from Source
+
+```bash
+git clone https://github.com/DryRainEnt/Greeum.git
+cd Greeum
+pip install -e .
+```
 
 ## 🧪 Usage
 
