@@ -58,10 +58,12 @@ class ClaudeCodeMCPServer:
         else:
             self.direct_mode = False
             
-        # Fallback: CLI 경로 설정  
+        # CLI 경로 설정 (일부 명령어는 CLI 필요)
+        self.greeum_cli = self._find_greeum_cli()
         if not self.direct_mode:
-            self.greeum_cli = self._find_greeum_cli()
             logger.info(f"Claude Code MCP Server initialized with CLI fallback: {self.greeum_cli}")
+        else:
+            logger.info(f"Claude Code MCP Server initialized with direct mode, CLI available: {self.greeum_cli}")
         
     def _find_greeum_cli(self) -> str:
         """Greeum CLI 경로 자동 감지"""
@@ -84,11 +86,19 @@ class ClaudeCodeMCPServer:
     def _run_cli_command(self, command: List[str]) -> Dict[str, Any]:
         """CLI 명령어 실행"""
         try:
+            if not hasattr(self, 'greeum_cli') or not self.greeum_cli:
+                return {"success": False, "error": "CLI path not configured"}
+                
             full_command = self.greeum_cli.split() + command
             logger.info(f"Running: {' '.join(full_command)}")
             
             # 보안: 허용된 명령어만 실행
-            allowed_commands = ["memory", "add", "search", "stats", "--version", "--help"]
+            allowed_commands = [
+                "memory", "add", "search", "stats", "--version", "--help",
+                "ltm", "analyze", "verify", "export", "stm", "promote", "cleanup",
+                "--period", "--output", "--trends", "--repair", "--format", "--limit",
+                "--threshold", "--dry-run", "--ttl", "--importance", "--smart", "--expired"
+            ]
             for cmd_part in command:
                 if cmd_part not in allowed_commands and not cmd_part.startswith(('-', '=')):
                     # 명령어 인젝션 방지: 안전한 텍스트만 허용
