@@ -1,0 +1,289 @@
+#!/usr/bin/env python3
+"""
+Greeum v2.0 Simple MCP Bridge
+- 환경 독립적 MCP 연결
+- Greeum v2.0 CLI 기반 동작
+- 최소 의존성, 최대 안정성
+"""
+
+import json
+import sys
+import os
+import asyncio
+import logging
+import subprocess
+from typing import Dict, Any, List, Optional
+from pathlib import Path
+
+# 로깅 설정
+logging.basicConfig(level=logging.INFO, stream=sys.stderr)
+logger = logging.getLogger("simple_mcp_bridge")
+
+class SimpleMCPBridge:
+    """간단하고 안정적인 MCP 브리지"""
+    
+    def __init__(self):
+        """초기화 - 최소한의 설정"""
+        self.greeum_cli = self._find_greeum_cli()
+        logger.info(f"Simple MCP Bridge initialized with CLI: {self.greeum_cli}")
+        
+    def _find_greeum_cli(self) -> str:
+        """Greeum CLI 경로 자동 감지"""
+        # 현재 디렉토리 기준
+        current_dir = Path(__file__).parent.parent.parent
+        
+        # 방법 1: 직접 Python 모듈로 실행
+        if (current_dir / "greeum" / "cli" / "__init__.py").exists():
+            return f"python3 -m greeum.cli"
+            
+        # 방법 2: 설치된 greeum 명령어 사용
+        try:
+            subprocess.run(["greeum", "--version"], capture_output=True, check=True)
+            return "greeum"
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
+            
+        # 방법 3: 직접 Python 실행
+        return f"python3 {current_dir / 'greeum' / 'cli' / '__init__.py'}"
+    
+    def _run_greeum_command(self, command: List[str]) -> Dict[str, Any]:
+        """Greeum CLI 명령어 실행"""
+        try:
+            full_command = self.greeum_cli.split() + command
+            logger.info(f"Running command: {' '.join(full_command)}")
+            
+            result = subprocess.run(
+                full_command,
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd="/Users/dryrain/DevRoom/Greeum"
+            )
+            
+            if result.stdout:
+                # JSON 응답인지 확인
+                try:
+                    return json.loads(result.stdout)
+                except json.JSONDecodeError:
+                    # 텍스트 응답을 JSON으로 래핑
+                    return {"success": True, "output": result.stdout.strip()}
+            else:
+                return {"success": True, "output": "Command executed successfully"}
+                
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Command failed: {e}")
+            return {
+                "success": False, 
+                "error": f"Command failed: {e.stderr or str(e)}"
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def add_memory(self, content: str, importance: float = 0.5) -> Dict[str, Any]:
+        """메모리 추가"""
+        command = ["memory", "add", "-c", content, "-i", str(importance)]
+        return self._run_greeum_command(command)
+    
+    def search_memory(self, query: str, limit: int = 5) -> Dict[str, Any]:
+        """메모리 검색"""
+        command = ["memory", "search", "-q", query, "-l", str(limit)]
+        return self._run_greeum_command(command)
+    
+    def get_memory_stats(self) -> Dict[str, Any]:
+        """메모리 통계"""
+        command = ["memory", "status"]
+        return self._run_greeum_command(command)
+
+class SimpleMCPProtocol:
+    """초간단 MCP 프로토콜"""
+    
+    def __init__(self):
+        self.bridge = SimpleMCPBridge()
+        
+    async def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """MCP 요청 처리"""
+        try:
+            method = request.get('method', '')
+            params = request.get('params', {})
+            request_id = request.get('id', 1)
+            
+            logger.info(f"Handling method: {method}")
+            
+            if method == 'initialize':
+                return {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "result": {
+                        "protocolVersion": "2024-11-05",
+                        "capabilities": {
+                            "tools": {},
+                            "resources": {},
+                            "prompts": {},
+                            "logging": {}
+                        },
+                        "serverInfo": {
+                            "name": "greeum-simple-bridge",
+                            "version": "2.0.0"
+                        }
+                    }
+                }
+            
+            elif method == 'tools/list':
+                return {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "result": {
+                        "tools": [
+                            {
+                                "name": "add_memory",
+                                "description": "Add new memory to Greeum v2.0",
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "content": {"type": "string"},
+                                        "importance": {"type": "number", "default": 0.5}
+                                    },
+                                    "required": ["content"]
+                                }
+                            },
+                            {
+                                "name": "search_memory", 
+                                "description": "Search memories in Greeum v2.0",
+                                "inputSchema": {
+                                    "type": "object", 
+                                    "properties": {
+                                        "query": {"type": "string"},
+                                        "limit": {"type": "number", "default": 5}
+                                    },
+                                    "required": ["query"]
+                                }
+                            },
+                            {
+                                "name": "memory_stats",
+                                "description": "Get Greeum v2.0 memory statistics", 
+                                "inputSchema": {"type": "object"}
+                            }
+                        ]
+                    }
+                }
+                
+            elif method == 'tools/call':
+                tool_name = params.get('name', '')
+                arguments = params.get('arguments', {})
+                
+                logger.info(f"Calling tool: {tool_name} with args: {arguments}")
+                
+                if tool_name == 'add_memory':
+                    result = self.bridge.add_memory(
+                        content=arguments.get('content', ''),
+                        importance=arguments.get('importance', 0.5)
+                    )
+                elif tool_name == 'search_memory':
+                    result = self.bridge.search_memory(
+                        query=arguments.get('query', ''),
+                        limit=arguments.get('limit', 5)
+                    )
+                elif tool_name == 'memory_stats':
+                    result = self.bridge.get_memory_stats()
+                else:
+                    return {
+                        "jsonrpc": "2.0",
+                        "id": request_id,
+                        "error": {
+                            "code": -32601,
+                            "message": f"Unknown tool: {tool_name}"
+                        }
+                    }
+                
+                return {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "result": {
+                        "content": [{
+                            "type": "text", 
+                            "text": json.dumps(result, indent=2, ensure_ascii=False)
+                        }]
+                    }
+                }
+                
+            # 지원하지 않는 메서드
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {
+                    "code": -32601,
+                    "message": f"Method not found: {method}"
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Request handling failed: {e}")
+            return {
+                "jsonrpc": "2.0", 
+                "id": request.get('id', 1),
+                "error": {
+                    "code": -32603,
+                    "message": f"Internal error: {str(e)}"
+                }
+            }
+
+async def main():
+    """메인 서버 실행"""
+    try:
+        protocol = SimpleMCPProtocol()
+        logger.info("Simple Greeum MCP Bridge started")
+        
+        # STDIO 모드에서 JSON-RPC 메시지 처리
+        while True:
+            try:
+                line = sys.stdin.readline()
+                if not line:
+                    break
+                    
+                line = line.strip()
+                if not line:
+                    continue
+                    
+                # JSON-RPC 요청 파싱
+                request = json.loads(line)
+                response = await protocol.handle_request(request)
+                
+                # 응답 전송
+                print(json.dumps(response), flush=True)
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON received: {e}")
+                error_response = {
+                    "jsonrpc": "2.0",
+                    "id": None,
+                    "error": {"code": -32700, "message": "Parse error"}
+                }
+                print(json.dumps(error_response), flush=True)
+                
+            except KeyboardInterrupt:
+                logger.info("Server interrupted by user")
+                break
+                
+            except Exception as e:
+                logger.error(f"Unexpected error: {e}")
+                
+    except Exception as e:
+        logger.error(f"Server startup failed: {e}")
+        sys.exit(1)
+    finally:
+        logger.info("Simple Greeum MCP Bridge stopped")
+
+if __name__ == "__main__":
+    # Python 버전 확인
+    if sys.version_info < (3, 6):
+        print("Error: Python 3.6+ required", file=sys.stderr)
+        sys.exit(1)
+        
+    # 비동기 실행
+    try:
+        asyncio.run(main())
+    except AttributeError:
+        # Python 3.6 호환성
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main())

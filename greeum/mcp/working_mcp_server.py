@@ -38,12 +38,12 @@ class WorkingGreeumMCPServer:
             os.makedirs(self.data_dir, exist_ok=True)
             logger.info(f"Data directory: {self.data_dir}")
             
-            # Import Greeum components
-            from greeum.database_manager import DatabaseManager
-            from greeum.block_manager import BlockManager
-            from greeum.stm_manager import STMManager
-            from greeum.cache_manager import CacheManager
-            from greeum.prompt_wrapper import PromptWrapper
+            # Import Greeum components (v2.0 structure)
+            from greeum.core.database_manager import DatabaseManager
+            from greeum.core.block_manager import BlockManager
+            from greeum.core.stm_manager import STMManager
+            from greeum.core.cache_manager import CacheManager
+            from greeum.core.prompt_wrapper import PromptWrapper
             
             # Initialize database
             db_path = os.path.join(self.data_dir, 'memory.db')
