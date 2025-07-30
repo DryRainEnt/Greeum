@@ -5,7 +5,7 @@ This package contains independent modules to provide a human-like
 memory system for Large Language Models.
 """
 
-__version__ = "0.6.0"
+__version__ = "2.0.0"
 
 # Core components imports
 try:
@@ -19,8 +19,19 @@ try:
 except NameError:
     pass
 
+# Core memory system (v2.0 structure with backward compatibility)
 try:
-    from .database_manager import DatabaseManager
+    from .core import (
+        BlockManager, STMManager, CacheManager, PromptWrapper,
+        DatabaseManager, SearchEngine, BertReranker, 
+        FaissVectorIndex, STMWorkingSet
+    )
+except ImportError:
+    pass
+
+# Backward compatibility - keep old import paths working
+try:
+    from .core.database_manager import DatabaseManager
 except ImportError:
     pass
 
@@ -48,24 +59,24 @@ try:
 except ImportError:
     pass
 
-# Original components (for compatibility)
+# Backward compatibility - ensure old imports still work
 try:
-    from .block_manager import BlockManager
+    from .core.block_manager import BlockManager
 except ImportError:
     pass
 
 try:
-    from .stm_manager import STMManager
+    from .core.stm_manager import STMManager  
 except ImportError:
     pass
 
 try:
-    from .cache_manager import CacheManager
+    from .core.cache_manager import CacheManager
 except ImportError:
     pass
 
 try:
-    from .prompt_wrapper import PromptWrapper
+    from .core.prompt_wrapper import PromptWrapper
 except ImportError:
     pass
 
@@ -91,6 +102,13 @@ except ImportError:
 try:
     from .search_engine import SearchEngine, BertReranker
 except ImportError:
+    pass
+
+# MCP integration (v2.0 feature) - optional import
+try:
+    from . import mcp
+except ImportError:
+    # MCP is optional and requires 'pip install greeum[mcp]'
     pass
 
 __all__ = [
