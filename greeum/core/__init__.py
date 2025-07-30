@@ -13,41 +13,35 @@ This module contains the core components for STM/LTM memory architecture:
 """
 
 # Core memory components
-try:
-    from .block_manager import BlockManager
-except ImportError:
-    pass
+from .database_manager import DatabaseManager
+from .block_manager import BlockManager
 
+# Optional components (may not be available in lightweight version)
 try:
     from .stm_manager import STMManager
 except ImportError:
-    pass
+    STMManager = None
 
 try:
     from .cache_manager import CacheManager
 except ImportError:
-    pass
+    CacheManager = None
 
 try:
     from .prompt_wrapper import PromptWrapper
 except ImportError:
-    pass
-
-try:
-    from .database_manager import DatabaseManager
-except ImportError:
-    pass
+    PromptWrapper = None
 
 try:
     from .search_engine import SearchEngine, BertReranker
 except ImportError:
-    pass
-
+    SearchEngine = None
+    BertReranker = None
 
 try:
     from .working_memory import STMWorkingSet
 except ImportError:
-    pass
+    STMWorkingSet = None
 
 __all__ = [
     "BlockManager",
