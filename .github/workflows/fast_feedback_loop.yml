@@ -42,7 +42,7 @@ jobs:
     - name: Install minimal dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e . --no-deps  # 의존성 없이 빠른 설치
+        pip install -e .  # 필수 의존성 포함 설치
         pip install pytest psutil bandit safety
         
     - name: Syntax Check (5초)
