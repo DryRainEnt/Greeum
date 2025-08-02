@@ -3,7 +3,7 @@ from datetime import datetime
 
 from .cache_manager import CacheManager
 from .stm_manager import STMManager
-from .token_utils import count_tokens, truncate_by_tokens
+from ..token_utils import count_tokens, truncate_by_tokens
 
 class PromptWrapper:
     """프롬프트 조합기 클래스"""

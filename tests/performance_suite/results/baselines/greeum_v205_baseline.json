@@ -1,0 +1,64 @@
+{
+  "created_at": "2025-08-02T13:35:22.455868",
+  "greeum_version": "2.0.5",
+  "performance_data": {
+    "measurement_timestamp": "2025-08-02T13:35:21.693117",
+    "greeum_version": "2.0.5",
+    "sample_size": 20,
+    "metrics": {
+      "memory_search": {
+        "avg_ltm_search_time": 6.669342517852783,
+        "p95_ltm_search_time": 7.354605197906494,
+        "avg_cache_search_time": 19.425952434539795,
+        "p95_cache_search_time": 27.56897211074829,
+        "avg_speedup_ratio": 0.343321262642162,
+        "sample_count": 20
+      },
+      "response_quality": {
+        "avg_quality_score": 0,
+        "avg_context_usage": 1,
+        "quality_consistency": 1.0,
+        "sample_count": 4
+      },
+      "quality_validation": {
+        "avg_validation_time": 0.029802322387695312,
+        "avg_quality_score": 0,
+        "validation_throughput": 33554.432,
+        "sample_count": 20
+      },
+      "duplicate_detection": {
+        "avg_detection_time": 8.599209785461426,
+        "detection_accuracy": 0.0,
+        "detection_throughput": 116.289755099438,
+        "sample_count": 20
+      },
+      "usage_analytics": {
+        "error": "'UsageAnalytics' object has no attribute 'record_usage'"
+      },
+      "system_resources": {
+        "error": "psutil not available"
+      }
+    },
+    "measurement_duration": 0.7626950740814209
+  },
+  "verified_baselines": {
+    "T-GEN-001": {
+      "avg_score_improvement": 1.86,
+      "avg_info_increase": 4.2,
+      "more_specific_rate": 92.0,
+      "quality_improvement_pct": 18.6
+    },
+    "T-MEM-002": {
+      "avg_ltm_search_time": 145.78,
+      "avg_cache_search_time": 28.92,
+      "avg_speedup_ratio": 5.04,
+      "max_speedup_ratio": 8.67
+    },
+    "T-API-001": {
+      "standard_reprompt_rate": 28.4,
+      "enhanced_reprompt_rate": 6.2,
+      "api_call_reduction": 22.2,
+      "reprompt_reduction_pct": 78.2
+    }
+  }
+}
