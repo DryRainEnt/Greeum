@@ -390,18 +390,14 @@ USE FOR:
     
     @classmethod
     def get_all_enhanced_schemas(cls) -> List[Dict[str, Any]]:
-        """Get all enhanced tool schemas for MCP server integration"""
+        """Get enhanced tool schemas for MCP server integration (안전한 도구만)"""
         return [
             cls.get_add_memory_schema(),
             cls.get_search_memory_schema(),
             cls.get_get_memory_stats_schema(),
-            cls.get_usage_analytics_schema(),
-            cls.get_ltm_analyze_schema(),
-            cls.get_ltm_verify_schema(),
-            cls.get_ltm_export_schema(),
-            cls.get_stm_add_schema(),
-            cls.get_stm_promote_schema(),
-            cls.get_stm_cleanup_schema()
+            cls.get_usage_analytics_schema()
+            # 제거됨: ltm_analyze, ltm_verify, ltm_export, stm_add, stm_promote, stm_cleanup
+            # 안전성과 보안상의 이유로 위험한 6개 도구는 MCP에서 제거됨
         ]
     
     @classmethod

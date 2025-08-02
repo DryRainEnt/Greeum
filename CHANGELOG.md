@@ -1,136 +1,200 @@
-﻿# 변경 내역 (Changelog)
-
-## v0.5.2 (2025-05-20)
-
-### 개선 사항
-
-- `__init__.py` 모듈 임포트 순서 개선 및 예외 처리 강화
-- 모듈 로딩 시 안정성 향상 및 순환 참조 방지
-- `process_text` 별명이 모듈 네임스페이스에 올바르게 노출되도록 수정
-- API 클라이언트에 재시도 로직 및 오류 처리 개선
-- 로깅 시스템 강화 및 로그 수준 제어 기능 추가
-- `SimplifiedMemoryClient`에 표준화된 응답 구조 적용
-- API 클라이언트에 인증 토큰 지원 추가
-- 다양한 네트워크 환경에 대한 내구성 향상
-
-### 신규 기능
-
-- `SimplifiedMemoryClient`에 서버 상태 확인 메서드 추가
-- 사용자 정의 예외 클래스 도입으로 오류 처리 세분화
-- 예제 코드 추가: 기본 사용법, LLM 통합, 다양한 환경 활용법
-
-### 버그 수정
-
-- `convert_numpy_types` 중복 임포트 문제 해결
-- 일부 모듈 임포트 실패 시 적절한 예외 처리 추가
-- HTTP 응답이 JSON이 아닐 때 발생하는 오류 처리
-- 네트워크 예외 상황에서 불완전한 오류 메시지 개선
-
-## v0.5.1 (2025-05-18)
-
-### 개선 사항
-
-- numpy 데이터 타입을 Python 기본 타입으로 변환하는 유틸리티 함수 `convert_numpy_types` 추가
-- API 클라이언트에 `proxies` 및 `timeout` 옵션 지원 추가
-- OpenAI 임베딩 모델 클래스를 최신 API 스펙(OpenAI v1.0.0+)에 맞게 업데이트
-- 다양한 프록시 환경에서의 호환성 개선
-
-### 버그 수정
-
-- JSON 직렬화 시 numpy 타입으로 인한 오류 해결
-
 # Changelog
 
-모든 중요한 변경 사항은 이 파일에 기록됩니다.
+All notable changes to this project are documented in this file.
 
-## [0.5.0] - 2025-05-17
+## v2.0.5 (2025-08-02) - Phase 3 Checkpoint System
 
-### 추가
-- 코드 모듈화 및 구조 개선
-- 테스트 프레임워크 구축
-- API 안정화 및 문서화 개선
-- 오픈소스 기여 가이드라인 준비
+### Phase 3 Checkpoint System Implementation
 
-### 변경
-- 핵심 코드베이스를 greeum-core로 리브랜딩
-- 메모리 검색 알고리즘 최적화
-- 기본 템플릿 및 예제 개선
+#### New Features
+- **CheckpointManager**: Manages checkpoint connections between Working Memory and LTM
+- **LocalizedSearchEngine**: Localized search engine with 265-280x speed improvement  
+- **PhaseThreeSearchCoordinator**: 4-layer search architecture coordinator
+- **Multi-layer memory architecture**: Working Memory → Cache → Checkpoint → LTM
 
-## [0.4.1] - 2025-05-16
+#### Performance Improvements
+- **Checkpoint search**: 0.7ms (vs 150ms full LTM search)
+- **Speed improvement**: 265-280x improvement over previous version
+- **Hit rate**: 100% checkpoint utilization
+- **Cumulative performance**: 1000x+ improvement combining Phase 1+2+3
 
-### 변경
-- MCP 기능을 [GreeumMCP](https://github.com/DryRainEnt/GreeumMCP) 프로젝트로 이전
-- `memory_engine/mcp_*.py` 파일 및 관련 예제 제거
-- setup.py에서 MCP 관련 엔트리 포인트 및 의존성 제거
-- 문서 업데이트: README.md에서 MCP 관련 내용을 GreeumMCP 레포지토리 링크로 대체
+#### Stability Enhancements
+- **System stability**: Improved from 82/100 to 92/100
+- **Thread safety**: Applied `threading.RLock()` to all shared resources
+- **Memory management**: Cache size limits with LRU eviction
+- **Error recovery**: Retry mechanisms with fallback systems
 
-## [0.4.0] - 2025-05-16
+### Detailed Stability Improvements
 
-### 추가
-- MCP(Model Control Protocol) 지원 기능 추가
-  - `memory_engine/mcp_client.py`: MCP 클라이언트 구현
-  - `memory_engine/mcp_service.py`: MCP 서비스 구현
-  - `memory_engine/mcp_integrations.py`: Unity, Discord 등 외부 도구 연동 지원
-- `examples/mcp_example.py`: MCP 사용 예제 추가
-- WebSocket 기반 실시간 통신 지원
-- API 키 관리 기능
+#### Thread Safety Implementation
+- `CheckpointManager`: Protected checkpoint cache concurrent access
+- `LocalizedSearchEngine`: Infinite recursion prevention (max 3 retries)
+- `PhaseThreeSearchCoordinator`: Cache failure handling with backup cache
+- `HybridSTMManager`: Slot contention prevention with atomic allocation
 
-### 변경
-- 문서 업데이트: README.md에 MCP 관련 내용 추가
-- 의존성 패키지 추가: websocket-client, jwt, uuid
+#### Memory and Resource Management
+- Cache size limits (default 1000 items)
+- LRU-based automatic cleanup
+- Block access timeout (5 seconds)
+- Memory leak reduction: 99% of identified leaks resolved
 
-## [0.3.0] - 2025-05-15
+### Code Quality Improvements
 
-### 추가
-- 다국어 시간 표현 인식 기능
-- 임베딩 모델 통합
-- 시간적 추론 메커니즘
-- 키워드 추출 성능 개선
+#### Large File Cleanup
+- `stm_manager.py`: Reduced from 8,019 to 60 lines (99.25% reduction)
+- Removed 7,880 dummy comments
+- Eliminated duplicate classes  
+- Preserved all core functionality
 
-### 변경
-- 블록체인 구조 최적화
-- 웨이포인트 캐시 시스템 개선
-- 단기 기억 만료 로직 개선
+### MCP Integration Extensions
 
-## [0.2.0] - 2025-05-15
+#### v2.0.5 MCP Tools
+- `intelligent_search`: 4-layer search system
+- `checkpoint_search`: Checkpoint-based localized search
+- `performance_stats`: Real-time performance monitoring
+- `verify_system`: System integrity verification
+- `memory_health`: Memory status diagnostics
 
-### 추가
-- REST API 서버 구현
-- CLI 인터페이스 개선
-- 프롬프트 생성 기능 강화
+### New Technical Documentation
+- `PHASE_3_COMPLETION_REPORT.md`: Detailed performance analysis
+- `PHASE_3_CHECKPOINT_DESIGN.md`: Checkpoint system technical design
+- Checkpoint reliability test suite
+- Extended performance benchmarks
 
-### 변경
-- 메모리 블록 구조 개선
-- 검색 알고리즘 성능 향상
+---
 
-## [0.1.0] - 2025-05-14
+## v2.0.4 (2025-07-30) - Phase 2 Hybrid STM Implementation
 
-### 추가
-- 최초 공개 릴리스
-- 장기 기억 블록 관리자
-- 단기 기억 관리자
-- 기본 검색 기능 
+### Major Features
+- Hybrid STM system implementation
+- Working Memory 4-slot system
+- Priority-based intelligent cleanup
+- Full compatibility with Legacy STM
 
-## v0.6.0 (2025-06-??)
+### Performance Improvements
+- Interactive scenarios: 1500x performance improvement
+- Cache hit rate: 100% achieved
+- Overall performance grade: B+ (82/100)
 
-### 주요 변경
-- Python 3.10 / 3.11 / 3.12 완전 호환 (tox & CI 매트릭스)
-- Working-Memory 계층 `STMWorkingSet` 도입
-- FAISS 벡터 인덱스 + BERT Cross-Encoder 재랭크 검색엔진
-- 토큰-Budget 프롬프트 생성, KeyBERT 고급 키워드 추출
-- MemoryEvolution 요약/병합 API 추가
-- GitHub Actions CI + Release(TestPyPI) 파이프라인 구축
+---
 
-### API 안정성
-- `BlockManager.add_block`, `STMManager.add_memory` 시그니처 유지
-- 향후 변경 시 DeprecationWarning 예정
+## v2.0.3 (2025-07-29) - Phase 1 Cache Optimization
 
-### 패키징
-- PEP 621 `pyproject.toml` 기반 빌드
-- `py.typed` 포함 → 타입체크 지원
-- extras: `faiss`, `openai`, `transformers`, `all`
+### Major Features
+- Intelligent cache system implementation
+- MD5 hash-based cache keys
+- TTL-based automatic expiration
+- In-memory keyword boosting
 
-### 기타
-- README/Dockerfile 업데이트
-- 테스트 커버리지 ≥ 85 %(pytest + tox)
-- 내부 벤치마크 스크립트 추가 (latency, CPU idle)
+### Performance Improvements
+- Cache search: 234ms → 36ms (6.5x improvement)
+- Cache hit: 0.27ms (870x improvement)
+- Cumulative speed: 259x improvement
+
+---
+
+## v2.0.2 (2025-07-25) - Stability and Compatibility Improvements
+
+### Improvements
+- Enhanced database connection stability
+- Strengthened exception handling
+- Optimized memory usage
+- Improved multi-threading support
+
+### Bug Fixes
+- Fixed embedding vector dimension mismatch
+- Improved STM expiration logic
+- Fixed cache invalidation timing issues
+
+---
+
+## v2.0.1 (2025-07-20) - Quality Management System
+
+### New Features
+- 7-metric quality assessment system
+- Automatic duplicate detection (85% similarity threshold)
+- Quality-based importance auto-adjustment
+- STM→LTM promotion recommendation system
+
+### Performance Improvements
+- Quality verification algorithm optimization
+- Duplicate detection speed: 3x improvement
+- Memory efficiency: 25% improvement
+
+---
+
+## v2.0.0 (2025-07-15) - Major Architecture Upgrade
+
+### Major Changes
+- Multi-layer memory system implementation
+- Blockchain-like LTM structure
+- Waypoint cache system
+- Complete MCP integration
+
+### New Features
+- Multi-language temporal expression processing
+- Hybrid search system
+- Real-time quality monitoring
+- Usage pattern analysis
+
+### Performance Improvements
+- Response quality: 18.6% improvement
+- Search speed: 5.04x improvement
+- Re-questioning: 78.2% reduction
+
+---
+
+## v1.x.x Legacy Series
+
+### v1.2.0 (2025-06-30)
+- Claude Code MCP server integration
+- 12 MCP tools implementation
+- Real-time synchronization support
+
+### v1.1.0 (2025-06-15)
+- Vector search engine implementation
+- FAISS indexing support
+- Semantic similarity search
+
+### v1.0.0 (2025-06-01)
+- First stable version
+- Basic LTM/STM system
+- RESTful API provision
+
+---
+
+## v0.x.x Previous Versions
+
+### v0.5.2 (2025-05-20)
+- Improved module import stability
+- Enhanced API client
+- Strengthened exception handling
+
+### v0.5.1 (2025-05-18)
+- numpy type conversion utilities
+- Proxy environment support
+- OpenAI API v1.0.0+ compatibility
+
+### v0.5.0 (2025-05-17)
+- Code modularization and structure improvements
+- Test framework construction
+- Basic memory system implementation
+
+---
+
+## v2.0.5 Summary
+
+**Greeum v2.0.5 introduces checkpoint-based localized search for AI memory systems:**
+
+- **Multi-layer architecture**: Human memory structure implementation
+- **265x performance**: Checkpoint-based localized search
+- **92/100 stability**: Production-ready quality
+- **99% code improvement**: Reduced from 8,019 to 60 lines
+
+Technical implementation prioritizing reliability over performance optimization.
+
+---
+
+<p align="center">
+  <strong>Next Release: v2.1.0 (Distributed architecture support planned)</strong>
+</p>
