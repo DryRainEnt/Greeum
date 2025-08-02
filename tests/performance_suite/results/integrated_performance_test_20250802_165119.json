@@ -1,0 +1,115 @@
+{
+  "test_start_time": "2025-08-02T16:48:01.403554",
+  "greeum_version": "2.0.5",
+  "test_type": "Phase 1+2 Integration Performance Test",
+  "baseline": {
+    "add_time": 0.1035001277923584,
+    "avg_search_time": 0.003910136222839355,
+    "total_searches": 10,
+    "memory_count": 100
+  },
+  "integrated": {
+    "add_time": 0.11899805068969727,
+    "avg_search_time": 0.00410707950592041,
+    "total_searches": 100,
+    "memory_count": 100,
+    "cache_hits": 100,
+    "stm_hits": 0,
+    "cache_hit_rate": 1.0,
+    "stm_hit_rate": 0.0
+  },
+  "conversation_scenario": {
+    "total_turns": 100,
+    "avg_add_time": 0.0012839317321777343,
+    "avg_enhancement_time": 6.852865219116211e-05,
+    "total_conversation_time": 0.13524603843688965,
+    "memory_growth": 27
+  },
+  "document_scenario": {
+    "document_size": 17000,
+    "chunk_count": 34,
+    "total_processing_time": 0.05891990661621094,
+    "avg_chunk_time": 0.0017269008299883675,
+    "avg_search_time": 1.5649487376213074,
+    "search_queries": 4
+  },
+  "concurrent_access": {
+    "thread_count": 5,
+    "total_operations": 61,
+    "total_errors": 39,
+    "error_rate": 0.39,
+    "avg_thread_time": 139.97331595420837,
+    "threads_detail": [
+      {
+        "thread_id": 1,
+        "operations": 1,
+        "total_time": 110.18054389953613,
+        "errors": 19
+      },
+      {
+        "thread_id": 0,
+        "operations": 0,
+        "total_time": 115.24058485031128,
+        "errors": 20
+      },
+      {
+        "thread_id": 4,
+        "operations": 20,
+        "total_time": 140.6365146636963,
+        "errors": 0
+      },
+      {
+        "thread_id": 2,
+        "operations": 20,
+        "total_time": 143.9768340587616,
+        "errors": 0
+      },
+      {
+        "thread_id": 3,
+        "operations": 20,
+        "total_time": 189.83210229873657,
+        "errors": 0
+      }
+    ]
+  },
+  "edge_cases": {
+    "empty_search": {
+      "time": 0.03562593460083008,
+      "results_count": 0
+    },
+    "long_text": {
+      "text_length": 26000,
+      "processing_time": 0.04097104072570801
+    },
+    "special_characters": {
+      "test_count": 5,
+      "avg_processing_time": 0.0009491443634033203,
+      "max_processing_time": 0.0010848045349121094
+    },
+    "extreme_importance": {
+      "test_count": 4,
+      "avg_processing_time": 0.0008770227432250977
+    }
+  },
+  "memory_analysis": {
+    "initial_memory_mb": 1.0148191452026367,
+    "final_memory_mb": 1.145986557006836,
+    "peak_memory_mb": 1.725895881652832,
+    "max_rss_mb": 78.796875,
+    "memory_growth_mb": 0.13116741180419922,
+    "memory_growth_rate_mb_per_sample": 0.003857865053064683,
+    "total_cpu_time_seconds": 0.7882609999999999,
+    "gc_activity": -1430,
+    "sample_count": 34,
+    "leak_detected": false,
+    "memory_efficiency": "GOOD"
+  },
+  "performance_summary": {
+    "baseline_search_time": 0.003910136222839355,
+    "integrated_search_time": 0.00410707950592041,
+    "performance_improvement_ratio": 0.9520478523006047,
+    "cache_hit_rate": 1.0,
+    "stm_hit_rate": 0.0
+  },
+  "test_end_time": "2025-08-02T16:51:19.622928"
+}

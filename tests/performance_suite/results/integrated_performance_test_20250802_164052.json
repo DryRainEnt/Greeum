@@ -1,0 +1,13 @@
+{
+  "test_start_time": "2025-08-02T16:40:45.691376",
+  "greeum_version": "2.0.5",
+  "test_type": "Phase 1+2 Integration Performance Test",
+  "baseline": {
+    "add_time": 1.0236740112304688,
+    "avg_search_time": 0.3813727140426636,
+    "total_searches": 10,
+    "memory_count": 1000
+  },
+  "error": "'STMManager' object has no attribute 'add'",
+  "test_end_time": "2025-08-02T16:40:52.536429"
+}

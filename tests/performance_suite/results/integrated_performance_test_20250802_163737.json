@@ -1,0 +1,7 @@
+{
+  "test_start_time": "2025-08-02T16:37:37.178895",
+  "greeum_version": "2.0.5",
+  "test_type": "Phase 1+2 Integration Performance Test",
+  "error": "'BlockManager' object has no attribute 'add_memory'",
+  "test_end_time": "2025-08-02T16:37:37.179504"
+}

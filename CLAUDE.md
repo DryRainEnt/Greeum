@@ -52,29 +52,22 @@ pip install -e .
 #### CLI Interface
 ```bash
 # Add long-term memory
-python cli/memory_cli.py add -c "새로운 프로젝트를 시작했고 정말 흥미로워요"
+greeum add-memory -c "새로운 프로젝트를 시작했고 정말 흥미로워요"
 
-# Search by keywords
-python cli/memory_cli.py search -k "프로젝트,흥미로운"
+# Search memories
+greeum search -q "프로젝트 흥미로운" --top-k 5
 
-# Search by temporal expressions (multilingual)
-python cli/memory_cli.py search-time -q "3일 전에 무엇을 했지?" -l "ko"
+# Get recent memories
+greeum recent-memories --count 10
 
-# Manage short-term memory
-python cli/memory_cli.py stm "오늘 날씨가 좋네요"
-python cli/memory_cli.py get-stm
-
-# Generate enhanced prompts
-python cli/memory_cli.py prompt -i "프로젝트는 어떻게 진행되고 있나요?"
+# Initialize memory engine
+greeum init --db-path data/memory.db
 ```
 
 #### REST API Server
 ```bash
-# Start API server
-python api/memory_api.py
-
-# Server runs on http://localhost:5000
-# Web interface available at the same URL
+# Note: REST API server is available but requires separate setup
+# Refer to MCP integration for modern usage with Claude Code
 ```
 
 ## Code Architecture

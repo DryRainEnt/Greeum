@@ -1,0 +1,123 @@
+{
+  "timestamp": "2025-08-02T16:58:13.439274",
+  "total_tests": 103,
+  "total_failures": 12,
+  "total_errors": 0,
+  "overall_success_rate": 88.3495145631068,
+  "module_results": {
+    "UsageAnalytics": {
+      "tests_run": 16,
+      "failures": 2,
+      "errors": 0,
+      "success_rate": 87.5,
+      "duration": 0.44367408752441406,
+      "failure_details": [
+        "test_database_path_validation (test_usage_analytics.TestUsageAnalytics.test_database_path_validation)",
+        "test_input_sanitization (test_usage_analytics.TestUsageAnalytics.test_input_sanitization)"
+      ],
+      "error_details": []
+    },
+    "UsageAnalytics_Integration": {
+      "tests_run": 1,
+      "failures": 1,
+      "errors": 0,
+      "success_rate": 0.0,
+      "duration": 0.004933834075927734,
+      "failure_details": [
+        "test_real_world_usage_simulation (test_usage_analytics.TestUsageAnalyticsIntegration.test_real_world_usage_simulation)"
+      ],
+      "error_details": []
+    },
+    "QualityValidator": {
+      "tests_run": 25,
+      "failures": 2,
+      "errors": 0,
+      "success_rate": 92.0,
+      "duration": 0.6714768409729004,
+      "failure_details": [
+        "test_comprehensive_validation_poor_content (test_quality_validator.TestQualityValidator.test_comprehensive_validation_poor_content)",
+        "test_searchability_assessment (test_quality_validator.TestQualityValidator.test_searchability_assessment)"
+      ],
+      "error_details": []
+    },
+    "QualityValidator_Integration": {
+      "tests_run": 2,
+      "failures": 1,
+      "errors": 0,
+      "success_rate": 50.0,
+      "duration": 0.0006248950958251953,
+      "failure_details": [
+        "test_realistic_user_inputs (test_quality_validator.TestQualityValidatorIntegration.test_realistic_user_inputs)"
+      ],
+      "error_details": []
+    },
+    "DuplicateDetector": {
+      "tests_run": 23,
+      "failures": 2,
+      "errors": 0,
+      "success_rate": 91.30434782608695,
+      "duration": 0.22063899040222168,
+      "failure_details": [
+        "test_context_window_optimization (test_duplicate_detector.TestDuplicateDetector.test_context_window_optimization)",
+        "test_partial_similarity_detection (test_duplicate_detector.TestDuplicateDetector.test_partial_similarity_detection)"
+      ],
+      "error_details": []
+    },
+    "DuplicateDetector_Integration": {
+      "tests_run": 2,
+      "failures": 1,
+      "errors": 0,
+      "success_rate": 50.0,
+      "duration": 0.0010449886322021484,
+      "failure_details": [
+        "test_realistic_duplicate_scenarios (test_duplicate_detector.TestDuplicateDetectorIntegration.test_realistic_duplicate_scenarios)"
+      ],
+      "error_details": []
+    },
+    "EnhancedToolSchema": {
+      "tests_run": 22,
+      "failures": 1,
+      "errors": 0,
+      "success_rate": 95.45454545454545,
+      "duration": 0.0022079944610595703,
+      "failure_details": [
+        "test_schema_descriptions_quality (test_enhanced_tool_schema.TestEnhancedToolSchema.test_schema_descriptions_quality)"
+      ],
+      "error_details": []
+    },
+    "EnhancedToolSchema_Integration": {
+      "tests_run": 5,
+      "failures": 0,
+      "errors": 0,
+      "success_rate": 100.0,
+      "duration": 0.00013685226440429688,
+      "failure_details": [],
+      "error_details": []
+    },
+    "V205_Integration": {
+      "tests_run": 7,
+      "failures": 2,
+      "errors": 0,
+      "success_rate": 71.42857142857143,
+      "duration": 6.786485910415649,
+      "failure_details": [
+        "test_batch_processing_integration (test_v205_integration.TestV205Integration.test_batch_processing_integration)",
+        "test_quality_and_duplicate_correlation (test_v205_integration.TestV205Integration.test_quality_and_duplicate_correlation)"
+      ],
+      "error_details": []
+    }
+  },
+  "performance_metrics": {
+    "total_duration_seconds": 8.131871938705444,
+    "tests_per_second": 12.666210286680574,
+    "average_test_duration": 0.07895021299714024
+  },
+  "status": "FAILED",
+  "coverage_areas": [
+    "UsageAnalytics - Database operations, event logging, session management",
+    "QualityValidator - Content analysis, quality scoring, recommendations",
+    "DuplicateDetector - Similarity algorithms, batch processing, performance",
+    "EnhancedToolSchema - MCP integration, parameter validation, usage hints",
+    "Integration - End-to-end workflows, error handling, performance benchmarks"
+  ]
+}

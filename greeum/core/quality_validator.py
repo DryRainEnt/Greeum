@@ -87,7 +87,7 @@ class QualityValidator:
                 "adjusted_importance": adjusted_importance,
                 "warnings": warnings,
                 "timestamp": datetime.now().isoformat(),
-                "validation_version": "2.0.5"
+                "validation_version": "2.1.0"
             }
             
         except Exception as e:
@@ -496,7 +496,7 @@ class QualityValidator:
             "adjusted_importance": importance,
             "warnings": [f"Quality validation error: {error}"],
             "timestamp": datetime.now().isoformat(),
-            "validation_version": "2.0.5"
+            "validation_version": "2.1.0"
         }
     
     def validate_batch_memories(self, memories: List[Tuple[str, float]]) -> List[Dict[str, Any]]:

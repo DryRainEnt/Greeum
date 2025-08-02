@@ -1,0 +1,28 @@
+{
+  "timestamp": "20250802_181101",
+  "total_time": 0.14810609817504883,
+  "success_rate": 25.0,
+  "overall_success": false,
+  "test_results": {
+    "phase1": {
+      "success": false,
+      "error": "BlockManager.add_block() missing 4 required positional arguments: 'keywords', 'tags', 'embedding', and 'importance'"
+    },
+    "phase2": {
+      "success": true,
+      "avg_search_time": 0.09734180348459631,
+      "wm_hit_rate": 80.0,
+      "recent_time": 0.05295900336932391,
+      "efficiency": 1.8,
+      "memories_added": 5
+    },
+    "synergy": {
+      "success": false,
+      "error": "'PromptWrapper' object has no attribute 'enhance_prompt'"
+    },
+    "stress": {
+      "success": false,
+      "error": "No module named 'psutil'"
+    }
+  }
+}

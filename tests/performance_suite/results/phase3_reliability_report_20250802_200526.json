@@ -1,0 +1,100 @@
+{
+  "test_name": "Phase 3 Reliability & Accuracy Test",
+  "start_time": "2025-08-02T20:04:49.261056",
+  "focus": "신뢰성 > 성능",
+  "verification_areas": [
+    "체크포인트 정확성",
+    "검색 결과 일관성",
+    "4층 로직 검증",
+    "데이터 무결성",
+    "엣지 케이스",
+    "오류 처리"
+  ],
+  "tests_passed": 3,
+  "tests_total": 6,
+  "reliability_score": 20.0,
+  "reliability_issues": [
+    "체크포인트 생성 시 블록 수 불일치",
+    "쿼리 1: 소스 레이어 불일치 {'checkpoint', 'cache'}",
+    "쿼리 1: 결과 내용 불일치",
+    "쿼리 2: 소스 레이어 불일치 {'checkpoint', 'cache'}",
+    "쿼리 2: 결과 내용 불일치",
+    "쿼리 3: 소스 레이어 불일치 {'checkpoint', 'cache'}",
+    "쿼리 3: 결과 내용 불일치",
+    "Fallback 실패: checkpoint"
+  ],
+  "end_time": "2025-08-02T20:05:26.102597",
+  "total_duration_seconds": 36.841796209002496,
+  "reliability_metrics": {
+    "checkpoint_accuracy": [],
+    "search_consistency": [],
+    "layer_logic_correctness": [],
+    "data_integrity_checks": [],
+    "edge_case_handling": [],
+    "error_recovery": [],
+    "_results": {
+      "passed": true,
+      "integrity_rate": 100.0,
+      "integrity_checks": [
+        {
+          "type": "checkpoint",
+          "passed": true
+        },
+        {
+          "type": "memory",
+          "passed": true,
+          "increase_mb": 0.32805347442626953
+        },
+        {
+          "type": "statistics",
+          "passed": true
+        }
+      ],
+      "issues": []
+    },
+    "처리_results": {
+      "passed": true,
+      "edge_case_rate": 100.0,
+      "edge_case_results": [
+        {
+          "case": "empty_embedding",
+          "passed": true
+        },
+        {
+          "case": "extreme_values",
+          "passed": true
+        },
+        {
+          "case": "dimension_mismatch",
+          "passed": true
+        },
+        {
+          "case": "concurrency",
+          "passed": true
+        }
+      ],
+      "issues": []
+    },
+    "메커니즘_results": {
+      "passed": false,
+      "recovery_rate": 66.66666666666666,
+      "recovery_tests": [
+        {
+          "type": "fallback",
+          "passed": false
+        },
+        {
+          "type": "partial_failure",
+          "passed": true
+        },
+        {
+          "type": "resource_exhaustion",
+          "passed": true
+        }
+      ],
+      "issues": [
+        "Fallback 실패: checkpoint"
+      ]
+    }
+  }
+}

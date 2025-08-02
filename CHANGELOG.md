@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
+## v2.1.0 (2025-08-02) - Production Release
+
+### Production Readiness Improvements
+- **Version synchronization**: All configuration files synchronized to v2.1.0
+- **Build system optimization**: Successfully builds wheel packages for distribution
+- **Syntax fixes**: Resolved critical indentation issues in HybridSTMManager
+- **Import validation**: All core modules pass import verification tests
+
+### Documentation Updates
+- **CLI command modernization**: Updated all examples to use current `greeum` CLI syntax
+- **MCP integration guide**: Aligned documentation with actual implementation
+- **Technical accuracy**: Corrected version references throughout documentation
+- **User experience**: Consistent command examples across all documentation
+
+### Code Quality Enhancements
+- **Legacy file removal**: Eliminated outdated setup.py in favor of pyproject.toml
+- **Package structure**: Streamlined configuration for production deployment
+- **Error handling**: Fixed syntax errors preventing module imports
+- **Import reliability**: Enhanced module loading with proper fallback mechanisms
+
 ## v2.0.5 (2025-08-02) - Phase 3 Checkpoint System
 
 ### Phase 3 Checkpoint System Implementation

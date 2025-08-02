@@ -1,0 +1,7 @@
+{
+  "test_start_time": "2025-08-02T16:39:39.651341",
+  "greeum_version": "2.0.5",
+  "test_type": "Phase 1+2 Integration Performance Test",
+  "error": "get_embedding() got an unexpected keyword argument 'model'",
+  "test_end_time": "2025-08-02T16:39:39.666138"
+}

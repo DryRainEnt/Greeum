@@ -1,0 +1,182 @@
+{
+  "test_timestamp": "2025-08-02T16:27:50.608899",
+  "greeum_version": "2.0.5",
+  "sample_sizes": {
+    "memory_search": 120,
+    "response_quality": 45,
+    "concurrency": 32
+  },
+  "metrics": {
+    "memory_search": {
+      "memory_size_100": {
+        "block_count": 100,
+        "sample_count": 40,
+        "ltm_avg_time_ms": 108.39786265169096,
+        "ltm_median_time_ms": 107.02858350123279,
+        "ltm_p95_time_ms": 121.48852949903812,
+        "ltm_std_dev": 4.706300967148757,
+        "cache_avg_time_ms": 109.7230365001451,
+        "cache_median_time_ms": 108.24964600033127,
+        "cache_p95_time_ms": 123.74841044511413,
+        "cache_std_dev": 4.446852782644915,
+        "avg_speedup_ratio": 0.989441010712105,
+        "median_speedup_ratio": 0.9864590785629227,
+        "max_speedup_ratio": 1.1632718317495667
+      },
+      "memory_size_500": {
+        "block_count": 500,
+        "sample_count": 40,
+        "ltm_avg_time_ms": 109.0260281234805,
+        "ltm_median_time_ms": 107.32814599759877,
+        "ltm_p95_time_ms": 121.62227885200991,
+        "ltm_std_dev": 4.945877272358907,
+        "cache_avg_time_ms": 0.2872073517210083,
+        "cache_median_time_ms": 0.28616700001293793,
+        "cache_p95_time_ms": 0.3305518031993415,
+        "cache_std_dev": 0.027693451776979995,
+        "avg_speedup_ratio": 382.9353042504426,
+        "median_speedup_ratio": 382.9146680717087,
+        "max_speedup_ratio": 467.5276087143831
+      },
+      "memory_size_1000": {
+        "block_count": 1000,
+        "sample_count": 40,
+        "ltm_avg_time_ms": 108.66471555127646,
+        "ltm_median_time_ms": 107.54945849475916,
+        "ltm_p95_time_ms": 120.97036635313998,
+        "ltm_std_dev": 4.053673995995474,
+        "cache_avg_time_ms": 0.28417497451300733,
+        "cache_median_time_ms": 0.28635399939958006,
+        "cache_p95_time_ms": 0.32503895854461007,
+        "cache_std_dev": 0.02296610372516578,
+        "avg_speedup_ratio": 384.7878572246028,
+        "median_speedup_ratio": 385.21945218819997,
+        "max_speedup_ratio": 466.5242228009379
+      },
+      "summary": {
+        "overall_ltm_avg": 108.69620210881597,
+        "overall_cache_avg": 36.764806275459705,
+        "overall_speedup_avg": 256.23753416191914,
+        "scalability_factor": 1.0057949986874557
+      }
+    },
+    "response_quality": {
+      "factual": {
+        "sample_count": 15,
+        "avg_quality_score": 0.37690457097032876,
+        "median_quality_score": 0.3793103448275862,
+        "avg_context_usage": 1,
+        "avg_response_length": 473.6666666666667,
+        "avg_processing_time_ms": 0.23473880137316883,
+        "quality_consistency": 0.9906562758973013
+      },
+      "contextual": {
+        "sample_count": 15,
+        "avg_quality_score": 0.36606230847803883,
+        "median_quality_score": 0.36363636363636365,
+        "avg_context_usage": 1,
+        "avg_response_length": 481.6666666666667,
+        "avg_processing_time_ms": 0.22411106425958374,
+        "quality_consistency": 0.9815175384611189
+      },
+      "analytical": {
+        "sample_count": 15,
+        "avg_quality_score": 0.36502960640891674,
+        "median_quality_score": 0.36363636363636365,
+        "avg_context_usage": 1,
+        "avg_response_length": 477,
+        "avg_processing_time_ms": 0.2244249995176991,
+        "quality_consistency": 0.9944127858418977
+      },
+      "summary": {
+        "overall_quality_score": 0.36933216195242813,
+        "overall_context_usage": 1,
+        "overall_processing_time": 0.2277582883834839,
+        "quality_variance": 0.006578195203981068
+      }
+    },
+    "scalability": {
+      "blocks_100": {
+        "block_count": 100,
+        "avg_search_time_ms": 108.22896660247352,
+        "scalability_factor": 1.0,
+        "search_efficiency": 0.9239670592744489,
+        "measurements": 5
+      },
+      "blocks_500": {
+        "block_count": 500,
+        "avg_search_time_ms": 107.69784180447459,
+        "scalability_factor": 0.995092581822852,
+        "search_efficiency": 4.642618567118085,
+        "measurements": 5
+      },
+      "blocks_1000": {
+        "block_count": 1000,
+        "avg_search_time_ms": 109.81666660518385,
+        "scalability_factor": 1.0146698250251431,
+        "search_efficiency": 9.106085905841868,
+        "measurements": 5
+      },
+      "analysis": {
+        "base_performance_ms": 108.22896660247352,
+        "linearity_score": 0,
+        "scalability_rating": "poor"
+      }
+    },
+    "concurrency": {
+      "threads_1": {
+        "thread_count": 1,
+        "error": "모든 작업 실패",
+        "failed_tasks": 8
+      },
+      "threads_2": {
+        "thread_count": 2,
+        "error": "모든 작업 실패",
+        "failed_tasks": 8
+      },
+      "threads_4": {
+        "thread_count": 4,
+        "error": "모든 작업 실패",
+        "failed_tasks": 8
+      },
+      "threads_8": {
+        "thread_count": 8,
+        "error": "모든 작업 실패",
+        "failed_tasks": 8
+      },
+      "concurrency_analysis": {}
+    },
+    "system_resources": {
+      "error": "psutil not available for system monitoring"
+    }
+  },
+  "total_test_duration": 19.360583782196045,
+  "performance_grade": {
+    "overall_score": 38.7,
+    "overall_grade": "F",
+    "overall_description": "Critical",
+    "category_scores": {
+      "memory_search": 54.41173124151343,
+      "response_quality": 61.551877770469325,
+      "scalability": 0
+    },
+    "category_grades": {
+      "memory_search": {
+        "score": 54.4,
+        "grade": "F",
+        "description": "Critical"
+      },
+      "response_quality": {
+        "score": 61.6,
+        "grade": "D+",
+        "description": "Below Average"
+      },
+      "scalability": {
+        "score": 0,
+        "grade": "F",
+        "description": "Critical"
+      }
+    },
+    "grade_timestamp": "2025-08-02T16:28:09.969516"
+  }
+}

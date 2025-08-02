@@ -1,0 +1,23 @@
+{
+  "test_start_time": "2025-08-02T16:41:47.664450",
+  "greeum_version": "2.0.5",
+  "test_type": "Phase 1+2 Integration Performance Test",
+  "baseline": {
+    "add_time": 1.0301413536071777,
+    "avg_search_time": 0.4544752836227417,
+    "total_searches": 10,
+    "memory_count": 1000
+  },
+  "integrated": {
+    "add_time": 1.1211860179901123,
+    "avg_search_time": 0.5230050253868103,
+    "total_searches": 100,
+    "memory_count": 1000,
+    "cache_hits": 100,
+    "stm_hits": 100,
+    "cache_hit_rate": 1.0,
+    "stm_hit_rate": 1.0
+  },
+  "error": "'BlockManager' object has no attribute 'block_manager'",
+  "test_end_time": "2025-08-02T16:42:47.711337"
+}

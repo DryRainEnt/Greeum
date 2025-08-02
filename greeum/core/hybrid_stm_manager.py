@@ -334,25 +334,25 @@ class HybridSTMManager:
                 if self.working_memory.add_memory(context, memory_data, importance=importance):
                     self.hybrid_stats["working_memory_hits"] += 1
                     # 동시에 legacy STM에도 저장 (호환성)
-                legacy_id = self.legacy_stm.add_memory(memory_data)
-                return f"hybrid_{len(self.working_memory.get_active_slots())}_{legacy_id}"
-            else:
-                # Working Memory 실패 시 legacy 사용
+                    legacy_id = self.legacy_stm.add_memory(memory_data)
+                    return f"hybrid_{len(self.working_memory.get_active_slots())}_{legacy_id}"
+                else:
+                    # Working Memory 실패 시 legacy 사용
+                    self.hybrid_stats["legacy_stm_hits"] += 1
+                    return self.legacy_stm.add_memory(memory_data)
+            
+            elif self.mode == "working_only":
+                context = memory_data.get("content", "")
+                importance = memory_data.get("importance", 0.5)
+                
+                if self.working_memory.add_memory(context, memory_data, importance=importance):
+                    self.hybrid_stats["working_memory_hits"] += 1
+                    return f"working_{len(self.working_memory.get_active_slots())}"
+                return None
+            
+            else:  # legacy mode
                 self.hybrid_stats["legacy_stm_hits"] += 1
                 return self.legacy_stm.add_memory(memory_data)
-        
-        elif self.mode == "working_only":
-            context = memory_data.get("content", "")
-            importance = memory_data.get("importance", 0.5)
-            
-            if self.working_memory.add_memory(context, memory_data, importance=importance):
-                self.hybrid_stats["working_memory_hits"] += 1
-                return f"working_{len(self.working_memory.get_active_slots())}"
-            return None
-        
-        else:  # legacy mode
-            self.hybrid_stats["legacy_stm_hits"] += 1
-            return self.legacy_stm.add_memory(memory_data)
     
     def search_memories(self, query: str, query_embedding: List[float] = None, top_k: int = 5) -> List[Dict[str, Any]]:
         """통합 메모리 검색"""

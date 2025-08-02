@@ -1,4 +1,4 @@
-# Greeum v2.0.5 - AI Memory System
+# Greeum v2.1.0 - AI Memory System
 
 <p align="center">
   <a href="README.md">🇰🇷 한국어</a> |
@@ -73,7 +73,7 @@ pip install greeum[all]  # includes FAISS, transformers, OpenAI
 ### Memory Operations
 ```bash
 # Add memory to long-term storage
-greeum memory add "Started working on new AI project using Greeum v2.0.5 checkpoint system."
+greeum memory add "Started working on new AI project using Greeum v2.1.0 checkpoint system."
 
 # Search memories
 greeum memory search "AI project checkpoint" --count 5
@@ -109,7 +109,7 @@ greeum mcp serve
 greeum api serve --port 5000
 ```
 
-## v2.0.5 Technical Changes
+## v2.1.0 Technical Changes
 
 ### Multi-layer Search System
 ```python
@@ -187,9 +187,9 @@ radius_blocks = checkpoint_mgr.get_checkpoint_radius(
 
 ## Performance Benchmarks
 
-### v2.0.5 Phase 3 Results (Verified 2025-08-02)
+### v2.1.0 Phase 3 Results (Verified 2025-08-02)
 
-| Metric | v2.0.4 | v2.0.5 | Improvement |
+| Metric | v2.0.4 | v2.1.0 | Improvement |
 |--------|--------|--------|-------------|
 | Checkpoint search | N/A | 0.7ms | New feature |
 | Full LTM search | 150ms | 150ms | Baseline |
@@ -214,7 +214,7 @@ Performance improvements by phase:
 
 ## MCP Integration (Claude Code)
 
-### v2.0.5 MCP Tools
+### v2.1.0 MCP Tools
 ```
 Phase 3 Search Tools:
 - intelligent_search: 4-layer search system
@@ -280,7 +280,7 @@ Analytics Tools:
 
 ## Documentation
 
-### v2.0.5 Technical Documentation
+### v2.1.0 Technical Documentation
 - **[Phase 3 Completion Report](PHASE_3_COMPLETION_REPORT.md)**: Detailed performance analysis
 - **[Checkpoint Design Document](PHASE_3_CHECKPOINT_DESIGN.md)**: Technical implementation details  
 - **[Stability Guide](docs/stability-guide.md)**: Production deployment guide
@@ -293,7 +293,7 @@ Analytics Tools:
 
 ## Development Roadmap
 
-### v2.0.5 Implementation Status
+### v2.1.0 Implementation Status
 - ✅ **Phase 1**: Cache optimization (259x improvement)
 - ✅ **Phase 2**: Hybrid STM system (1500x improvement)  
 - ✅ **Phase 3**: Checkpoint system (265x improvement)
@@ -306,7 +306,7 @@ Analytics Tools:
 
 ## Contributing
 
-Greeum v2.0.5 includes checkpoint-based localized search technology. Contributions are welcome.
+Greeum v2.1.0 includes checkpoint-based localized search technology. Contributions are welcome.
 
 ### Contribution Areas
 1. **Checkpoint algorithm improvements**
@@ -316,10 +316,10 @@ Greeum v2.0.5 includes checkpoint-based localized search technology. Contributio
 
 ### Development Setup
 ```bash
-# Download v2.0.5 source code
+# Download v2.1.0 source code
 git clone https://github.com/DryRainEnt/Greeum.git
 cd Greeum
-git checkout phase2-hybrid-stm  # v2.0.5 branch
+git checkout phase2-hybrid-stm  # v2.1.0 branch
 
 # Setup development environment
 pip install -e .[dev]
@@ -342,7 +342,7 @@ This project is distributed under the MIT License. See [LICENSE](LICENSE) file f
 
 ## Acknowledgments
 
-### v2.0.5 Development
+### v2.1.0 Development
 - **Claude Code**: Phase 3 development partnership
 - **Neuroscience research**: Brain-based architecture inspiration
 - **Open source community**: Feedback and contributions
@@ -361,7 +361,7 @@ This project is distributed under the MIT License. See [LICENSE](LICENSE) file f
 ---
 
 <p align="center">
-  <strong>Greeum v2.0.5 - AI Memory System</strong><br>
+  <strong>Greeum v2.1.0 - AI Memory System</strong><br>
   <em>265x faster memory retrieval, 92/100 stability score, checkpoint-based search</em><br><br>
   Made with ❤️ by the Greeum Team
 </p>

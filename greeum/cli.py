@@ -22,8 +22,18 @@ sys.path.append(parent_dir)
 # 콘솔 설정
 console = Console()
 
+# 동적 버전 로드
+try:
+    from . import __version__
+except ImportError:
+    try:
+        import greeum
+        __version__ = greeum.__version__
+    except (ImportError, AttributeError):
+        __version__ = "2.1.0"
+
 @click.group()
-@click.version_option(version="0.1.0")
+@click.version_option(version=__version__)
 def main():
     """Greeum - LLM 독립적 기억 시스템 CLI"""
     pass
