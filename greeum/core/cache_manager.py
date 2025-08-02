@@ -232,6 +232,34 @@ class CacheManager:
         
         return final_results
     
+    def cache_search_results(self, query_embedding: List[float], keywords: List[str], 
+                           search_results: List[Dict[str, Any]]) -> None:
+        """실제 검색 결과를 캐시에 직접 저장 (Phase 3 일관성 보장용)"""
+        cache_key = self._compute_cache_key(query_embedding, keywords or [])
+        
+        self.memory_cache[cache_key] = {
+            "results": search_results,
+            "timestamp": time.time()
+        }
+        
+        # 주기적 캐시 정리
+        if len(self.memory_cache) > 100:
+            self._cleanup_expired_cache()
+    
+    def get_cached_results(self, query_embedding: List[float], keywords: List[str] = None) -> Optional[List[Dict[str, Any]]]:
+        """Phase 3용: 캐시된 결과 조회"""
+        if keywords is None:
+            keywords = []
+        
+        cache_key = self._compute_cache_key(query_embedding, keywords)
+        
+        if self._is_cache_valid(cache_key):
+            self.cache_hit_count += 1
+            return self.memory_cache[cache_key]["results"]
+        
+        self.cache_miss_count += 1
+        return None
+    
     def clear_cache(self) -> None:
         """캐시 초기화 (메모리 캐시 + 파일 캐시)"""
         # 🚀 메모리 캐시 초기화

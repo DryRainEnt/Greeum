@@ -1,10 +1,12 @@
 """
-Hybrid STM Manager - Phase 2 하이브리드 STM 구현
+Hybrid STM Manager - Phase 2+3 하이브리드 STM 구현
 
 기존 STMManager와 새로운 WorkingMemoryManager를 통합하는 하이브리드 시스템
+Phase 3에서 체크포인트 시스템과 연동됩니다.
 """
 
 import time
+import threading
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -22,6 +24,7 @@ class WorkingMemorySlot:
         self.context = ""
         self.content = None
         self.metadata = {}
+        self.embedding = []          # Phase 3: 체크포인트 시스템용 임베딩
         
         # 우선순위 계산 요소들
         self.importance = 0.5        # 기본 중요도
@@ -30,7 +33,7 @@ class WorkingMemorySlot:
         self.usage_count = 0         # 사용 횟수
         self.created_at = datetime.now()   # 생성 시간
         
-        # LTM 체크포인트 연결
+        # LTM 체크포인트 연결 (Phase 3)
         self.ltm_checkpoints = []    # 연결된 LTM 블록 좌표들
     
     def calculate_priority(self, current_context: str = "") -> float:
@@ -132,6 +135,7 @@ class WorkingMemoryManager:
         self.slots = [WorkingMemorySlot(i) for i in range(slots)]
         self.checkpoint_enabled = checkpoint_enabled
         self.smart_cleanup = smart_cleanup
+        self._slot_lock = threading.RLock()  # 슬롯 접근 동시성 보장
         
         # 통계
         self.cleanup_count = 0
@@ -143,38 +147,51 @@ class WorkingMemoryManager:
         self.average_priority = 0.0
     
     def has_available_slot(self) -> bool:
-        """사용 가능한 슬롯이 있는지 확인"""
-        return any(slot.is_empty() for slot in self.slots)
+        """사용 가능한 슬롯이 있는지 확인 (스레드 안전)"""
+        with self._slot_lock:
+            return any(slot.is_empty() for slot in self.slots)
     
     def get_active_slots(self) -> List[WorkingMemorySlot]:
-        """활성 슬롯들 반환"""
-        return [slot for slot in self.slots if not slot.is_empty()]
+        """활성 슬롯들 반환 (스레드 안전)"""
+        with self._slot_lock:
+            return [slot for slot in self.slots if not slot.is_empty()]
     
     def get_available_slots(self) -> List[WorkingMemorySlot]:
-        """사용 가능한 슬롯들 반환"""
-        return [slot for slot in self.slots if slot.is_empty()]
+        """사용 가능한 슬롯들 반환 (스레드 안전)"""
+        with self._slot_lock:
+            return [slot for slot in self.slots if slot.is_empty()]
+    
+    def _get_available_slot_atomic(self) -> Optional[WorkingMemorySlot]:
+        """원자적 슬롯 할당 (경합 상태 방지)"""
+        # 락 내부에서만 호출되므로 추가 락 불필요
+        for slot in self.slots:
+            if slot.is_empty():
+                return slot
+        return None
     
     def add_memory(self, context: str, content: Any = None, metadata: Dict = None, importance: float = 0.5) -> bool:
-        """Working Memory에 새 컨텍스트 추가"""
-        self.total_additions += 1
-        
-        if self.has_available_slot():
-            # 빈 슬롯에 추가
-            available_slot = self.get_available_slots()[0]
-            self._populate_slot(available_slot, context, content, metadata, importance)
-            return True
-        else:
-            # 공간 부족 시 지능적 정리
-            if self.smart_cleanup:
-                victim_slot = self._find_least_important_slot(context)
-                if victim_slot:
-                    self._promote_to_ltm(victim_slot)
-                    self._populate_slot(victim_slot, context, content, metadata, importance)
-                    self.cleanup_count += 1
-                    self.last_cleanup_time = datetime.now()
-                    return True
-        
-        return False
+        """Working Memory에 새 컨텍스트 추가 (스레드 안전)"""
+        with self._slot_lock:
+            self.total_additions += 1
+            
+            # 원자적 슬롯 할당
+            available_slot = self._get_available_slot_atomic()
+            if available_slot is not None:
+                # 빈 슬롯에 추가
+                self._populate_slot(available_slot, context, content, metadata, importance)
+                return True
+            else:
+                # 공간 부족 시 지능적 정리
+                if self.smart_cleanup:
+                    victim_slot = self._find_least_important_slot(context)
+                    if victim_slot:
+                        self._promote_to_ltm(victim_slot)
+                        self._populate_slot(victim_slot, context, content, metadata, importance)
+                        self.cleanup_count += 1
+                        self.last_cleanup_time = datetime.now()
+                        return True
+            
+            return False
     
     def _populate_slot(self, slot: WorkingMemorySlot, context: str, content: Any, metadata: Dict, importance: float):
         """슬롯에 데이터 채우기"""
@@ -285,6 +302,9 @@ class HybridSTMManager:
             smart_cleanup=True
         )
         
+        # 동시성 보장
+        self._hybrid_lock = threading.RLock()
+        
         # 동작 모드
         self.mode = mode  # "hybrid" | "legacy" | "working_only"
         
@@ -302,17 +322,18 @@ class HybridSTMManager:
         self.last_optimization = datetime.now()
     
     def add_memory(self, memory_data: Dict[str, Any]) -> Optional[str]:
-        """메모리 추가 (모드에 따라 다르게 처리)"""
-        self.hybrid_stats["total_requests"] += 1
-        
-        if self.mode == "hybrid":
-            # Working Memory 우선 시도
-            context = memory_data.get("content", "")
-            importance = memory_data.get("importance", 0.5)
+        """메모리 추가 (모드에 따라 다르게 처리, 스레드 안전)"""
+        with self._hybrid_lock:
+            self.hybrid_stats["total_requests"] += 1
             
-            if self.working_memory.add_memory(context, memory_data, importance=importance):
-                self.hybrid_stats["working_memory_hits"] += 1
-                # 동시에 legacy STM에도 저장 (호환성)
+            if self.mode == "hybrid":
+                # Working Memory 우선 시도
+                context = memory_data.get("content", "")
+                importance = memory_data.get("importance", 0.5)
+                
+                if self.working_memory.add_memory(context, memory_data, importance=importance):
+                    self.hybrid_stats["working_memory_hits"] += 1
+                    # 동시에 legacy STM에도 저장 (호환성)
                 legacy_id = self.legacy_stm.add_memory(memory_data)
                 return f"hybrid_{len(self.working_memory.get_active_slots())}_{legacy_id}"
             else:
@@ -338,8 +359,10 @@ class HybridSTMManager:
         results = []
         
         if self.mode in ["hybrid", "working_only"]:
-            # Working Memory 검색
-            wm_results = self.working_memory.search_working_memory(query_embedding or [], query)
+            # Working Memory 검색 - 임베딩이 없으면 생성
+            if query_embedding is None:
+                query_embedding = self._generate_query_embedding(query)
+            wm_results = self.working_memory.search_working_memory(query_embedding, query)
             results.extend(wm_results)
             
             if wm_results:
@@ -367,6 +390,12 @@ class HybridSTMManager:
         
         return results[:top_k]
     
+    def search_working_memory(self, query_embedding: List[float]) -> List[Dict[str, Any]]:
+        """Phase 3용: Working Memory 직접 검색"""
+        if self.mode in ["hybrid", "working_only"]:
+            return self.working_memory.search_working_memory(query_embedding, "")
+        return []
+    
     def get_recent_memories(self, count: int = 10) -> List[Dict[str, Any]]:
         """최근 메모리 조회 (기존 STM API 호환)"""
         if self.mode == "working_only":
@@ -386,8 +415,19 @@ class HybridSTMManager:
             } for slot in sorted_slots[:count]]
         
         elif self.mode == "hybrid":
-            # Working Memory + Legacy 결합
-            wm_results = self.get_recent_memories(count // 2) if count > 2 else []
+            # Working Memory + Legacy 결합 (무한 재귀 방지)
+            # Working Memory에서 직접 가져오기
+            active_slots = self.working_memory.get_active_slots()
+            sorted_slots = sorted(active_slots, key=lambda x: x.last_access, reverse=True)
+            wm_results = [{
+                "id": f"working_{slot.slot_id}",
+                "content": slot.context,
+                "timestamp": slot.last_access.isoformat(),
+                "metadata": slot.metadata,
+                "importance": slot.importance,
+                "usage_count": slot.usage_count
+            } for slot in sorted_slots[:count//2]]
+            
             legacy_results = self.legacy_stm.get_recent_memories(count - len(wm_results))
             
             all_results = wm_results + legacy_results
@@ -470,3 +510,20 @@ class HybridSTMManager:
             cleared_count += legacy_count
         
         return cleared_count
+    
+    def _generate_query_embedding(self, query: str) -> List[float]:
+        """간단한 쿼리 임베딩 생성"""
+        import hashlib
+        
+        # MD5 해시 기반 간단한 임베딩 생성
+        hash_obj = hashlib.md5(query.encode('utf-8'))
+        hash_hex = hash_obj.hexdigest()
+        
+        # 32자 hex를 16개 float로 변환 (0-15 → 0.0-1.0)
+        embedding = []
+        for i in range(0, len(hash_hex), 2):
+            hex_pair = hash_hex[i:i+2]
+            float_val = int(hex_pair, 16) / 255.0
+            embedding.append(float_val)
+        
+        return embedding
