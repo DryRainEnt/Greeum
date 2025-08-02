@@ -3,16 +3,38 @@
 Claude Code 호환 MCP 서버
 - Claude Code의 MCP 프로토콜 규격에 정확히 맞춤
 - 도구 인식 문제 해결을 위한 완전 호환 버전
+
+🔧 TOOL USAGE WORKFLOW:
+1. NEW INFO: add_memory (permanent) vs stm_add (temporary)
+2. FIND INFO: search_memory (searches both permanent & temporary)
+3. CHECK SYSTEM: get_memory_stats (before bulk operations)
+4. MANAGE TEMPORARY: stm_promote (temp→permanent) + stm_cleanup (maintenance)
+5. ANALYZE DATA: ltm_analyze (patterns) → ltm_verify (integrity) → ltm_export (backup)
+
+⚠️  BEST PRACTICES:
+- Use add_memory for insights you want to keep across conversations
+- Use stm_add for current session context that expires
+- Always dry_run stm_promote first to preview
+- Check get_memory_stats before ltm_analyze (need 10+ memories)
+- Don't set importance > 0.8 unless truly critical
 """
 
 import asyncio
 import json
 import sys
 import logging
+import time
+from datetime import datetime
 from typing import Dict, Any, List, Optional
 import subprocess
 import os
 from pathlib import Path
+
+# Import enhanced tool schemas, duplicate detection, quality validation, and usage analytics
+from .enhanced_tool_schema import EnhancedToolSchema
+from greeum.core.duplicate_detector import DuplicateDetector
+from greeum.core.quality_validator import QualityValidator
+from greeum.core.usage_analytics import UsageAnalytics
 
 # Greeum 모듈 직접 import
 try:
@@ -34,7 +56,7 @@ class ClaudeCodeMCPServer:
         """초기화"""
         self.server_info = {
             "name": "greeum",
-            "version": "2.0.2"
+            "version": "2.0.5"
         }
         self.protocol_version = "2024-11-05"
         self.capabilities = {
@@ -50,13 +72,29 @@ class ClaudeCodeMCPServer:
                 self.db_manager = DatabaseManager()
                 self.block_manager = BlockManager(self.db_manager)
                 self.stm_manager = STMManager(self.db_manager)
+                # v2.0.5: 중복 검사기, 품질 검증기, 사용 분석기 초기화
+                self.duplicate_detector = DuplicateDetector(self.db_manager)
+                self.quality_validator = QualityValidator()
+                self.usage_analytics = UsageAnalytics(self.db_manager)
                 self.direct_mode = True
-                logger.info("Claude Code MCP Server initialized with direct Greeum modules")
+                # 서버 세션 시작
+                self.server_session_id = f"mcp_server_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                self.usage_analytics.start_session(self.server_session_id, "Claude Code MCP", "mcp_server")
+                logger.info("Claude Code MCP Server v2.0.5 initialized with full analytics suite (duplicate detection + quality validation + usage analytics)")
             except Exception as e:
                 logger.warning(f"Failed to initialize Greeum modules: {e}")
                 self.direct_mode = False
         else:
             self.direct_mode = False
+    
+    def __del__(self):
+        """Ensure proper cleanup of analytics session"""
+        if hasattr(self, 'usage_analytics') and hasattr(self, 'server_session_id'):
+            try:
+                self.usage_analytics.end_session(self.server_session_id)
+                logger.info(f"Analytics session {self.server_session_id} properly closed")
+            except Exception:
+                pass  # Cleanup should never raise
             
         # CLI 경로 설정 (일부 명령어는 CLI 필요)
         try:
@@ -221,135 +259,16 @@ class ClaudeCodeMCPServer:
                     }
                 }
             
-            # 2. Tools list
+            # 2. Tools list - Using Enhanced Tool Schemas v2.0.5
             elif method == 'tools/list':
+                # Get all enhanced tool schemas with improved guidance
+                enhanced_tools = EnhancedToolSchema.get_all_enhanced_schemas()
+                
                 return {
                     "jsonrpc": "2.0",
                     "id": request_id,
                     "result": {
-                        "tools": [
-                            {
-                                "name": "add_memory",
-                                "description": "Add new memory to Greeum v2.0 long-term storage",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "content": {
-                                            "type": "string",
-                                            "description": "Memory content to store"
-                                        },
-                                        "importance": {
-                                            "type": "number",
-                                            "description": "Importance score (0.0-1.0)",
-                                            "default": 0.5,
-                                            "minimum": 0.0,
-                                            "maximum": 1.0
-                                        }
-                                    },
-                                    "required": ["content"]
-                                }
-                            },
-                            {
-                                "name": "search_memory",
-                                "description": "Search memories using keywords or semantic similarity",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "query": {
-                                            "type": "string",
-                                            "description": "Search query or keywords"
-                                        },
-                                        "limit": {
-                                            "type": "integer",
-                                            "description": "Maximum number of results",
-                                            "default": 5,
-                                            "minimum": 1,
-                                            "maximum": 50
-                                        }
-                                    },
-                                    "required": ["query"]
-                                }
-                            },
-                            {
-                                "name": "get_memory_stats",
-                                "description": "Get Greeum memory system statistics",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {}
-                                }
-                            },
-                            # LTM 전용 도구들
-                            {
-                                "name": "ltm_analyze",
-                                "description": "Analyze long-term memory patterns and trends",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "trends": {"type": "boolean", "description": "Enable trend analysis", "default": True},
-                                        "period": {"type": "string", "description": "Analysis period (e.g., 6m, 1y)", "default": "6m"},
-                                        "output": {"type": "string", "description": "Output format", "enum": ["text", "json"], "default": "text"}
-                                    }
-                                }
-                            },
-                            {
-                                "name": "ltm_verify",
-                                "description": "Verify blockchain-like LTM integrity",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "repair": {"type": "boolean", "description": "Attempt to repair issues", "default": False}
-                                    }
-                                }
-                            },
-                            {
-                                "name": "ltm_export",
-                                "description": "Export LTM data in various formats",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "format": {"type": "string", "description": "Export format", "enum": ["json", "blockchain", "csv"], "default": "json"},
-                                        "limit": {"type": "integer", "description": "Limit number of blocks", "minimum": 1, "maximum": 1000}
-                                    }
-                                }
-                            },
-                            # STM 전용 도구들
-                            {
-                                "name": "stm_add",
-                                "description": "Add content to short-term memory with TTL",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "content": {"type": "string", "description": "Content to add to STM"},
-                                        "ttl": {"type": "string", "description": "Time to live (e.g., 1h, 30m, 2d)", "default": "1h"},
-                                        "importance": {"type": "number", "description": "Importance score", "default": 0.3, "minimum": 0.0, "maximum": 1.0}
-                                    },
-                                    "required": ["content"]
-                                }
-                            },
-                            {
-                                "name": "stm_promote",
-                                "description": "Promote important STM entries to LTM",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "threshold": {"type": "number", "description": "Importance threshold", "default": 0.8, "minimum": 0.0, "maximum": 1.0},
-                                        "dry_run": {"type": "boolean", "description": "Show what would be promoted", "default": False}
-                                    }
-                                }
-                            },
-                            {
-                                "name": "stm_cleanup",
-                                "description": "Clean up short-term memory entries",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "smart": {"type": "boolean", "description": "Use intelligent cleanup", "default": False},
-                                        "expired": {"type": "boolean", "description": "Remove only expired entries", "default": False},
-                                        "threshold": {"type": "number", "description": "Remove below this importance", "default": 0.2, "minimum": 0.0, "maximum": 1.0}
-                                    }
-                                }
-                            }
-                        ]
+                        "tools": enhanced_tools
                     }
                 }
                 
@@ -360,16 +279,145 @@ class ClaudeCodeMCPServer:
                 
                 logger.info(f"Calling tool: {tool_name} with args: {arguments}")
                 
-                # add_memory 도구
+                # add_memory 도구 - v2.0.5 Enhanced with Analytics, Duplicate Detection & Quality Validation
                 if tool_name == 'add_memory':
                     content = arguments.get('content', '')
                     importance = arguments.get('importance', 0.5)
+                    start_time = time.time()
                     
                     if self.direct_mode:
                         try:
-                            # 직접 모듈 사용 - CLI와 동일한 패턴
-                            block_data = self._add_memory_direct(content, importance)
-                            result_text = f"✅ Memory added (Block #{block_data['block_index']})"
+                            # v2.0.5: 품질 검증 수행
+                            quality_result = self.quality_validator.validate_memory_quality(content, importance)
+                            
+                            # 품질이 너무 낮으면 저장 중단
+                            if not quality_result["should_store"]:
+                                duration_ms = int((time.time() - start_time) * 1000)
+                                
+                                # Analytics: 품질 검증 실패 로깅
+                                self.usage_analytics.log_event(
+                                    "tool_usage", tool_name, 
+                                    {"quality_score": quality_result['quality_score'], "quality_level": quality_result['quality_level']},
+                                    duration_ms, False, "Quality validation failed", session_id=self.server_session_id
+                                )
+                                self.usage_analytics.log_quality_metrics(
+                                    len(content), quality_result['quality_score'], quality_result['quality_level'],
+                                    importance, quality_result['adjusted_importance'], False, 0.0, len(quality_result['suggestions'])
+                                )
+                                
+                                quality_warning = f"""❌ **Low Quality Content Detected!**
+
+**Quality Score**: {quality_result['quality_score']:.1%} ({quality_result['quality_level']})
+**Issues Found**: Quality below acceptable threshold
+
+**Suggestions for Improvement**:
+{chr(10).join('• ' + suggestion for suggestion in quality_result['suggestions'])}
+
+**Warnings**:
+{chr(10).join('• ' + warning for warning in quality_result['warnings'])}
+
+⚠️ **Memory NOT stored** due to low quality. Please improve content and try again."""
+                                
+                                return {
+                                    "jsonrpc": "2.0",
+                                    "id": request_id,
+                                    "result": {
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": quality_warning
+                                            }
+                                        ]
+                                    }
+                                }
+                            
+                            # v2.0.5: 중복 검사 수행
+                            duplicate_check = self.duplicate_detector.check_duplicate(content, importance)
+                            
+                            # 중복 발견시 사용자에게 알림
+                            if duplicate_check["is_duplicate"]:
+                                duration_ms = int((time.time() - start_time) * 1000)
+                                similar_memory = duplicate_check["similar_memories"][0] if duplicate_check["similar_memories"] else {}
+                                block_index = similar_memory.get("block_index", "unknown")
+                                similarity = duplicate_check["similarity_score"]
+                                
+                                # Analytics: 중복 검사 실패 로깅
+                                self.usage_analytics.log_event(
+                                    "tool_usage", tool_name,
+                                    {"duplicate_similarity": similarity, "existing_block": block_index},
+                                    duration_ms, False, "Duplicate content detected", session_id=self.server_session_id
+                                )
+                                self.usage_analytics.log_quality_metrics(
+                                    len(content), quality_result['quality_score'], quality_result['quality_level'],
+                                    importance, quality_result['adjusted_importance'], True, similarity, len(quality_result['suggestions'])
+                                )
+                                
+                                warning_text = f"""🚫 **Duplicate Content Detected!**
+
+**Similarity**: {similarity:.1%} match found
+**Existing Memory**: Block #{block_index}
+**Content Preview**: {similar_memory.get('context', '')[:100]}...
+
+**Recommendation**: {duplicate_check['recommendation']}
+
+💡 **Suggested Actions**:
+• Use `search_memory` to review existing content
+• Update existing memory if needed  
+• Add only truly new information
+
+⚠️ **Memory NOT stored** to prevent duplication."""
+                                
+                                return {
+                                    "jsonrpc": "2.0",
+                                    "id": request_id,
+                                    "result": {
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": warning_text
+                                            }
+                                        ]
+                                    }
+                                }
+                            
+                            # 품질 검증 및 중복 검사 통과 - 실제 저장
+                            # 품질 점수에 따라 중요도 조정
+                            adjusted_importance = quality_result["adjusted_importance"]
+                            block_data = self._add_memory_direct(content, adjusted_importance)
+                            duration_ms = int((time.time() - start_time) * 1000)
+                            
+                            # Analytics: 성공적인 메모리 저장 로깅
+                            self.usage_analytics.log_event(
+                                "tool_usage", tool_name,
+                                {
+                                    "block_index": block_data['block_index'],
+                                    "quality_score": quality_result['quality_score'],
+                                    "quality_level": quality_result['quality_level'],
+                                    "importance_adjusted": adjusted_importance != importance
+                                },
+                                duration_ms, True, session_id=self.server_session_id
+                            )
+                            self.usage_analytics.log_quality_metrics(
+                                len(content), quality_result['quality_score'], quality_result['quality_level'],
+                                importance, adjusted_importance, False, duplicate_check["similarity_score"], 
+                                len(quality_result['suggestions'])
+                            )
+                            
+                            # v2.0.5: 품질 및 중복 피드백 포함한 성공 메시지
+                            quality_feedback = f"""
+**Quality Score**: {quality_result['quality_score']:.1%} ({quality_result['quality_level']})
+**Adjusted Importance**: {adjusted_importance:.2f} (original: {importance:.2f})"""
+                            
+                            # 추가 제안사항이 있으면 포함
+                            suggestions_text = ""
+                            if quality_result['suggestions']:
+                                suggestions_text = f"\n\n💡 **Quality Suggestions**:\n" + "\n".join(f"• {s}" for s in quality_result['suggestions'][:2])
+                            
+                            result_text = f"""✅ **Memory Successfully Added!**
+
+**Block Index**: #{block_data['block_index']}
+**Storage**: Permanent (Long-term Memory)
+**Duplicate Check**: ✅ Passed{quality_feedback}{suggestions_text}"""
                             
                             return {
                                 "jsonrpc": "2.0",
@@ -384,7 +432,7 @@ class ClaudeCodeMCPServer:
                                 }
                             }
                         except Exception as e:
-                            logger.error(f"Direct memory add failed: {e}")
+                            logger.error(f"Enhanced memory add failed: {e}")
                             return {
                                 "jsonrpc": "2.0",
                                 "id": request_id,
@@ -406,7 +454,7 @@ class ClaudeCodeMCPServer:
                                     "content": [
                                         {
                                             "type": "text",
-                                            "text": f"✅ Memory added successfully: {result['output']}"
+                                            "text": f"✅ Memory added to PERMANENT storage: {result['output']}"
                                         }
                                     ]
                                 }
@@ -425,11 +473,24 @@ class ClaudeCodeMCPServer:
                 elif tool_name == 'search_memory':
                     query = arguments.get('query', '')
                     limit = arguments.get('limit', 5)
+                    start_time = time.time()
                     
                     if self.direct_mode:
                         try:
                             # 직접 모듈 사용 - CLI와 동일한 패턴
                             results = self._search_memory_direct(query, limit)
+                            duration_ms = int((time.time() - start_time) * 1000)
+                            
+                            # Analytics: 검색 이벤트 로깅
+                            self.usage_analytics.log_event(
+                                "tool_usage", tool_name,
+                                {
+                                    "query_length": len(query),
+                                    "results_found": len(results),
+                                    "limit_requested": limit
+                                },
+                                duration_ms, True, session_id=self.server_session_id
+                            )
                             
                             if results:
                                 result_text = f"🔍 Found {len(results)} memories:\n"
@@ -533,6 +594,120 @@ class ClaudeCodeMCPServer:
                             }
                         }
                 
+                # usage_analytics 도구 - v2.0.5 New Analytics Tool
+                elif tool_name == 'usage_analytics':
+                    days = arguments.get('days', 7)
+                    report_type = arguments.get('report_type', 'usage')
+                    start_time = time.time()
+                    
+                    if self.direct_mode and hasattr(self, 'usage_analytics'):
+                        try:
+                            if report_type == 'usage' or report_type == 'all':
+                                usage_stats = self.usage_analytics.get_usage_statistics(days)
+                            
+                            if report_type == 'quality' or report_type == 'all':
+                                quality_trends = self.usage_analytics.get_quality_trends(days)
+                            
+                            if report_type == 'performance' or report_type == 'all':
+                                performance_insights = self.usage_analytics.get_performance_insights(days)
+                            
+                            duration_ms = int((time.time() - start_time) * 1000)
+                            
+                            # Analytics: analytics 요청 자체도 로깅
+                            self.usage_analytics.log_event(
+                                "tool_usage", tool_name,
+                                {"report_type": report_type, "days": days},
+                                duration_ms, True, session_id=self.server_session_id
+                            )
+                            
+                            # 보고서 생성
+                            if report_type == 'usage':
+                                report_text = f"""📊 **Usage Analytics Report** ({days} days)
+
+**Basic Statistics**:
+• Total Events: {usage_stats['basic_stats']['total_events']}
+• Unique Sessions: {usage_stats['basic_stats']['unique_sessions']}
+• Success Rate: {usage_stats['basic_stats']['success_rate']:.1%}
+• Avg Response Time: {usage_stats['basic_stats']['avg_duration_ms']:.0f}ms
+
+**Top Tools Used**:
+{chr(10).join(f"• {tool}: {count} times" for tool, count in list(usage_stats['tool_usage'].items())[:5])}
+
+**Quality Statistics**:
+• Average Quality Score: {usage_stats['quality_stats']['avg_quality_score']:.2f}
+• Duplicate Rate: {usage_stats['quality_stats']['duplicate_rate']:.1%}
+• Quality Checks: {usage_stats['quality_stats']['total_quality_checks']}"""
+                            
+                            elif report_type == 'quality':
+                                report_text = f"""📈 **Quality Trends Report** ({days} days)
+
+**Quality Distribution**:
+{chr(10).join(f"• {level}: {count}" for level, count in quality_trends['quality_distribution'].items())}
+
+**Recent Trends**:
+{chr(10).join(f"• {trend['date']}: {trend['avg_quality']:.2f} avg quality ({trend['count']} memories)" for trend in quality_trends['daily_trends'][-5:])}
+
+**Duplicate Analysis**:
+{chr(10).join(f"• {trend['date']}: {trend['duplicate_rate']:.1%} duplicate rate" for trend in quality_trends['duplicate_trends'][-3:])}"""
+                            
+                            elif report_type == 'performance':
+                                report_text = f"""⚡ **Performance Insights Report** ({days} days)
+
+**Performance by Tool**:
+{chr(10).join(f"• {perf['tool_name']}: {perf['avg_duration_ms']:.0f}ms avg ({perf['operation_count']} ops)" for perf in performance_insights['performance_by_tool'][:5])}
+
+**Error Patterns**:
+{chr(10).join(f"• {error['tool_name']}: {error['error_count']} errors" for error in performance_insights['error_patterns'][:3])}
+
+**Recommendations**:
+{chr(10).join(f"• {rec}" for rec in performance_insights['recommendations'])}"""
+                            
+                            else:  # 'all'
+                                report_text = f"""📊 **Complete Analytics Report** ({days} days)
+
+**Usage Summary**:
+• Total Events: {usage_stats['basic_stats']['total_events']}
+• Success Rate: {usage_stats['basic_stats']['success_rate']:.1%}
+• Avg Quality: {usage_stats['quality_stats']['avg_quality_score']:.2f}
+
+**Top Issues**:
+{chr(10).join(f"• {rec}" for rec in performance_insights['recommendations'][:3])}
+
+💡 Use specific report types for detailed analysis: 'usage', 'quality', or 'performance'"""
+                            
+                            return {
+                                "jsonrpc": "2.0",
+                                "id": request_id,
+                                "result": {
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": report_text
+                                        }
+                                    ]
+                                }
+                            }
+                            
+                        except Exception as e:
+                            logger.error(f"Analytics report generation failed: {e}")
+                            return {
+                                "jsonrpc": "2.0",
+                                "id": request_id,
+                                "error": {
+                                    "code": -32603,
+                                    "message": f"Failed to generate analytics report: {str(e)}"
+                                }
+                            }
+                    else:
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "error": {
+                                "code": -32603,
+                                "message": "Analytics not available in CLI mode"
+                            }
+                        }
+                
                 # LTM 도구들
                 elif tool_name == 'ltm_analyze':
                     trends = arguments.get('trends', True)
@@ -623,7 +798,7 @@ class ClaudeCodeMCPServer:
                             "jsonrpc": "2.0",
                             "id": request_id,
                             "result": {
-                                "content": [{"type": "text", "text": f"🧠 STM Add:\n{result['output']}"}]
+                                "content": [{"type": "text", "text": f"🧠 Added to TEMPORARY memory (expires in {ttl}):\n{result['output']}"}]
                             }
                         }
                     else:
@@ -648,7 +823,7 @@ class ClaudeCodeMCPServer:
                             "jsonrpc": "2.0",
                             "id": request_id,
                             "result": {
-                                "content": [{"type": "text", "text": f"🔝 STM Promote:\n{result['output']}"}]
+                                "content": [{"type": "text", "text": f"⬆️ Promoted from temporary to PERMANENT storage:\n{result['output']}"}]
                             }
                         }
                     else:
@@ -676,7 +851,7 @@ class ClaudeCodeMCPServer:
                             "jsonrpc": "2.0",
                             "id": request_id,
                             "result": {
-                                "content": [{"type": "text", "text": f"🧹 STM Cleanup:\n{result['output']}"}]
+                                "content": [{"type": "text", "text": f"🧹 Cleaned up temporary memories:\n{result['output']}"}]
                             }
                         }
                     else:

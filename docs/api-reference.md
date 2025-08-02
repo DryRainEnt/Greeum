@@ -1,579 +1,814 @@
-﻿# Greeum API 레퍼런스
+# Greeum API Reference
 
-이 문서는 Greeum의 모든 주요 API를 설명합니다. Greeum의 각 클래스와 기능을 활용하여 고급 기억 시스템을 구축할 수 있습니다.
+Complete API documentation for Greeum v2.0.5. This guide covers all classes, methods, and integration patterns for building advanced memory systems.
 
-## 목차
+## Table of Contents
 
-- [BlockManager](#blockmanager) - 장기 기억 관리
-- [STMManager](#stmmanager) - 단기 기억 관리
-- [CacheManager](#cachemanager) - 웨이포인트 캐시
-- [PromptWrapper](#promptwrapper) - 프롬프트 조합
-- [TemporalReasoner](#temporalreasoner) - 시간 기반 추론
-- [FaissVectorIndex](#faissvectorindex) - 벡터 인덱스
-- [STMWorkingSet](#stmworkingset) - 활성 단기 기억
-- [SearchEngine](#searchengine) - BERT 재랭크 검색
-- [MCPClient](#mcpclient) - MCP 클라이언트
-- [MCPService](#mcpservice) - MCP 서비스
-- [MCPIntegrations](#mcpintegrations) - MCP 통합 유틸리티
-- [텍스트 유틸리티](#텍스트-유틸리티) - 텍스트 처리 도구
+### Core Components
+- [BlockManager](#blockmanager) - Long-term memory management
+- [STMManager](#stmmanager) - Short-term memory management  
+- [CacheManager](#cachemanager) - Waypoint cache system
+- [PromptWrapper](#promptwrapper) - Enhanced prompt composition
+- [DatabaseManager](#databasemanager) - Database operations
 
----
+### Advanced Features (v2.0.5)
+- [QualityValidator](#qualityvalidator) - Memory quality assessment
+- [DuplicateDetector](#duplicatedetector) - Duplicate prevention
+- [UsageAnalytics](#usageanalytics) - Usage pattern analysis
+- [TemporalReasoner](#temporalreasoner) - Time-based reasoning
+- [SearchEngine](#searchengine) - Advanced search with reranking
 
-## BlockManager
+### MCP Integration
+- [MCP Tools](#mcp-tools) - 12 MCP tools for Claude Code
+- [MCP Server](#mcp-server) - Server configuration and usage
 
-블록체인 구조의 장기 기억을 관리하는 클래스입니다.
-
-### 주요 메서드
-
-#### `__init__(storage_dir=None, embedding_model=None)`
-
-BlockManager 객체를 초기화합니다.
-
-- `storage_dir` (str, 선택): 메모리 블록을 저장할 디렉토리 경로
-- `embedding_model` (object, 선택): 임베딩 생성에 사용할 모델
-
-#### `add_block(context, keywords=None, tags=None, embedding=None, importance=None, timestamp=None)`
-
-새로운 메모리 블록을 생성하고 저장합니다.
-
-- `context` (str): 기억의 내용
-- `keywords` (list, 선택): 관련 키워드 목록
-- `tags` (list, 선택): 관련 태그 목록
-- `embedding` (list, 선택): 사전 계산된 임베딩 벡터
-- `importance` (float, 선택): 기억의 중요도 (0.0~1.0)
-- `timestamp` (str, 선택): ISO 형식의 타임스탬프 (기본값: 현재 시간)
-
-**반환**: 생성된 블록 객체
-
-#### `get_block(block_index)`
-
-특정 인덱스의 블록을 검색합니다.
-
-- `block_index` (int): 검색할 블록의 인덱스
-
-**반환**: 블록 객체 또는 None
-
-#### `get_blocks(limit=100, offset=0, sort="desc")`
-
-여러 블록을 검색합니다.
-
-- `limit` (int, 선택): 반환할 최대 블록 수
-- `offset` (int, 선택): 시작 오프셋
-- `sort` (str, 선택): 정렬 방향 ("desc" 또는 "asc")
-
-**반환**: 블록 객체 목록
-
-#### `search_blocks_by_keyword(keywords, limit=10, operator="or")`
-
-키워드로 블록을 검색합니다.
-
-- `keywords` (list): 검색할 키워드 목록
-- `limit` (int, 선택): 반환할 최대 블록 수
-- `operator` (str, 선택): 검색 연산자 ("or" 또는 "and")
-
-**반환**: 블록 객체 목록
-
-#### `search_blocks_by_embedding(embedding, top_k=5)`
-
-임베딩 유사도로 블록을 검색합니다.
-
-- `embedding` (list): 검색할 임베딩 벡터
-- `top_k` (int, 선택): 반환할 최대 블록 수
-
-**반환**: 블록 객체 목록
-
-#### `search_blocks_by_date_range(from_date, to_date, limit=100)`
-
-날짜 범위로 블록을 검색합니다.
-
-- `from_date` (str): ISO 형식의 시작 날짜
-- `to_date` (str): ISO 형식의 종료 날짜
-- `limit` (int, 선택): 반환할 최대 블록 수
-
-**반환**: 블록 객체 목록
-
-#### `verify_chain()`
-
-블록체인 무결성을 검증합니다.
-
-**반환**: 검증 결과 (bool)
+### Utilities
+- [Embedding Models](#embedding-models) - Vector generation
+- [Text Utils](#text-utils) - Text processing utilities
 
 ---
 
-## STMManager
+## Core Components
 
-TTL 기반의 단기 기억을 관리하는 클래스입니다.
+### BlockManager
 
-### 주요 메서드
+Manages long-term memory blocks with blockchain-like immutable structure.
 
-#### `__init__(ttl_short=3600, ttl_medium=86400, ttl_long=604800)`
+#### `__init__(db_manager=None)`
 
-STMManager 객체를 초기화합니다.
+Initialize BlockManager with optional database manager.
 
-- `ttl_short` (int, 선택): 단기 기억 TTL (초)
-- `ttl_medium` (int, 선택): 중기 기억 TTL (초)
-- `ttl_long` (int, 선택): 장기 기억 TTL (초)
+```python
+from greeum import BlockManager, DatabaseManager
 
-#### `add_memory(content, ttl_type="medium", importance=0.5)`
+# Use default SQLite database
+bm = BlockManager()
 
-새로운 단기 기억을 추가합니다.
+# Use custom database manager
+db_manager = DatabaseManager("custom_path/memory.db")
+bm = BlockManager(db_manager)
+```
 
-- `content` (str): 기억 내용
-- `ttl_type` (str, 선택): TTL 유형 ("short", "medium", "long")
-- `importance` (float, 선택): 기억 중요도 (0.0~1.0)
+#### `add_block(context, keywords, tags, embedding, importance, metadata=None)`
 
-**반환**: 메모리 ID
+Add a new memory block to long-term storage.
 
-#### `get_memories(limit=10, include_expired=False)`
+**Parameters:**
+- `context` (str): Memory content
+- `keywords` (List[str]): Associated keywords
+- `tags` (List[str]): Associated tags  
+- `embedding` (List[float]): Vector embedding
+- `importance` (float): Importance score (0.0-1.0)
+- `metadata` (Dict, optional): Additional metadata
 
-단기 기억을 검색합니다.
+**Returns:** `Dict[str, Any]` - Created block data
 
-- `limit` (int, 선택): 반환할 최대 기억 수
-- `include_expired` (bool, 선택): 만료된 기억 포함 여부
+```python
+block = bm.add_block(
+    context="Attended team meeting about Q4 goals",
+    keywords=["meeting", "goals", "team"],
+    tags=["work", "planning"],
+    embedding=get_embedding("meeting content"),
+    importance=0.8,
+    metadata={"meeting_id": "mt_001", "participants": 5}
+)
+```
 
-**반환**: 기억 객체 목록
+#### `search_by_keywords(keywords, limit=10)`
 
-#### `forget(memory_id)`
+Search blocks by keywords.
 
-특정 단기 기억을 삭제합니다.
+```python
+results = bm.search_by_keywords(["python", "project"], limit=5)
+```
 
-- `memory_id` (str): 삭제할 기억의 ID
+#### `search_by_embedding(query_embedding, top_k=5)`
 
-**반환**: 성공 여부 (bool)
+Search blocks by vector similarity.
+
+```python
+from greeum.embedding_models import get_embedding
+
+query_emb = get_embedding("What did we discuss about the project?")
+similar_blocks = bm.search_by_embedding(query_emb, top_k=10)
+```
+
+#### `get_blocks(limit=None, sort_by='timestamp', order='desc')`
+
+Retrieve blocks with sorting options.
+
+```python
+# Get recent blocks
+recent = bm.get_blocks(limit=10)
+
+# Get by importance
+important = bm.get_blocks(limit=20, sort_by='importance', order='desc')
+```
+
+#### `verify_blocks()`
+
+Verify blockchain integrity of all blocks.
+
+```python
+is_valid = bm.verify_blocks()
+if not is_valid:
+    print("Blockchain integrity compromised!")
+```
+
+### STMManager
+
+Manages short-term memory with TTL-based expiration.
+
+#### `__init__(db_manager=None, default_ttl=3600)`
+
+Initialize STM manager with TTL settings.
+
+```python
+from greeum import STMManager
+
+# 1-hour default TTL
+stm = STMManager(default_ttl=3600)
+
+# 30-minute TTL
+stm = STMManager(default_ttl=1800)
+```
+
+#### `add_memory(memory_data, ttl=None)`
+
+Add short-term memory with optional custom TTL.
+
+```python
+memory = {
+    "id": "stm_001",
+    "content": "User is working on Python FastAPI project",
+    "speaker": "user",
+    "importance": 0.7
+}
+
+stm.add_memory(memory, ttl=7200)  # 2-hour TTL
+```
+
+#### `get_recent_memories(count=5, include_expired=False)`
+
+Retrieve recent short-term memories.
+
+```python
+recent_memories = stm.get_recent_memories(count=10)
+all_memories = stm.get_recent_memories(count=20, include_expired=True)
+```
 
 #### `cleanup_expired()`
 
-만료된 단기 기억을 정리합니다.
-
-**반환**: 정리된 기억 수
-
----
-
-## CacheManager
-
-효율적인 기억 검색을 위한 웨이포인트 캐시 관리 클래스입니다.
-
-### 주요 메서드
-
-#### `__init__(block_manager, capacity=10)`
-
-CacheManager 객체를 초기화합니다.
-
-- `block_manager` (BlockManager): 블록 관리자 인스턴스
-- `capacity` (int, 선택): 캐시 용량
-
-#### `update_cache(query_embedding, query_keywords=None)`
-
-쿼리 컨텍스트에 따라 캐시를 업데이트합니다.
-
-- `query_embedding` (list): 쿼리 임베딩 벡터
-- `query_keywords` (list, 선택): 쿼리 관련 키워드
-
-**반환**: 캐시된 블록 목록
-
-#### `get_relevant_blocks(query_embedding, query_keywords=None, limit=5)`
-
-쿼리와 관련된 블록을 검색합니다.
-
-- `query_embedding` (list): 쿼리 임베딩 벡터
-- `query_keywords` (list, 선택): 쿼리 관련 키워드
-- `limit` (int, 선택): 반환할 최대 블록 수
-
-**반환**: 관련 블록 목록
-
-#### `clear_cache()`
-
-캐시를 비웁니다.
-
----
-
-## PromptWrapper
-
-기억을 포함한 LLM 프롬프트를 자동 생성하는 클래스입니다.
-
-### 주요 메서드
-
-#### `__init__(cache_manager, stm_manager=None, template=None)`
-
-PromptWrapper 객체를 초기화합니다.
-
-- `cache_manager` (CacheManager): 캐시 관리자 인스턴스
-- `stm_manager` (STMManager, 선택): 단기 기억 관리자 인스턴스
-- `template` (str, 선택): 프롬프트 템플릿
-
-#### `compose_prompt(user_input, include_stm=True, max_blocks=3, max_stm=5)`
-
-사용자 입력과 관련 기억을 포함한 프롬프트를 생성합니다.
-
-- `user_input` (str): 사용자 입력
-- `include_stm` (bool, 선택): 단기 기억 포함 여부
-- `max_blocks` (int, 선택): 포함할 최대 블록 수
-- `max_stm` (int, 선택): 포함할 최대 단기 기억 수
-
-**반환**: 생성된 프롬프트 문자열
-
-#### `set_template(template)`
-
-프롬프트 템플릿을 설정합니다.
-
-- `template` (str): 새 템플릿
-
----
-
-## TemporalReasoner
-
-시간 표현 인식 및 처리를 위한 클래스입니다.
-
-### 주요 메서드
-
-#### `__init__(db_manager=None, default_language="auto")`
-
-TemporalReasoner 객체를 초기화합니다.
-
-- `db_manager` (BlockManager, 선택): 블록 관리자 인스턴스
-- `default_language` (str, 선택): 기본 언어 ("ko", "en", "auto" 등)
-
-#### `extract_time_references(query)`
-
-쿼리에서 시간 참조를 추출합니다.
-
-- `query` (str): 검색 쿼리
-
-**반환**: 시간 참조 목록
-
-#### `search_by_time_reference(query, margin_hours=12)`
-
-시간 참조를 기반으로 메모리를 검색합니다.
-
-- `query` (str): 검색 쿼리
-- `margin_hours` (int, 선택): 시간 여유 (경계 확장)
-
-**반환**: 검색 결과 및 메타데이터
-
-#### `hybrid_search(query, embedding, keywords, time_weight=0.3, embedding_weight=0.5, keyword_weight=0.2, top_k=5)`
-
-시간, 임베딩, 키워드 기반 하이브리드 검색을 수행합니다.
-
-- `query` (str): 검색 쿼리
-- `embedding` (list): 쿼리 임베딩
-- `keywords` (list): 추출된 키워드
-- `time_weight` (float, 선택): 시간 가중치
-- `embedding_weight` (float, 선택): 임베딩 가중치
-- `keyword_weight` (float, 선택): 키워드 가중치
-- `top_k` (int, 선택): 상위 k개 결과 반환
-
-**반환**: 하이브리드 검색 결과
-
----
-
-## FaissVectorIndex
-
-FAISS 기반 벡터 인덱스를 관리하는 헬퍼 클래스입니다. BlockManager와 별도로 대규모 임베딩을 고속으로 검색합니다.
-
-### 주요 메서드
-
-#### `__init__(dimension=384, hnsw_m=32, ef_construction=200)`
-
-- `dimension` (int): 임베딩 차원
-- `hnsw_m` (int): HNSW 그래프 인접 리스트 크기
-- `ef_construction` (int): 인덱스 구축 시 탐색 깊이
-
-#### `add_embeddings(vectors, metadata_list=None)`
-
-- `vectors` (ndarray | List[List[float]]): 추가할 임베딩
-- `metadata_list` (list, 선택): 각 벡터에 매핑될 메타데이터 딕셔너리
-
-#### `search(query_vector, top_k=5)`
-
-- `query_vector` (list): 검색할 임베딩 벡터
-- `top_k` (int): 상위 결과 수
-
-**반환**: `(indices, distances)` 튜플
-
----
-
-## STMWorkingSet
-
-단기 기억 슬롯을 관리하여 현재 컨텍스트에 가장 관련성 높은 STM을 유지합니다.
-
-### 주요 메서드
-
-#### `__init__(capacity=8)`
-
-- `capacity` (int): 동시에 유지할 최대 STM 개수
-
-#### `add(content, importance=0.5, ttl=3600)`
-
-- 새로운 STM 항목을 추가하며, 용량 초과 시 중요도가 낮은 항목을 제거합니다.
-
-#### `get_recent(limit=5)`
-
-- 가장 최근의 STM 항목을 반환합니다.
-
-#### `prune()`
-
-- 만료되었거나 중요도가 낮은 STM을 정리합니다.
-
----
-
-## SearchEngine
-
-FAISS 검색 결과를 BERT Cross-Encoder 로 재랭크하여 정확도를 향상시킵니다.
-
-### 주요 메서드
-
-#### `__init__(vector_index, reranker_model="cross-encoder/ms-marco-MiniLM-L-6-v2")`
-
-- `vector_index` (FaissVectorIndex): 벡터 인덱스 인스턴스
-- `reranker_model` (str): HuggingFace Cross-Encoder 모델 명
-
-#### `search(query_text, top_k=5, rerank_k=20)`
-
-- `query_text` (str): 사용자 쿼리 텍스트
-- `top_k` (int): 최종 결과 수
-- `rerank_k` (int): 재랭크 대상 수 (vector 검색 상위 N)
-
-**반환**: 재랭크된 결과 리스트
-
----
-
-## MCPClient
-
-MCP(Model Control Protocol) 클라이언트 클래스입니다. 외부 도구와 Greeum을 연결합니다.
-
-### 주요 메서드
-
-#### `__init__(api_key, base_url="http://localhost:8000/api/mcp")`
-
-MCPClient 객체를 초기화합니다.
-
-- `api_key` (str): MCP API 키
-- `base_url` (str, 선택): MCP API 기본 URL
-
-#### `manage_memory(action, memory_content="", memory_id=None, query=None, limit=10)`
-
-메모리 관리 API 호출을 수행합니다.
-
-- `action` (str): 수행할 작업 - "add", "get", "query", "update", "delete"
-- `memory_content` (str, 선택): 추가/업데이트할 메모리 내용
-- `memory_id` (str, 선택): 메모리 ID (get, update, delete 시 필요)
-- `query` (str, 선택): 검색 쿼리 (query 작업 시 필요)
-- `limit` (int, 선택): 반환할 최대 결과 수
-
-**반환**: API 응답 (Dict)
-
-#### `execute_menu_item(menu_path)`
-
-Unity 메뉴 아이템을 실행합니다.
-
-- `menu_path` (str): 메뉴 경로 (예: "GameObject/Create Empty")
-
-**반환**: API 응답 (Dict)
-
-#### `select_gameobject(object_path=None, instance_id=None)`
-
-Unity 게임오브젝트를 선택합니다.
-
-- `object_path` (str, 선택): 게임오브젝트 경로
-- `instance_id` (int, 선택): 게임오브젝트 인스턴스 ID
-
-**반환**: API 응답 (Dict)
-
-#### `add_package(source, **kwargs)`
-
-Unity 패키지를 추가합니다.
-
-- `source` (str): 패키지 소스 (registry, github, disk)
-- `**kwargs`: 패키지 추가에 필요한 추가 파라미터
-
-**반환**: API 응답 (Dict)
-
-#### `run_tests(test_mode="EditMode", test_filter="", return_only_failures=True)`
-
-Unity 테스트를 실행합니다.
-
-- `test_mode` (str, 선택): 테스트 모드 (EditMode 또는 PlayMode)
-- `test_filter` (str, 선택): 테스트 필터
-- `return_only_failures` (bool, 선택): 실패한 테스트만 반환 여부
-
-**반환**: API 응답 (Dict)
-
-#### `send_console_log(message, log_type="info")`
-
-Unity 콘솔에 로그 메시지를 전송합니다.
-
-- `message` (str): 로그 메시지
-- `log_type` (str, 선택): 로그 타입 (info, warning, error)
-
-**반환**: API 응답 (Dict)
-
-#### `update_component(component_name, **kwargs)`
-
-Unity 컴포넌트를 업데이트합니다.
-
-- `component_name` (str): 컴포넌트 이름
-- `**kwargs`: 컴포넌트 업데이트에 필요한 추가 파라미터
-
-**반환**: API 응답 (Dict)
-
-#### `add_asset_to_scene(**kwargs)`
-
-Unity 씬에 에셋을 추가합니다.
-
-- `**kwargs`: 에셋 추가에 필요한 파라미터
-
-**반환**: API 응답 (Dict)
-
----
-
-## MCPService
-
-MCP 서비스를 제공하는 클래스입니다.
-
-### 주요 메서드
-
-#### `__init__(data_dir="./data", port=8000)`
-
-MCPService 객체를 초기화합니다.
-
-- `data_dir` (str, 선택): 데이터 디렉토리 경로
-- `port` (int, 선택): 서비스 포트
-
-#### `start()`
-
-MCP 서비스를 시작합니다.
-
-### CLI 도구 인터페이스
-
-CLI를 통해 MCP 서비스를 실행할 수 있습니다:
-
-```bash
-greeum-mcp --data-dir ./data --port 8000
+Remove expired short-term memories.
+
+```python
+removed_count = stm.cleanup_expired()
+print(f"Removed {removed_count} expired memories")
 ```
 
-또는 Python 모듈로 직접 실행:
+### CacheManager
 
-```bash
-python -m greeum.mcp_service --data-dir ./data --port 8000
+Manages waypoint cache for context-relevant memory retrieval.
+
+#### `__init__(block_manager=None, stm_manager=None, max_cache_size=50)`
+
+Initialize cache manager with memory managers.
+
+```python
+from greeum import CacheManager, BlockManager, STMManager
+
+bm = BlockManager()
+stm = STMManager()
+cache = CacheManager(bm, stm, max_cache_size=100)
+```
+
+#### `update_cache(query_text, query_embedding, query_keywords)`
+
+Update cache based on current query context.
+
+```python
+from greeum.embedding_models import get_embedding
+from greeum.text_utils import extract_keywords
+
+query = "What did we decide about the new features?"
+embedding = get_embedding(query)
+keywords = extract_keywords(query)
+
+cache.update_cache(query, embedding, keywords)
+```
+
+#### `get_relevant_memories(limit=10)`
+
+Get cached memories relevant to current context.
+
+```python
+relevant = cache.get_relevant_memories(limit=15)
+```
+
+### PromptWrapper
+
+Composes enhanced prompts with relevant memories.
+
+#### `__init__(cache_manager=None, stm_manager=None)`
+
+Initialize prompt wrapper with memory managers.
+
+```python
+from greeum import PromptWrapper, CacheManager, STMManager
+
+cache = CacheManager()
+stm = STMManager()
+wrapper = PromptWrapper(cache, stm)
+```
+
+#### `compose_prompt(user_input, include_stm=True, max_context_length=2000)`
+
+Generate enhanced prompt with memory context.
+
+```python
+user_query = "How should we approach the database design?"
+enhanced_prompt = wrapper.compose_prompt(
+    user_query, 
+    include_stm=True,
+    max_context_length=3000
+)
+```
+
+### DatabaseManager
+
+Low-level database operations for memory storage.
+
+#### `__init__(connection_string=None, db_type='sqlite')`
+
+Initialize database connection.
+
+```python
+from greeum.core import DatabaseManager
+
+# SQLite (default)
+db = DatabaseManager("data/custom.db")
+
+# PostgreSQL
+db = DatabaseManager(
+    "postgresql://user:pass@localhost/greeum",
+    db_type='postgres'
+)
+```
+
+#### Database Operations
+
+```python
+# Store block
+block_data = {...}
+db.store_block(block_data)
+
+# Get block
+block = db.get_block(42)
+
+# Search operations
+results = db.search_blocks_by_keyword(["python", "api"])
+similar = db.search_blocks_by_embedding(embedding_vector)
 ```
 
 ---
 
-## MCPIntegrations
+## Advanced Features (v2.0.5)
 
-외부 도구와 Greeum을 통합하는 유틸리티 클래스입니다.
+### QualityValidator
 
-### 주요 메서드
+Automatic memory quality assessment with 7-factor analysis.
 
-#### `__init__(data_dir="./data", config_path="./data/mcp_config.json")`
+#### `__init__()`
 
-MCPIntegrations 객체를 초기화합니다.
+Initialize quality validator.
 
-- `data_dir` (str, 선택): 데이터 디렉토리 경로
-- `config_path` (str, 선택): MCP 구성 파일 경로
+```python
+from greeum.core.quality_validator import QualityValidator
 
-#### `store_unity_event(event_type, event_data)`
+validator = QualityValidator()
+```
 
-Unity 이벤트를 기억으로 저장합니다.
+#### `validate_memory_quality(content, importance=0.5, context=None)`
 
-- `event_type` (str): 이벤트 타입
-- `event_data` (Dict): 이벤트 데이터
+Assess memory quality with detailed metrics.
 
-**반환**: 생성된 기억 ID
+```python
+result = validator.validate_memory_quality(
+    content="Attended team meeting about Q4 roadmap and resource allocation",
+    importance=0.8
+)
 
-#### `store_discord_event(event_type, event_data)`
+print(f"Quality Score: {result['quality_score']:.3f}")
+print(f"Quality Level: {result['quality_level']}")
+print(f"Factors: {result['quality_factors']}")
+print(f"Suggestions: {result['suggestions']}")
+```
 
-Discord 이벤트를 기억으로 저장합니다.
+**Quality Factors:**
+1. **Length**: Appropriate information volume
+2. **Richness**: Meaningful word ratio and lexical diversity
+3. **Structure**: Sentence and paragraph composition
+4. **Language**: Grammar and expression quality
+5. **Information Density**: Specific information content
+6. **Searchability**: Future search convenience
+7. **Temporal Relevance**: Current context relevance
 
-- `event_type` (str): 이벤트 타입
-- `event_data` (Dict): 이벤트 데이터
+### DuplicateDetector
 
-**반환**: 생성된 기억 ID
+Intelligent duplicate memory detection with 85% similarity threshold.
 
-#### `get_related_unity_memories(query, limit=5)`
+#### `__init__(db_manager=None, similarity_threshold=0.85)`
 
-Unity 관련 기억을 검색합니다.
+Initialize duplicate detector.
 
-- `query` (str): 검색 쿼리
-- `limit` (int, 선택): 반환할 최대 결과 수
+```python
+from greeum.core.duplicate_detector import DuplicateDetector
 
-**반환**: 검색 결과 목록
+detector = DuplicateDetector(similarity_threshold=0.90)
+```
 
-#### `get_related_discord_memories(query, limit=5)`
+#### `check_duplicates(content, embedding=None, top_k=5)`
 
-Discord 관련 기억을 검색합니다.
+Check for duplicate memories.
 
-- `query` (str): 검색 쿼리
-- `limit` (int, 선택): 반환할 최대 결과 수
+```python
+result = detector.check_duplicates(
+    content="Meeting about project timeline",
+    embedding=content_embedding
+)
 
-**반환**: 검색 결과 목록
+if result['is_duplicate']:
+    print(f"Found {len(result['similar_memories'])} similar memories")
+    print(f"Highest similarity: {result['max_similarity']:.3f}")
+```
+
+### UsageAnalytics
+
+Comprehensive usage pattern analysis and monitoring.
+
+#### `__init__(db_manager=None, analytics_db_path=None)`
+
+Initialize usage analytics system.
+
+```python
+from greeum.core.usage_analytics import UsageAnalytics
+
+analytics = UsageAnalytics()
+```
+
+#### `log_event(event_type, tool_name=None, metadata=None, duration_ms=None, success=True)`
+
+Log usage events for analysis.
+
+```python
+analytics.log_event(
+    event_type="tool_usage",
+    tool_name="add_memory",
+    metadata={"quality_score": 0.85, "importance": 0.7},
+    duration_ms=150,
+    success=True
+)
+```
+
+#### `get_usage_statistics(days=7, user_id=None)`
+
+Get comprehensive usage statistics.
+
+```python
+stats = analytics.get_usage_statistics(days=30)
+
+print(f"Total events: {stats['total_events']}")
+print(f"Unique sessions: {stats['unique_sessions']}")
+print(f"Average response time: {stats['avg_response_time']:.0f}ms")
+print(f"Success rate: {stats['success_rate']*100:.1f}%")
+```
+
+#### `get_quality_trends(days=7)`
+
+Analyze memory quality trends over time.
+
+```python
+trends = analytics.get_quality_trends(days=30)
+
+print(f"Average quality: {trends['avg_quality_score']:.3f}")
+print(f"High quality ratio: {trends['high_quality_ratio']*100:.1f}%")
+```
+
+### TemporalReasoner
+
+Process temporal expressions in multiple languages.
+
+#### `__init__(db_manager=None)`
+
+Initialize temporal reasoner.
+
+```python
+from greeum import TemporalReasoner
+
+reasoner = TemporalReasoner()
+```
+
+#### `search_by_time(query, language='auto', top_k=10)`
+
+Search memories by temporal expressions.
+
+```python
+# English
+results = reasoner.search_by_time("What did I do 3 days ago?", language='en')
+
+# Korean  
+results = reasoner.search_by_time("지난 주에 무엇을 했지?", language='ko')
+
+# Auto-detect
+results = reasoner.search_by_time("昨日何をしましたか？")
+```
+
+### SearchEngine
+
+Advanced search with optional BERT reranking.
+
+#### `__init__(block_manager=None, reranker=None)`
+
+Initialize search engine with optional reranker.
+
+```python
+from greeum.core.search_engine import SearchEngine, BertReranker
+
+# Basic search
+engine = SearchEngine()
+
+# With BERT reranking
+reranker = BertReranker("cross-encoder/ms-marco-MiniLM-L-6-v2")
+engine = SearchEngine(reranker=reranker)
+```
+
+#### `search(query, top_k=5)`
+
+Perform advanced search with metrics.
+
+```python
+results = engine.search("project planning meeting", top_k=10)
+
+print(f"Found {len(results['blocks'])} results")
+print(f"Search time: {results['search_time_ms']:.0f}ms")
+```
 
 ---
 
-## 텍스트 유틸리티
+## MCP Integration
 
-텍스트 처리를 위한 유틸리티 함수들입니다.
+### MCP Tools
 
-### 주요 함수
+Greeum provides 12 MCP tools for Claude Code integration:
 
-#### `process_user_input(text, extract_keywords=True, extract_tags=True, compute_embedding=True)`
+#### Memory Management Tools
 
-사용자 입력을 처리합니다.
+**add_memory**
+```python
+# Available in Claude Code
+add_memory(
+    content="Project milestone reached - API v2.0 deployed",
+    keywords=["project", "milestone", "api"],
+    importance=0.9
+)
+```
 
-- `text` (str): 처리할 텍스트
-- `extract_keywords` (bool, 선택): 키워드 추출 여부
-- `extract_tags` (bool, 선택): 태그 추출 여부
-- `compute_embedding` (bool, 선택): 임베딩 계산 여부
+**search_memory**
+```python
+# Search with multiple methods
+search_memory(
+    query="project status",
+    search_type="hybrid",  # keyword, embedding, hybrid
+    limit=10
+)
+```
 
-**반환**: 처리된 결과 딕셔너리
+#### Analytics Tools
 
-#### `extract_keywords(text, language="auto", max_keywords=5)`
+**usage_analytics**
+```python
+# Get usage insights
+usage_analytics(
+    days=30,
+    detailed=True,
+    include_trends=True
+)
+```
 
-텍스트에서 키워드를 추출합니다.
+**get_memory_stats**
+```python
+# System statistics
+get_memory_stats(
+    include_quality=True,
+    include_performance=True
+)
+```
 
-- `text` (str): 처리할 텍스트
-- `language` (str, 선택): 텍스트 언어
-- `max_keywords` (int, 선택): 최대 키워드 수
+#### Quality Tools
 
-**반환**: 키워드 목록
+**quality_check**
+```python
+# Validate memory quality
+quality_check(
+    content="Memory content to validate",
+    importance=0.7
+)
+```
 
-#### `extract_tags(text, language="auto")`
+**check_duplicates**
+```python
+# Check for duplicates
+check_duplicates(
+    content="Content to check",
+    threshold=0.85
+)
+```
 
-텍스트에서 태그를 추출합니다.
+### MCP Server Configuration
 
-- `text` (str): 처리할 텍스트
-- `language` (str, 선택): 텍스트 언어
+#### Basic Configuration
 
-**반환**: 태그 목록
+```json
+{
+  "mcpServers": {
+    "greeum": {
+      "command": "python3",
+      "args": ["-m", "greeum.mcp.claude_code_mcp_server"],
+      "env": {
+        "GREEUM_DATA_DIR": "/path/to/data",
+        "GREEUM_LOG_LEVEL": "INFO"
+      }
+    }
+  }
+}
+```
 
-#### `compute_embedding(text)`
+#### Advanced Configuration
 
-텍스트의 임베딩 벡터를 계산합니다.
-
-- `text` (str): 임베딩할 텍스트
-
-**반환**: 임베딩 벡터
-
-#### `estimate_importance(text)`
-
-텍스트의 중요도를 추정합니다.
-
-- `text` (str): 평가할 텍스트
-
-**반환**: 중요도 점수 (0.0~1.0)
+```json
+{
+  "mcpServers": {
+    "greeum": {
+      "command": "python3",
+      "args": ["-m", "greeum.mcp.claude_code_mcp_server"],
+      "env": {
+        "GREEUM_DATA_DIR": "/custom/data/path",
+        "GREEUM_LOG_LEVEL": "DEBUG",
+        "GREEUM_DB_TYPE": "postgresql",
+        "GREEUM_CONNECTION_STRING": "postgresql://user:pass@localhost/greeum",
+        "GREEUM_QUALITY_THRESHOLD": "0.7",
+        "GREEUM_DUPLICATE_THRESHOLD": "0.85"
+      }
+    }
+  }
+}
+```
 
 ---
 
-## 고급 사용법
+## Embedding Models
 
-### CLI 도구
+### Built-in Models
 
-Greeum은 다양한 명령줄 도구를 제공합니다. 자세한 내용은 [CLI 도구 문서](tutorials.md#cli-도구)를 참조하세요.
+#### SimpleEmbeddingModel
 
-### REST API
+Basic hash-based embedding for development.
 
-Greeum의 REST API를 사용하여 애플리케이션을 통합할 수 있습니다. 자세한 내용은 [API 서버 문서](tutorials.md#rest-api-서버)를 참조하세요.
+```python
+from greeum.embedding_models import SimpleEmbeddingModel
 
-### MCP 활용
+model = SimpleEmbeddingModel(dimension=128)
+embedding = model.encode("text to embed")
+```
 
-MCP를 통해 Greeum과 외부 도구를 연동하는 방법은 [MCP 예제](../examples/README.md)를 참조하세요. 
+#### EmbeddingRegistry
+
+Manage multiple embedding models.
+
+```python
+from greeum.embedding_models import EmbeddingRegistry
+
+registry = EmbeddingRegistry()
+registry.register_model("custom", custom_model, set_as_default=True)
+
+# Use registered model
+embedding = registry.get_embedding("text", model_name="custom")
+```
+
+### External Models (Optional)
+
+#### Sentence Transformers
+
+```python
+# Requires: pip install sentence-transformers
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer('all-MiniLM-L6-v2')
+embeddings = model.encode(["text1", "text2"])
+```
+
+#### OpenAI Embeddings
+
+```python
+# Requires: pip install openai
+import openai
+
+response = openai.embeddings.create(
+    model="text-embedding-3-small",
+    input="text to embed"
+)
+embedding = response.data[0].embedding
+```
+
+---
+
+## Text Utils
+
+Utility functions for text processing.
+
+#### `extract_keywords(text, max_keywords=10)`
+
+Extract keywords from text.
+
+```python
+from greeum.text_utils import extract_keywords
+
+keywords = extract_keywords("Machine learning project with Python and TensorFlow")
+# Returns: ["machine", "learning", "project", "python", "tensorflow"]
+```
+
+#### `process_user_input(text)`
+
+Process user input with keyword extraction and embedding.
+
+```python
+from greeum.text_utils import process_user_input
+
+result = process_user_input("Started working on the new API endpoints")
+# Returns: {
+#   "context": "Started working on the new API endpoints",
+#   "keywords": ["started", "working", "api", "endpoints"],
+#   "tags": ["work", "development"],
+#   "embedding": [...],
+#   "importance": 0.6
+# }
+```
+
+#### `detect_language(text)`
+
+Auto-detect text language.
+
+```python
+from greeum.text_utils import detect_language
+
+lang = detect_language("안녕하세요 반갑습니다")  # Returns: "ko"
+lang = detect_language("Hello, how are you?")   # Returns: "en"
+```
+
+---
+
+## Error Handling
+
+### Common Exceptions
+
+```python
+from greeum.exceptions import (
+    GreeumError,
+    DatabaseError, 
+    EmbeddingError,
+    ValidationError
+)
+
+try:
+    bm.add_block(context, keywords, tags, embedding, importance)
+except ValidationError as e:
+    print(f"Invalid input: {e}")
+except DatabaseError as e:
+    print(f"Database error: {e}")
+except GreeumError as e:
+    print(f"General Greeum error: {e}")
+```
+
+### Best Practices
+
+#### Memory Management
+
+```python
+# Always validate inputs
+if not context or len(context.strip()) < 10:
+    raise ValidationError("Context too short")
+
+# Handle embedding failures gracefully
+try:
+    embedding = get_embedding(context)
+except EmbeddingError:
+    embedding = simple_embedding_fallback(context)
+
+# Check for duplicates before adding
+if not detector.check_duplicates(context)['is_duplicate']:
+    bm.add_block(context, keywords, tags, embedding, importance)
+```
+
+#### Performance Optimization
+
+```python
+# Batch operations when possible
+contexts = ["text1", "text2", "text3"]
+embeddings = embedding_model.batch_encode(contexts)
+
+for context, embedding in zip(contexts, embeddings):
+    bm.add_block(context, keywords, tags, embedding, importance)
+
+# Use appropriate limits
+results = bm.search_by_embedding(query_emb, top_k=20)  # Not too high
+recent = stm.get_recent_memories(count=10)  # Reasonable count
+```
+
+---
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Data directory
+export GREEUM_DATA_DIR="/path/to/data"
+
+# Database configuration  
+export GREEUM_DB_TYPE="sqlite"  # or "postgres"
+export GREEUM_CONNECTION_STRING="path/to/db.sqlite"
+
+# Logging
+export GREEUM_LOG_LEVEL="INFO"  # DEBUG, INFO, WARNING, ERROR
+
+# Quality settings
+export GREEUM_QUALITY_THRESHOLD="0.7"
+export GREEUM_DUPLICATE_THRESHOLD="0.85"
+
+# External API keys
+export OPENAI_API_KEY="your-key-here"
+```
+
+### Configuration File
+
+Create `~/.greeum/config.json`:
+
+```json
+{
+  "database": {
+    "type": "sqlite",
+    "connection_string": "data/memory.db"
+  },
+  "embeddings": {
+    "default_model": "simple",
+    "cache_embeddings": true
+  },
+  "quality": {
+    "auto_validate": true,
+    "threshold": 0.7,
+    "factors": {
+      "length": {"weight": 0.1, "min_score": 0.3},
+      "richness": {"weight": 0.2, "min_score": 0.4},
+      "structure": {"weight": 0.15, "min_score": 0.3}
+    }
+  },
+  "analytics": {
+    "enabled": true,
+    "retention_days": 90,
+    "session_timeout": 1800
+  },
+  "cache": {
+    "max_size": 100,
+    "ttl": 3600
+  }
+}
+```
+
+---
+
+## Version History
+
+### v2.0.5 (Current)
+- Enhanced MCP tool descriptions with usage guidelines
+- Smart duplicate detection with 85% similarity threshold  
+- Quality validation system with 7-factor assessment
+- Usage analytics and monitoring system
+- Improved CLI commands: `quality`, `analytics`, `optimize`
+
+### v2.0.4
+- Lightweight dependency optimization
+- Enhanced MCP server stability
+- Performance improvements
+
+### v2.0.3
+- MCP server integration improvements
+- Bug fixes and stability enhancements
+
+---
+
+For more examples and tutorials, see:
+- [Get Started Guide](get-started.md)
+- [Tutorials](tutorials.md)
+- [Official Website](https://greeum.app)
+
+Contact: playtart@play-t.art

@@ -1,787 +1,1399 @@
-﻿# Greeum 튜토리얼
+﻿# Greeum Tutorials
 
-이 튜토리얼에서는 Greeum을 사용하여 다양한 기능을 구현하는 방법을 단계별로 설명합니다. 이 가이드를 통해 Greeum의 핵심 기능을 빠르게 배울 수 있습니다.
+Complete step-by-step guides for using Greeum v2.0.5 memory management system. Learn how to leverage intelligent memory, quality validation, and advanced MCP integration.
 
-## 목차
+## Table of Contents
 
-1. [시작하기](#시작하기)
-2. [기본 기억 관리](#기본-기억-관리)
-3. [시간 기반 검색](#시간-기반-검색)
-4. [다국어 지원 활용](#다국어-지원-활용)
-5. [LLM 통합](#llm-통합)
-6. [CLI 도구](#cli-도구)
-7. [REST API 서버](#rest-api-서버)
-8. [v0.6.0 새로운 기능](#v060-새로운-기능)
-9. [고급 기능](#고급-기능)
+1. [Getting Started](#getting-started)
+2. [Basic Memory Management](#basic-memory-management)
+3. [Quality Management (v2.0.5)](#quality-management-v205)
+4. [Advanced CLI Commands (v2.0.5)](#advanced-cli-commands-v205)
+5. [MCP Integration with Claude Code](#mcp-integration-with-claude-code)
+6. [Temporal Search](#temporal-search)
+7. [Multi-language Support](#multi-language-support)
+8. [Python API Usage](#python-api-usage)
+9. [Advanced Features](#advanced-features)
+10. [REST API Server](#rest-api-server)
 
-## 시작하기
+## Getting Started
 
-Greeum을 설치하고 기본 초기화하는 방법을 알아봅니다.
+Learn how to install Greeum v2.0.5 and initialize the memory system.
 
-### 필수 설정
+### Installation
 
-먼저 [설치 가이드](installation.md)에 따라 Greeum을 설치하세요.
+First, install Greeum following the [Get Started Guide](get-started.md):
 
-### 기본 초기화
+```bash
+# Install with pipx (recommended)
+pipx install greeum
 
-```python
-from greeum import BlockManager, STMManager, CacheManager, PromptWrapper
+# Or install with pip
+pip install greeum
 
-# 기본 블록 매니저 초기화
-block_manager = BlockManager(storage_dir="./data/memory")
-
-# 단기 기억 매니저 초기화
-stm_manager = STMManager(
-    ttl_short=3600,      # 1시간
-    ttl_medium=86400,    # 1일
-    ttl_long=604800      # 1주일
-)
-
-# 캐시 매니저 초기화
-cache_manager = CacheManager(
-    block_manager=block_manager,
-    capacity=10
-)
-
-# 프롬프트 래퍼 초기화
-prompt_wrapper = PromptWrapper(
-    cache_manager=cache_manager,
-    stm_manager=stm_manager
-)
-
-print("Greeum 초기화 완료!")
+# Verify installation
+greeum --version  # Should show v2.0.5 or higher
 ```
 
-## 기본 기억 관리
+### Quick Start
 
-Greeum을 사용하여 기억을 저장하고 검색하는 방법을 알아봅니다.
+Get started with Greeum in 3 simple steps:
 
-### 장기 기억 저장
+```bash
+# Step 1: Add your first memory
+python3 -m greeum.cli memory add "Started learning Greeum v2.0.5 - it has amazing quality validation features!"
+
+# Step 2: Search memories
+python3 -m greeum.cli memory search "learning Greeum" --limit 5
+
+# Step 3: Analyze your memory patterns
+python3 -m greeum.cli ltm analyze --period 7d
+```
+
+### Basic System Initialization
+
+```python
+from greeum import BlockManager, STMManager, PromptWrapper
+from greeum.core.quality_validator import QualityValidator
+from greeum.core.duplicate_detector import DuplicateDetector
+
+# Initialize core memory components
+block_manager = BlockManager()
+stm_manager = STMManager(default_ttl=3600)  # 1 hour TTL
+prompt_wrapper = PromptWrapper()
+
+# Initialize v2.0.5 quality features
+quality_validator = QualityValidator()
+duplicate_detector = DuplicateDetector(similarity_threshold=0.85)
+
+print("Greeum v2.0.5 initialized with quality validation!")
+```
+
+## Basic Memory Management
+
+Learn the fundamentals of storing, retrieving, and managing memories with Greeum v2.0.5.
+
+### Adding Memories with Quality Validation
 
 ```python
 from greeum import BlockManager
+from greeum.core.quality_validator import QualityValidator
+from greeum.core.duplicate_detector import DuplicateDetector
 from greeum.text_utils import process_user_input
 
-# 블록 매니저 초기화
+# Initialize components
 block_manager = BlockManager()
+quality_validator = QualityValidator()
+duplicate_detector = DuplicateDetector()
 
-# 사용자 입력 처리
-user_input = "새로운 프로젝트를 시작했는데 머신러닝 알고리즘을 활용해 이미지 인식 시스템을 개발할 계획이야."
-processed = process_user_input(user_input)
+# Memory content
+content = "Started a new machine learning project focused on developing an image recognition system using deep learning algorithms. The goal is to achieve 95% accuracy for medical diagnosis applications."
 
-# 중요도를 높게 설정하여 블록 저장
-block = block_manager.add_block(
-    context=processed["context"],
-    keywords=processed["keywords"],
-    tags=processed["tags"],
-    embedding=processed["embedding"],
-    importance=0.9  # 중요한 기억이므로 높은 값 설정
-)
+# Step 1: Validate quality before storing
+quality_result = quality_validator.validate_memory_quality(content, importance=0.8)
 
-print(f"저장된 블록 인덱스: {block['block_index']}")
+print(f"Quality Score: {quality_result['quality_score']:.3f}")
+print(f"Quality Level: {quality_result['quality_level']}")
+print(f"Suggestions: {quality_result['suggestions']}")
+
+# Step 2: Check for duplicates
+duplicate_result = duplicate_detector.check_duplicates(content)
+
+if duplicate_result['is_duplicate']:
+    print(f"⚠️ Similar memory found with {duplicate_result['max_similarity']:.3f} similarity")
+else:
+    print("✅ No duplicates found")
+
+# Step 3: Store memory if quality is acceptable
+if quality_result['quality_score'] >= 0.6 and not duplicate_result['is_duplicate']:
+    processed = process_user_input(content)
+    
+    block = block_manager.add_block(
+        context=processed["context"],
+        keywords=processed["keywords"],
+        tags=processed["tags"],
+        embedding=processed["embedding"],
+        importance=0.8
+    )
+    
+    print(f"✅ Memory stored successfully! Block index: {block['block_index']}")
+else:
+    print("❌ Memory not stored due to quality/duplicate issues")
 ```
 
-### 키워드로 기억 검색
+### Searching Memories
 
 ```python
-# 키워드로 기억 검색
-search_results = block_manager.search_blocks_by_keyword(
-    keywords=["프로젝트", "머신러닝"],
+# Keyword search
+keyword_results = block_manager.search_by_keywords(
+    keywords=["machine learning", "project", "image"],
     limit=5
 )
 
-print(f"검색 결과 수: {len(search_results)}")
-for result in search_results:
-    print(f"블록 {result['block_index']}: {result['context'][:50]}...")
+print(f"Keyword search results: {len(keyword_results)}")
+for result in keyword_results:
+    print(f"Block {result['block_index']}: {result['context'][:60]}...")
+
+# Vector similarity search
+from greeum.embedding_models import get_embedding
+
+query = "Tell me about AI projects for medical applications"
+query_embedding = get_embedding(query)
+
+similarity_results = block_manager.search_by_embedding(
+    query_embedding, 
+    top_k=5
+)
+
+print(f"\nSimilarity search results: {len(similarity_results)}")
+for result in similarity_results:
+    print(f"Score: {result.get('similarity', 'N/A'):.3f} - {result['context'][:60]}...")
 ```
 
-### 단기 기억 관리
+## Quality Management (v2.0.5)
+
+Greeum v2.0.5 introduces intelligent quality management with 7-factor assessment.
+
+### Understanding Quality Metrics
+
+```python
+from greeum.core.quality_validator import QualityValidator
+
+validator = QualityValidator()
+
+# Test different content quality levels
+test_contents = [
+    "Good",  # Too short
+    "Attended team meeting about Q4 roadmap, resource allocation, and timeline adjustments. Discussed budget constraints and identified key milestones for product launch.",  # High quality
+    "meeting stuff happened",  # Low quality
+    "Today I successfully implemented the new authentication system using JWT tokens, integrated it with the existing user database, tested all edge cases, and documented the API endpoints for the development team."  # Very high quality
+]
+
+for i, content in enumerate(test_contents, 1):
+    print(f"\n--- Test Content {i} ---")
+    print(f"Content: {content}")
+    
+    result = validator.validate_memory_quality(content)
+    
+    print(f"Quality Score: {result['quality_score']:.3f}")
+    print(f"Quality Level: {result['quality_level']}")
+    print(f"Quality Factors:")
+    
+    for factor, score in result['quality_factors'].items():
+        print(f"  {factor}: {score:.2f}")
+    
+    if result['suggestions']:
+        print(f"Suggestions: {', '.join(result['suggestions'])}")
+```
+
+### Duplicate Detection
+
+```python
+from greeum.core.duplicate_detector import DuplicateDetector
+
+detector = DuplicateDetector(similarity_threshold=0.85)
+
+# Add initial memory
+initial_content = "Working on machine learning project for image classification"
+block_manager.add_block(
+    context=initial_content,
+    keywords=["machine", "learning", "image", "classification"]
+)
+
+# Test for duplicates
+similar_contents = [
+    "Working on ML project for image classification",  # Very similar
+    "Developing image classification using machine learning",  # Similar concept
+    "Started a cooking tutorial project",  # Different topic
+]
+
+for content in similar_contents:
+    result = detector.check_duplicates(content)
+    
+    print(f"\nContent: {content}")
+    print(f"Is duplicate: {result['is_duplicate']}")
+    print(f"Max similarity: {result['max_similarity']:.3f}")
+    
+    if result['similar_memories']:
+        print(f"Found {len(result['similar_memories'])} similar memories")
+```
+
+### Short-term Memory Management
 
 ```python
 from greeum import STMManager
 
-# 단기 기억 매니저 초기화
-stm_manager = STMManager()
+# Initialize STM with custom TTL
+stm_manager = STMManager(default_ttl=3600)  # 1 hour
 
-# 다양한 TTL로 단기 기억 추가
-stm_manager.add_memory(
-    content="미팅은 오후 3시에 예정되어 있습니다.",
-    ttl_type="short"  # 짧은 유지 시간 (기본 1시간)
-)
+# Add short-term memories with different TTLs
+memories = [
+    {"content": "Meeting scheduled for 3 PM today", "ttl": 3600},      # 1 hour
+    {"content": "Project deadline is next Friday", "ttl": 86400},     # 1 day  
+    {"content": "New ML algorithm achieved 98.5% accuracy", "ttl": 604800}  # 1 week
+]
 
-stm_manager.add_memory(
-    content="프로젝트 제안서는 다음 주 금요일까지 제출해야 합니다.",
-    ttl_type="medium"  # 중간 유지 시간 (기본 1일)
-)
-
-stm_manager.add_memory(
-    content="새 머신러닝 알고리즘은 98.5% 정확도를 달성했습니다.",
-    ttl_type="long",   # 긴 유지 시간 (기본 1주일)
-    importance=0.8     # 중요한 정보
-)
-
-# 단기 기억 조회
-memories = stm_manager.get_memories(limit=10)
-for mem in memories:
-    print(f"[{mem['ttl_type']}] {mem['content']}")
-```
-
-## 시간 기반 검색
-
-시간 표현을 인식하고 시간에 따라 기억을 검색하는 방법을 알아봅니다.
-
-### 시간 표현 인식
-
-```python
-from greeum.temporal_reasoner import TemporalReasoner, evaluate_temporal_query
-
-# 시간 표현 평가 (한국어)
-ko_result = evaluate_temporal_query("어제 회의에서 결정된 사항을 알려줘", language="ko")
-print(f"한국어 시간 표현: {ko_result['detected']}, 표현: {ko_result.get('best_ref', {}).get('term')}")
-
-# 시간 표현 평가 (영어)
-en_result = evaluate_temporal_query("Tell me what was decided in yesterday's meeting", language="en")
-print(f"영어 시간 표현: {en_result['detected']}, 표현: {en_result.get('best_ref', {}).get('term')}")
-
-# 자동 언어 감지
-auto_result = evaluate_temporal_query("What did I do 3 days ago?")
-print(f"감지된 언어: {auto_result['language']}, 표현: {auto_result.get('best_ref', {}).get('term')}")
-```
-
-### 시간 기반 기억 검색
-
-```python
-# 시간 기반 검색 설정
-temporal_reasoner = TemporalReasoner(db_manager=block_manager, default_language="auto")
-
-# 시간 표현을 이용한 검색
-query = "지난주에 있었던 미팅 내용을 알려줘"
-results = temporal_reasoner.search_by_time_reference(query)
-
-print(f"감지된 시간 표현: {results.get('time_ref', {}).get('term')}")
-print(f"검색 범위: {results.get('search_range', {})}")
-print(f"검색 결과 수: {len(results.get('blocks', []))}")
-
-# 결과 출력
-for block in results.get('blocks', []):
-    print(f"[{block['timestamp']}] {block['context'][:50]}...")
-```
-
-## 다국어 지원 활용
-
-Greeum의 다국어 지원 기능을 사용하는 방법을 알아봅니다.
-
-### 다국어 처리 설정
-
-```python
-from greeum.temporal_reasoner import TemporalReasoner
-from greeum.text_utils import extract_keywords, extract_tags
-
-# 자동 언어 감지 설정
-temporal_reasoner = TemporalReasoner(default_language="auto")
-
-# 다양한 언어 처리 예제
-languages = {
-    "ko": "어제 프로젝트 회의에서 새로운 아이디어를 논의했습니다.",
-    "en": "We discussed new ideas in yesterday's project meeting.",
-    "mixed": "프로젝트 meeting에서 new ideas를 discussed."
-}
-
-for lang_name, text in languages.items():
-    # 언어 감지
-    detected_lang = temporal_reasoner._detect_language(text)
+for memory in memories:
+    memory_data = {
+        "id": f"stm_{hash(memory['content']) % 10000}",
+        "content": memory["content"],
+        "importance": 0.7
+    }
     
-    # 키워드 추출
-    keywords = extract_keywords(text, language="auto")
-    
-    # 태그 추출
-    tags = extract_tags(text, language="auto")
-    
-    print(f"텍스트 ({lang_name}): {text}")
-    print(f"감지된 언어: {detected_lang}")
-    print(f"추출된 키워드: {keywords}")
-    print(f"추출된 태그: {tags}")
-    print("-" * 50)
+    stm_manager.add_memory(memory_data, ttl=memory["ttl"])
+    print(f"Added STM: {memory['content']} (TTL: {memory['ttl']}s)")
+
+# Retrieve recent memories
+recent = stm_manager.get_recent_memories(count=5)
+print(f"\nRecent STM entries: {len(recent)}")
+
+for mem in recent:
+    print(f"- {mem['content']} (importance: {mem.get('importance', 'N/A')})")
 ```
 
-### 다국어 시간 표현 처리
+## Advanced CLI Commands (v2.0.5)
+
+Explore the new CLI commands introduced in Greeum v2.0.5.
+
+### Python API: Quality Validation
 
 ```python
-# 다양한 언어의 시간 표현 예제
-time_expressions = {
-    "ko": [
-        "어제 회의",
-        "3일 전에 작성한 문서",
-        "지난주 금요일에 보낸 이메일",
-        "2023년 5월 15일 미팅"
-    ],
-    "en": [
-        "yesterday's meeting",
-        "document written 3 days ago",
-        "email sent last Friday",
-        "meeting on May 15, 2023"
-    ]
-}
+from greeum.core.quality_validator import QualityValidator
 
-for lang, expressions in time_expressions.items():
-    print(f"언어: {lang}")
-    for expr in expressions:
-        result = evaluate_temporal_query(expr, language=lang)
-        if result["detected"]:
-            time_ref = result.get("best_ref", {})
-            print(f"  표현: '{expr}' -> '{time_ref.get('term')}' 감지됨")
-            from_date = time_ref.get("from_date", "N/A")
-            to_date = time_ref.get("to_date", "N/A")
-            print(f"  시간 범위: {from_date} ~ {to_date}")
-        else:
-            print(f"  표현: '{expr}' -> 시간 표현 감지되지 않음")
-    print("-" * 50)
-```
-
-## LLM 통합
-
-Greeum을 LLM과 통합하는 방법을 알아봅니다.
-
-### 프롬프트 생성
-
-```python
-from greeum import BlockManager, STMManager, CacheManager, PromptWrapper
-from greeum.text_utils import process_user_input, compute_embedding
-
-# 매니저 초기화
-block_manager = BlockManager()
-stm_manager = STMManager()
-cache_manager = CacheManager(block_manager=block_manager)
-
-# 몇 가지 기억 추가
-block_manager.add_block(
-    context="프로젝트의 첫 번째 단계로 데이터 수집 방법을 연구하기로 했습니다.",
-    keywords=["프로젝트", "데이터", "수집", "연구"],
-    importance=0.8
+validator = QualityValidator()
+result = validator.validate_memory_quality(
+    "Comprehensive project analysis completed with detailed findings and recommendations"
 )
 
-stm_manager.add_memory(
-    content="클라이언트는 다음 주까지 초기 프로토타입을 원합니다.",
-    ttl_type="medium",
+print(f"Quality Score: {result['quality_score']:.3f}")
+print(f"Quality Level: {result['quality_level']}")
+# Output:
+# Quality Score: 0.847
+# Quality Level: good
+```
+
+### Python API: Usage Analytics
+
+```python
+from greeum.core.usage_analytics import UsageAnalytics
+
+analytics = UsageAnalytics()
+stats = analytics.get_usage_statistics(days=30)
+
+print(f"Total Events: {stats['total_events']}")
+print(f"Success Rate: {stats['success_rate']:.1%}")
+# Access via Python API for detailed analytics
+```
+
+### Memory Management via CLI
+
+```bash
+# Analyze long-term memory patterns
+python3 -m greeum.cli ltm analyze --period 30d --trends
+
+# Manage short-term memory
+python3 -m greeum.cli stm cleanup --expired
+python3 -m greeum.cli stm promote --threshold 0.8
+
+# Export memory data
+python3 -m greeum.cli ltm export --format json --limit 1000
+```
+
+### Advanced Search via CLI
+
+```bash
+# Basic memory search
+python3 -m greeum.cli memory search "machine learning project" --limit 10
+
+# Search in long-term memory with analysis
+python3 -m greeum.cli ltm analyze --period 1d
+
+# Add specific search terms to short-term memory
+python3 -m greeum.cli stm add "Searching for ML project info" --ttl 30m
+```
+
+## MCP Integration with Claude Code
+
+Learn how to integrate Greeum with Claude Code using MCP (Model Control Protocol).
+
+### Setting Up MCP Integration
+
+1. **Install Greeum MCP Server**:
+   ```bash
+   # Install GreeumMCP package
+   pip install greeummcp
+   
+   # Verify installation
+   python -m greeum.mcp.claude_code_mcp_server --help
+   ```
+
+2. **Configure Claude Desktop**:
+   
+   Edit your Claude Desktop configuration (`~/.config/claude-desktop/claude_desktop_config.json`):
+   
+   ```json
+   {
+     "mcpServers": {
+       "greeum": {
+         "command": "python3",
+         "args": ["-m", "greeum.mcp.claude_code_mcp_server"],
+         "env": {
+           "GREEUM_DATA_DIR": "/path/to/your/data",
+           "GREEUM_LOG_LEVEL": "INFO"
+         }
+       }
+     }
+   }
+   ```
+
+3. **Verify Connection**:
+   ```bash
+   claude mcp list
+   # Should show: greeum - ✓ Connected
+   ```
+
+### Using MCP Tools in Claude Code
+
+Once configured, you can use these 12 MCP tools in Claude Code:
+
+#### Memory Management Tools
+```python
+# In Claude Code, these tools are available directly:
+
+# Add new memory
+add_memory(
+    content="Completed implementation of user authentication system",
+    keywords=["authentication", "implementation", "completed"],
     importance=0.9
 )
 
-# 프롬프트 래퍼 설정
-prompt_wrapper = PromptWrapper(
-    cache_manager=cache_manager,
-    stm_manager=stm_manager
+# Search memories  
+search_memory(
+    query="authentication system",
+    search_type="hybrid",  # keyword, embedding, or hybrid
+    limit=10
 )
 
-# 사용자 질문
-user_question = "프로젝트 진행 상황에 대해 알려줘"
-
-# 질문 임베딩 계산
-question_embedding = compute_embedding(user_question)
-
-# 캐시 업데이트
-cache_manager.update_cache(
-    query_embedding=question_embedding,
-    query_keywords=["프로젝트", "진행", "상황"]
+# Get system statistics
+get_memory_stats(
+    include_quality=True,
+    include_performance=True
 )
-
-# 프롬프트 생성
-prompt = prompt_wrapper.compose_prompt(
-    user_input=user_question,
-    include_stm=True,
-    max_blocks=3,
-    max_stm=3
-)
-
-print("생성된 프롬프트:")
-print("-" * 50)
-print(prompt)
-print("-" * 50)
-
-# 실제 LLM 호출 (예시)
-# llm_response = call_your_llm(prompt)
-# print("LLM 응답:", llm_response)
 ```
 
-### 커스텀 프롬프트 템플릿
+#### Quality and Analytics Tools
+```python
+# Validate memory quality
+quality_check(
+    content="Memory content to validate for quality assessment",
+    importance=0.7
+)
+
+# Check for duplicates
+check_duplicates(
+    content="Content to check for similar existing memories",
+    threshold=0.85
+)
+
+# Get usage analytics
+usage_analytics(
+    days=30,
+    detailed=True,
+    include_trends=True
+)
+```
+
+#### Long-term Memory Tools
+```python
+# Analyze LTM patterns
+ltm_analyze(
+    period="30d",
+    trends=True,
+    output="text"  # or "json"
+)
+
+# Verify LTM integrity
+ltm_verify(
+    repair=False  # Set to True to attempt repairs
+)
+
+# Export LTM data
+ltm_export(
+    format="json",  # "json", "csv", or "blockchain"
+    limit=1000
+)
+```
+
+#### Short-term Memory Tools
+```python
+# Add STM entry
+stm_add(
+    content="Temporary information for current session",
+    ttl="2h",
+    importance=0.6
+)
+
+# Promote STM to LTM
+stm_promote(
+    threshold=0.8,
+    dry_run=False
+)
+
+# Clean up STM
+stm_cleanup(
+    expired=True,
+    smart=True,
+    threshold=0.3
+)
+```
+```
+
+## Temporal Search
+
+Utilize Greeum's advanced temporal reasoning for time-based memory retrieval.
+
+### Natural Language Time Expressions
 
 ```python
-# 커스텀 템플릿 설정
-custom_template = """
-당신은 기억을 가진 지능형 비서입니다.
+from greeum import TemporalReasoner
 
-다음은 당신이 알고 있는 중요한 정보입니다:
+# Initialize temporal reasoner
+temporal_reasoner = TemporalReasoner()
+
+# Test various time expressions
+time_queries = [
+    "What did I work on yesterday?",
+    "Show me tasks from last week",
+    "Find memories from 3 days ago",
+    "어제 회의에서 뭘 결정했지?",  # Korean
+    "昨日の作業内容を教えて",        # Japanese
+    "上周的项目进展如何？"         # Chinese
+]
+
+for query in time_queries:
+    print(f"\nQuery: {query}")
+    
+    # Search with temporal reasoning
+    results = temporal_reasoner.search_by_time(query, top_k=5)
+    
+    print(f"Language detected: {results.get('language', 'auto')}")
+    print(f"Time expression found: {results.get('time_reference', 'none')}")
+    print(f"Results: {len(results.get('blocks', []))} memories found")
+    
+    # Display results
+    for block in results.get('blocks', [])[:2]:  # Show first 2
+        timestamp = block.get('timestamp', 'Unknown')
+        content = block.get('context', '')[:50] + '...'
+        print(f"  [{timestamp}] {content}")
+```
+
+### Time Range Search
+
+```python
+from datetime import datetime, timedelta
+
+# Search within specific time range
+end_date = datetime.now()
+start_date = end_date - timedelta(days=7)  # Last 7 days
+
+range_results = block_manager.get_blocks_by_time_range(
+    start_date=start_date,
+    end_date=end_date,
+    limit=20
+)
+
+print(f"Memories from last 7 days: {len(range_results)}")
+
+# Group by day
+from collections import defaultdict
+
+memories_by_day = defaultdict(list)
+for block in range_results:
+    day = block['timestamp'][:10]  # YYYY-MM-DD
+    memories_by_day[day].append(block)
+
+for day, day_memories in sorted(memories_by_day.items()):
+    print(f"\n{day}: {len(day_memories)} memories")
+    for memory in day_memories[:2]:  # Show first 2 per day
+        print(f"  - {memory['context'][:40]}...")
+```
+
+## Multi-language Support
+
+Leverage Greeum's comprehensive multi-language capabilities for Korean, English, Japanese, and Chinese.
+
+### Automatic Language Detection
+
+```python
+from greeum.text_utils import detect_language, extract_keywords
+from greeum import BlockManager
+
+block_manager = BlockManager()
+
+# Multi-language content examples
+multilingual_content = [
+    {"text": "오늘 머신러닝 프로젝트 회의를 했습니다.", "expected": "ko"},
+    {"text": "We had a machine learning project meeting today.", "expected": "en"},
+    {"text": "今日は機械学習プロジェクトの会議をしました。", "expected": "ja"},
+    {"text": "今天我们开了机器学习项目会议。", "expected": "zh"},
+    {"text": "프로젝트 meeting was very productive today.", "expected": "mixed"}
+]
+
+for item in multilingual_content:
+    text = item["text"]
+    
+    # Detect language
+    detected_lang = detect_language(text)
+    
+    # Extract keywords with auto-detection
+    keywords = extract_keywords(text, language="auto")
+    
+    print(f"\nText: {text}")
+    print(f"Expected: {item['expected']}, Detected: {detected_lang}")
+    print(f"Keywords: {keywords}")
+    
+    # Store memory with detected language metadata
+    block_manager.add_block(
+        context=text,
+        keywords=keywords,
+        tags=["multilingual", "meeting"],
+        importance=0.7,
+        metadata={"language": detected_lang}
+    )
+```
+
+### Cross-language Search
+
+```python
+# Search across different languages
+search_queries = [
+    "machine learning meeting",  # English
+    "머신러닝 회의",              # Korean
+    "機械学習 会議",              # Japanese
+    "机器学习 会议"               # Chinese
+]
+
+for query in search_queries:
+    print(f"\nSearching for: {query}")
+    
+    # Perform semantic search (works across languages)
+    from greeum.embedding_models import get_embedding
+    
+    query_embedding = get_embedding(query)
+    results = block_manager.search_by_embedding(query_embedding, top_k=3)
+    
+    print(f"Found {len(results)} results:")
+    for result in results:
+        lang = result.get('metadata', {}).get('language', 'unknown')
+        print(f"  [{lang}] {result['context'][:50]}...")
+```
+
+### Multi-language Temporal Expressions
+
+```python
+# Multi-language temporal expression examples
+time_expressions = {
+    "Korean": [
+        "어제 회의에서 결정한 사항",
+        "3일 전에 작성한 문서", 
+        "지난주 프로젝트 진행상황",
+        "이번 달 목표 설정"
+    ],
+    "English": [
+        "yesterday's meeting decisions",
+        "document written 3 days ago",
+        "last week's project progress", 
+        "this month's goal setting"
+    ],
+    "Japanese": [
+        "昨日の会議での決定事項",
+        "3日前に作成した文書",
+        "先週のプロジェクト進捗",
+        "今月の目標設定"
+    ],
+    "Chinese": [
+        "昨天会议的决定",
+        "3天前写的文档", 
+        "上周的项目进展",
+        "本月的目标设定"
+    ]
+}
+
+for language, expressions in time_expressions.items():
+    print(f"\n{language} temporal expressions:")
+    for expr in expressions:
+        # Search using temporal reasoning
+        results = temporal_reasoner.search_by_time(expr, top_k=3)
+        
+        print(f"  Query: '{expr}'")
+        print(f"  Time reference detected: {results.get('time_reference', 'none')}")
+        print(f"  Results found: {len(results.get('blocks', []))}")
+    print("-" * 60)
+```
+
+## Python API Usage
+
+Comprehensive Python API examples for integrating Greeum into your applications.
+
+### Enhanced Prompt Generation
+
+```python
+from greeum import BlockManager, STMManager, CacheManager, PromptWrapper
+from greeum.core.quality_validator import QualityValidator
+from greeum.embedding_models import get_embedding
+
+# Initialize system with quality validation
+block_manager = BlockManager()
+stm_manager = STMManager()
+cache_manager = CacheManager(block_manager=block_manager)
+quality_validator = QualityValidator()
+prompt_wrapper = PromptWrapper(cache_manager=cache_manager, stm_manager=stm_manager)
+
+# Add some high-quality memories
+memories = [
+    {
+        "context": "Successfully implemented authentication system using JWT tokens with refresh mechanism. Integrated with existing user database, added rate limiting, and comprehensive error handling.",
+        "keywords": ["authentication", "JWT", "security", "implementation"],
+        "importance": 0.9
+    },
+    {
+        "context": "Client requested prototype delivery by next Friday. Scope includes user login, dashboard, and basic CRUD operations. Team allocated: 2 developers, 1 designer.",
+        "keywords": ["client", "prototype", "deadline", "scope"],
+        "importance": 0.8
+    }
+]
+
+for memory in memories:
+    # Validate quality before storing
+    quality_result = quality_validator.validate_memory_quality(
+        memory["context"], 
+        importance=memory["importance"]
+    )
+    
+    if quality_result["quality_score"] >= 0.7:
+        block_manager.add_block(
+            context=memory["context"],
+            keywords=memory["keywords"],
+            tags=["work", "development"],
+            embedding=get_embedding(memory["context"]),
+            importance=memory["importance"]
+        )
+        print(f"✅ Added memory (quality: {quality_result['quality_score']:.3f})")
+
+# Add short-term context
+stm_memory = {
+    "id": "current_session",
+    "content": "User is asking about project status. Show recent developments and upcoming deadlines.",
+    "importance": 0.7
+}
+stm_manager.add_memory(stm_memory)
+
+# Generate enhanced prompt
+user_question = "What's the current status of our development project?"
+
+# Update cache with current context
+question_embedding = get_embedding(user_question)
+cache_manager.update_cache(
+    query_text=user_question,
+    query_embedding=question_embedding,
+    query_keywords=["project", "status", "development"]
+)
+
+# Compose prompt with memory context
+enhanced_prompt = prompt_wrapper.compose_prompt(
+    user_input=user_question,
+    include_stm=True,
+    max_context_length=2000
+)
+
+print("\n=== Enhanced Prompt with Memory Context ===")
+print(enhanced_prompt)
+print("\n" + "=" * 50)
+
+# Simulate LLM response processing
+llm_response = "Based on the current project status, we have successfully implemented the authentication system and are on track for the prototype delivery by next Friday."
+
+# Store the interaction as a new memory
+interaction_context = f"User asked: {user_question}\nResponse: {llm_response}"
+interaction_quality = quality_validator.validate_memory_quality(interaction_context)
+
+if interaction_quality["quality_score"] >= 0.6:
+    block_manager.add_block(
+        context=interaction_context,
+        keywords=["interaction", "status", "update"],
+        tags=["conversation", "project"],
+        embedding=get_embedding(interaction_context),
+        importance=0.7
+    )
+    print(f"💾 Stored interaction (quality: {interaction_quality['quality_score']:.3f})")
+```
+
+### Building Intelligent Agents
+
+```python
+class IntelligentAgent:
+    """An AI agent with persistent memory using Greeum"""
+    
+    def __init__(self, agent_name: str):
+        self.name = agent_name
+        self.block_manager = BlockManager()
+        self.stm_manager = STMManager()
+        self.cache_manager = CacheManager(self.block_manager)
+        self.prompt_wrapper = PromptWrapper(self.cache_manager, self.stm_manager)
+        self.quality_validator = QualityValidator()
+    
+    def learn(self, information: str, importance: float = 0.7, tags: list = None):
+        """Learn new information with quality validation"""
+        quality_result = self.quality_validator.validate_memory_quality(
+            information, importance=importance
+        )
+        
+        if quality_result["quality_score"] >= 0.5:
+            from greeum.text_utils import process_user_input
+            processed = process_user_input(information)
+            
+            self.block_manager.add_block(
+                context=processed["context"],
+                keywords=processed["keywords"],
+                tags=tags or processed["tags"],
+                embedding=processed["embedding"],
+                importance=importance
+            )
+            
+            return f"✅ Learned: {information[:50]}... (Quality: {quality_result['quality_score']:.3f})"
+        else:
+            return f"❌ Information quality too low ({quality_result['quality_score']:.3f})"
+    
+    def remember(self, query: str, max_memories: int = 5):
+        """Remember relevant information based on query"""
+        query_embedding = get_embedding(query)
+        
+        # Update cache with current query context
+        from greeum.text_utils import extract_keywords
+        keywords = extract_keywords(query)
+        
+        self.cache_manager.update_cache(
+            query_text=query,
+            query_embedding=query_embedding,
+            query_keywords=keywords
+        )
+        
+        # Get relevant memories
+        relevant_memories = self.cache_manager.get_relevant_memories(limit=max_memories)
+        
+        return relevant_memories
+    
+    def think(self, user_input: str):
+        """Generate contextual response using memory"""
+        # Remember relevant information
+        memories = self.remember(user_input)
+        
+        # Add current input to short-term memory
+        stm_entry = {
+            "id": f"input_{hash(user_input) % 10000}",
+            "content": user_input,
+            "importance": 0.6
+        }
+        self.stm_manager.add_memory(stm_entry)
+        
+        # Generate enhanced prompt
+        prompt = self.prompt_wrapper.compose_prompt(
+            user_input=user_input,
+            include_stm=True,
+            max_context_length=1500
+        )
+        
+        return {
+            "prompt": prompt,
+            "relevant_memories": len(memories),
+            "memory_context": [mem["context"][:100] + "..." for mem in memories[:3]]
+        }
+
+# Example usage
+agent = IntelligentAgent("DevAssistant")
+
+# Teach the agent
+learning_results = [
+    agent.learn("Python FastAPI framework is excellent for building REST APIs with automatic OpenAPI documentation.", importance=0.8, tags=["python", "api", "documentation"]),
+    agent.learn("JWT tokens should be stored securely and have reasonable expiration times for security.", importance=0.9, tags=["security", "jwt", "best-practices"]),
+    agent.learn("Code reviews improve code quality and help knowledge sharing among team members.", importance=0.7, tags=["development", "quality", "teamwork"])
+]
+
+for result in learning_results:
+    print(result)
+
+# Ask the agent something
+user_question = "How should I implement secure API authentication?"
+thought_process = agent.think(user_question)
+
+print(f"\n🤔 Thinking about: {user_question}")
+print(f"📚 Relevant memories found: {thought_process['relevant_memories']}")
+print(f"🧠 Memory context preview:")
+for i, context in enumerate(thought_process['memory_context'], 1):
+    print(f"  {i}. {context}")
+
+print(f"\n📝 Generated prompt:")
+print(thought_process['prompt'])
+```
+
+### Custom Prompt Templates
+
+```python
+# Define custom prompt templates for different use cases
+
+# Technical Assistant Template
+tech_template = """
+You are an expert technical assistant with persistent memory.
+
+RELEVANT TECHNICAL KNOWLEDGE:
 {memory_blocks}
 
-다음은 최근에 언급된 정보입니다:
+RECENT CONTEXT:
 {short_term_memories}
 
-사용자 질문: {user_input}
+USER QUERY: {user_input}
 
-위 정보를 바탕으로 사용자의 질문에 친절하고 자세하게 대답해주세요.
+Provide a detailed technical response based on your knowledge and context. Include:
+1. Direct answer to the question
+2. Relevant technical details
+3. Best practices or recommendations
+4. Related concepts from your memory
 """
 
-# 프롬프트 래퍼에 템플릿 설정
-prompt_wrapper.set_template(custom_template)
+# Creative Assistant Template  
+creative_template = """
+You are a creative assistant with rich experiential memory.
 
-# 새 프롬프트 생성
-new_prompt = prompt_wrapper.compose_prompt(user_question)
+INSPIRATIONAL MEMORIES:
+{memory_blocks}
 
-print("커스텀 템플릿으로 생성된 프롬프트:")
-print("-" * 50)
-print(new_prompt)
-print("-" * 50)
+CURRENT SESSION CONTEXT:
+{short_term_memories}
+
+CREATIVE REQUEST: {user_input}
+
+Draw upon your memories to provide a creative, innovative response. Consider:
+- Past successful approaches
+- Creative patterns and techniques
+- Unexpected connections between ideas
+- Lessons learned from previous projects
+"""
+
+# Project Manager Template
+project_template = """
+You are an experienced project manager with comprehensive project memory.
+
+PROJECT HISTORY & DECISIONS:
+{memory_blocks}
+
+CURRENT PROJECT STATUS:
+{short_term_memories}
+
+PROJECT QUERY: {user_input}
+
+Provide strategic project guidance considering:
+- Historical project data and outcomes
+- Previous decisions and their results
+- Team capabilities and constraints
+- Risk factors and mitigation strategies
+- Timeline and resource implications
+"""
+
+# Example: Using different templates
+templates = {
+    "technical": tech_template,
+    "creative": creative_template,
+    "project": project_template
+}
+
+def get_contextual_response(query: str, template_type: str = "technical"):
+    """Generate response using specific template type"""
+    
+    # Set the appropriate template
+    template = templates.get(template_type, tech_template) 
+    prompt_wrapper.set_template(template)
+    
+    # Generate prompt with memory context
+    enhanced_prompt = prompt_wrapper.compose_prompt(
+        user_input=query,
+        include_stm=True,
+        max_context_length=2000
+    )
+    
+    return enhanced_prompt
+
+# Test different templates
+test_queries = [
+    {"query": "How can I optimize database queries?", "type": "technical"},
+    {"query": "I need creative ideas for user engagement", "type": "creative"},
+    {"query": "What's our project timeline looking like?", "type": "project"}
+]
+
+for test in test_queries:
+    print(f"\n=== {test['type'].upper()} TEMPLATE ===")
+    print(f"Query: {test['query']}")
+    prompt = get_contextual_response(test["query"], test["type"])
+    print(f"Generated prompt: {len(prompt)} characters")
+    print(f"Preview: {prompt[:200]}...")
+```
 ```
 
-## CLI 도구
+## Advanced Features
 
-Greeum CLI 도구를 사용하는 방법을 알아봅니다.
+Explore Greeum v2.0.5's advanced capabilities for production use.
 
-### 기본 CLI 명령어
+### Hybrid Search Engine
 
-```bash
-# 장기 기억 추가
-python cli/memory_cli.py add -c "머신러닝 프로젝트의 첫 번째 단계로 데이터 수집을 시작했습니다."
+```python
+from greeum.core.search_engine import SearchEngine, BertReranker
 
-# 키워드로 기억 검색
-python cli/memory_cli.py search -k "머신러닝,프로젝트,데이터"
+# Initialize advanced search with BERT reranking
+try:
+    # Optional: Use BERT cross-encoder for better relevance
+    reranker = BertReranker("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    search_engine = SearchEngine(block_manager=block_manager, reranker=reranker)
+    print("🚀 Advanced search engine with BERT reranking enabled")
+except ImportError:
+    # Fallback to standard search
+    search_engine = SearchEngine(block_manager=block_manager)
+    print("📊 Standard search engine enabled")
 
-# 시간 표현으로 기억 검색
-python cli/memory_cli.py search-time -q "어제 한 일을 알려줘" -l "ko"
+# Perform advanced search
+complex_queries = [
+    "machine learning algorithms for natural language processing",
+    "database optimization techniques for large datasets",
+    "user authentication security best practices"
+]
 
-# 단기 기억 추가
-python cli/memory_cli.py stm "다음 미팅은 수요일 오후 3시입니다."
-
-# 단기 기억 조회
-python cli/memory_cli.py get-stm
-
-# 프롬프트 생성
-python cli/memory_cli.py prompt -i "프로젝트 진행 상황은 어떻게 되고 있나요?"
+for query in complex_queries:
+    print(f"\n🔍 Searching: {query}")
+    
+    # Advanced search with timing
+    results = search_engine.search(query, top_k=5)
+    
+    print(f"📈 Performance metrics:")
+    print(f"  - Total time: {results['timing']['total_time']:.0f}ms")
+    print(f"  - Vector search: {results['timing']['vector_search']:.0f}ms")
+    print(f"  - Reranking: {results['timing'].get('reranking', 0):.0f}ms")
+    
+    print(f"📚 Results ({len(results['blocks'])}):") 
+    for i, block in enumerate(results["blocks"][:3], 1):
+        relevance = block.get("relevance_score", "N/A")
+        print(f"  {i}. [Score: {relevance}] {block['context'][:80]}...")
 ```
 
-### CLI 고급 옵션
+### Memory Analytics and Monitoring
 
-```bash
-# 중요도를 지정하여 기억 추가
-python cli/memory_cli.py add -c "새로운 알고리즘 개발 완료" -i 0.9
+```python
+from greeum.core.usage_analytics import UsageAnalytics
+import time
 
-# 태그 지정하여 기억 추가
-python cli/memory_cli.py add -c "클라이언트 미팅에서 요구사항 변경됨" -t "미팅,중요,클라이언트"
+# Initialize analytics system
+analytics = UsageAnalytics()
 
-# 블록 세부 정보 보기
-python cli/memory_cli.py get-block -i 1
+# Simulate various operations with logging
+operations = [
+    {"type": "tool_usage", "tool": "add_memory", "duration": 120, "success": True},
+    {"type": "tool_usage", "tool": "search_memory", "duration": 85, "success": True},
+    {"type": "tool_usage", "tool": "quality_check", "duration": 45, "success": True},
+    {"type": "tool_usage", "tool": "search_memory", "duration": 95, "success": False},
+    {"type": "system_event", "tool": "optimization", "duration": 300, "success": True},
+]
 
-# 블록체인 무결성 검증
-python cli/memory_cli.py verify
+for op in operations:
+    analytics.log_event(
+        event_type=op["type"],
+        tool_name=op["tool"],
+        duration_ms=op["duration"],
+        success=op["success"],
+        metadata={"simulated": True}
+    )
+    time.sleep(0.1)  # Small delay between operations
 
-# 단기 기억 삭제
-python cli/memory_cli.py forget-stm -i "memory_id_here"
+# Get comprehensive usage statistics
+stats = analytics.get_usage_statistics(days=7)
 
-# 만료된 단기 기억 정리
-python cli/memory_cli.py cleanup-stm
+print("📊 Usage Analytics Report:")
+print(f"  Total Events: {stats['total_events']}")
+print(f"  Unique Sessions: {stats['unique_sessions']}")
+print(f"  Success Rate: {stats['success_rate']*100:.1f}%")
+print(f"  Avg Response Time: {stats['avg_response_time']:.0f}ms")
+
+if 'tool_usage' in stats:
+    print(f"\n🔧 Most Used Tools:")
+    for tool, count in stats['tool_usage'].items():
+        print(f"    {tool}: {count} uses")
+
+# Get quality trends
+quality_trends = analytics.get_quality_trends(days=7)
+if quality_trends:
+    print(f"\n📈 Quality Trends:")
+    print(f"  Average Quality: {quality_trends['avg_quality_score']:.3f}")
+    print(f"  High Quality Ratio: {quality_trends['high_quality_ratio']*100:.1f}%")
 ```
 
-## REST API 서버
+### Memory System Optimization
 
-Greeum REST API를 사용하는 방법을 알아봅니다.
+```python
+from greeum.core.duplicate_detector import DuplicateDetector
+from greeum.core.quality_validator import QualityValidator
 
-### 서버 실행
+class MemoryOptimizer:
+    """Advanced memory system optimization"""
+    
+    def __init__(self, block_manager, stm_manager):
+        self.block_manager = block_manager
+        self.stm_manager = stm_manager
+        self.duplicate_detector = DuplicateDetector(similarity_threshold=0.85)
+        self.quality_validator = QualityValidator()
+    
+    def optimize_long_term_memory(self, min_quality=0.5):
+        """Optimize LTM by removing low-quality and duplicate memories"""
+        all_blocks = self.block_manager.get_blocks(limit=1000)
+        
+        removed_count = 0
+        duplicate_count = 0
+        low_quality_count = 0
+        
+        print(f"🔧 Optimizing {len(all_blocks)} memories...")
+        
+        for block in all_blocks:
+            block_id = block['block_index']
+            content = block['context']
+            
+            # Check quality
+            quality_result = self.quality_validator.validate_memory_quality(content)
+            quality_score = quality_result['quality_score']
+            
+            # Check for duplicates
+            duplicate_result = self.duplicate_detector.check_duplicates(content)
+            
+            should_remove = False
+            reason = ""
+            
+            if quality_score < min_quality:
+                should_remove = True
+                reason = f"low quality ({quality_score:.3f})"
+                low_quality_count += 1
+            elif duplicate_result['is_duplicate'] and duplicate_result['max_similarity'] > 0.90:
+                should_remove = True
+                reason = f"duplicate ({duplicate_result['max_similarity']:.3f} similarity)"
+                duplicate_count += 1
+            
+            if should_remove:
+                # In a real implementation, you'd have a method to remove blocks
+                print(f"  ❌ Would remove block {block_id}: {reason}")
+                removed_count += 1
+        
+        print(f"\n✅ Optimization complete:")
+        print(f"  - Low quality removed: {low_quality_count}")
+        print(f"  - Duplicates removed: {duplicate_count}")
+        print(f"  - Total removed: {removed_count}")
+        print(f"  - Remaining: {len(all_blocks) - removed_count}")
+        
+        return {
+            "total_processed": len(all_blocks),
+            "removed": removed_count,
+            "low_quality": low_quality_count,
+            "duplicates": duplicate_count
+        }
+    
+    def optimize_short_term_memory(self, importance_threshold=0.8):
+        """Promote important STM entries to LTM"""
+        stm_memories = self.stm_manager.get_recent_memories(count=100)
+        
+        promoted_count = 0
+        
+        for memory in stm_memories:
+            importance = memory.get('importance', 0.5)
+            
+            if importance >= importance_threshold:
+                # Convert STM to LTM format
+                from greeum.text_utils import process_user_input
+                processed = process_user_input(memory['content'])
+                
+                self.block_manager.add_block(
+                    context=processed["context"],
+                    keywords=processed["keywords"],
+                    tags=processed["tags"] + ["promoted_from_stm"],
+                    embedding=processed["embedding"],
+                    importance=importance
+                )
+                
+                promoted_count += 1
+                print(f"⬆️ Promoted to LTM: {memory['content'][:50]}... (importance: {importance:.2f})")
+        
+        print(f"\n📈 STM Optimization: {promoted_count} memories promoted to LTM")
+        return promoted_count
 
-```bash
-# API 서버 실행
-python api/memory_api.py
+# Example usage
+optimizer = MemoryOptimizer(block_manager, stm_manager)
+
+print("=== Memory System Optimization ===")
+ltm_results = optimizer.optimize_long_term_memory(min_quality=0.6)
+stm_results = optimizer.optimize_short_term_memory(importance_threshold=0.7)
+
+print(f"\n📊 Optimization Summary:")
+print(f"  LTM processed: {ltm_results['total_processed']} memories")
+print(f"  LTM optimized: {ltm_results['removed']} removed")
+print(f"  STM promoted: {stm_results} memories")
+```
 ```
 
-서버는 기본적으로 http://localhost:5000 에서 실행됩니다.
+### Production Configuration
 
-### API 호출 예제
+```python
+# Production-ready configuration example
+import os
+from greeum import BlockManager, STMManager
+from greeum.core import DatabaseManager
 
-#### cURL을 사용한 API 호출
+# Environment-based configuration
+class ProductionGreeumConfig:
+    def __init__(self):
+        self.data_dir = os.getenv('GREEUM_DATA_DIR', '/opt/greeum/data')
+        self.db_type = os.getenv('GREEUM_DB_TYPE', 'sqlite')
+        self.log_level = os.getenv('GREEUM_LOG_LEVEL', 'INFO')
+        self.quality_threshold = float(os.getenv('GREEUM_QUALITY_THRESHOLD', '0.7'))
+        self.duplicate_threshold = float(os.getenv('GREEUM_DUPLICATE_THRESHOLD', '0.85'))
+        
+        # Database configuration
+        if self.db_type == 'postgresql':
+            self.connection_string = os.getenv('GREEUM_CONNECTION_STRING')
+        else:
+            self.connection_string = os.path.join(self.data_dir, 'memory.db')
+    
+    def initialize_system(self):
+        """Initialize production Greeum system"""
+        # Ensure data directory exists
+        os.makedirs(self.data_dir, exist_ok=True)
+        
+        # Initialize database manager
+        db_manager = DatabaseManager(
+            connection_string=self.connection_string,
+            db_type=self.db_type
+        )
+        
+        # Initialize components with production settings
+        block_manager = BlockManager(db_manager=db_manager)
+        stm_manager = STMManager(
+            db_manager=db_manager,
+            default_ttl=3600  # 1 hour default
+        )
+        
+        print(f"✅ Greeum production system initialized")
+        print(f"   Data directory: {self.data_dir}")
+        print(f"   Database type: {self.db_type}")
+        print(f"   Quality threshold: {self.quality_threshold}")
+        
+        return block_manager, stm_manager
+
+# Usage
+config = ProductionGreeumConfig()
+block_manager, stm_manager = config.initialize_system()
+```
+```
+
+## REST API Server
+
+Greeum v2.0.5 provides a comprehensive REST API for integration with web applications and services.
+
+### Starting the API Server
 
 ```bash
-# 상태 확인
+# Start the REST API server
+python -m greeum.api.memory_api
+
+# Server runs on http://localhost:5000
+# Swagger documentation available at http://localhost:5000/api/v1/docs
+```
+
+### API Endpoints Overview
+
+#### Health and Status
+```bash
+# Health check
 curl http://localhost:5000/api/v1/health
 
-# 블록 추가
-curl -X POST \
-  http://localhost:5000/api/v1/blocks \
-  -H "Content-Type: application/json" \
-  -d '{"context": "새로운 데이터 분석 결과가 나왔습니다.", "keywords": ["데이터", "분석", "결과"], "importance": 0.8}'
-
-# 키워드로 검색
-curl http://localhost:5000/api/v1/search?keywords=데이터,분석
-
-# 시간 표현으로 검색
-curl http://localhost:5000/api/v1/search/time?query=어제&language=ko
-
-# 단기 기억 추가
-curl -X POST \
-  http://localhost:5000/api/v1/stm \
-  -H "Content-Type: application/json" \
-  -d '{"content": "내일 회의에서 데이터 분석 결과를 발표합니다.", "ttl_type": "medium"}'
-
-# 단기 기억 조회
-curl http://localhost:5000/api/v1/stm
-
-# 프롬프트 생성
-curl -X POST \
-  http://localhost:5000/api/v1/prompt \
-  -H "Content-Type: application/json" \
-  -d '{"input": "데이터 분석 결과에 대해 알려줘", "include_stm": true}'
+# System statistics
+curl http://localhost:5000/api/v1/stats
 ```
 
-#### Python 클라이언트 예제
+#### Memory Management
+```bash
+# Add memory with quality validation
+curl -X POST http://localhost:5000/api/v1/memories \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Implemented new caching system that improved API response time by 40%",
+    "keywords": ["caching", "performance", "api"],
+    "importance": 0.8,
+    "validate_quality": true
+  }'
+
+# Search memories (hybrid approach)
+curl "http://localhost:5000/api/v1/memories/search?q=caching%20performance&method=hybrid&limit=5"
+
+# Get memory by ID
+curl http://localhost:5000/api/v1/memories/123
+```
+
+#### Quality and Analytics
+```bash
+# Validate content quality
+curl -X POST http://localhost:5000/api/v1/quality/validate \
+  -H "Content-Type: application/json" \
+  -d '{"content": "Content to validate", "importance": 0.7}'
+
+# Check for duplicates
+curl -X POST http://localhost:5000/api/v1/quality/duplicates \
+  -H "Content-Type: application/json" \
+  -d '{"content": "Content to check for duplicates"}'
+
+# Get usage analytics
+curl "http://localhost:5000/api/v1/analytics?days=30&detailed=true"
+```
+```
+
+### Python Client Library
 
 ```python
 import requests
 import json
+from typing import List, Dict, Optional
 
-# API 기본 URL
-base_url = "http://localhost:5000/api/v1"
-
-# 블록 추가
-def add_block(context, keywords=None, tags=None, importance=0.5):
-    url = f"{base_url}/blocks"
-    data = {
-        "context": context,
-        "keywords": keywords or [],
-        "tags": tags or [],
-        "importance": importance
-    }
-    response = requests.post(url, json=data)
-    return response.json()
-
-# 키워드로 검색
-def search_by_keywords(keywords, limit=10):
-    url = f"{base_url}/search"
-    params = {
-        "keywords": ",".join(keywords),
-        "limit": limit
-    }
-    response = requests.get(url, params=params)
-    return response.json()
-
-# 시간 표현으로 검색
-def search_by_time(query, language="auto", margin_hours=12):
-    url = f"{base_url}/search/time"
-    params = {
-        "query": query,
-        "language": language,
-        "margin_hours": margin_hours
-    }
-    response = requests.get(url, params=params)
-    return response.json()
-
-# 사용 예
-block = add_block(
-    context="새로운 머신러닝 알고리즘이 95% 정확도를 달성했습니다.",
-    keywords=["머신러닝", "알고리즘", "정확도"],
-    tags=["연구", "성공", "AI"],
-    importance=0.9
-)
-print(f"추가된 블록: {block}")
-
-results = search_by_keywords(["머신러닝", "알고리즘"])
-print(f"검색 결과: {len(results)} 블록 찾음")
-
-time_results = search_by_time("어제 연구한 내용", language="ko")
-print(f"시간 검색 결과: {len(time_results.get('blocks', []))} 블록 찾음")
-```
-
-## v0.6.0 새로운 기능
-
-Greeum v0.6.0에서 새로 추가된 주요 기능들을 소개합니다.
-
-### FaissVectorIndex 사용하기
-
-FAISS 벡터 인덱스를 사용하여 빠른 벡터 유사도 검색을 수행할 수 있습니다.
-
-```python
-from greeum.vector_index import FaissVectorIndex
-import numpy as np
-
-# FAISS 벡터 인덱스 생성 (384차원)
-vector_index = FaissVectorIndex(dim=384)
-
-# 벡터 데이터 준비
-block_indices = [1, 2, 3]
-vectors = [
-    np.random.randn(384).tolist(),  # 블록 1의 임베딩
-    np.random.randn(384).tolist(),  # 블록 2의 임베딩
-    np.random.randn(384).tolist()   # 블록 3의 임베딩
-]
-
-# 벡터를 인덱스에 추가
-vector_index.add_vectors(block_indices, vectors)
-
-# 쿼리 벡터로 유사도 검색
-query_vector = np.random.randn(384).tolist()
-results = vector_index.search(query_vector, top_k=5)
-
-print(f"검색 결과: {len(results)}개 찾음")
-for block_idx, similarity in results:
-    print(f"블록 {block_idx}: 유사도 {similarity:.4f}")
-```
-
-### SearchEngine과 BERT 재랭크 사용하기
-
-새로운 SearchEngine은 벡터 검색과 BERT 기반 재랭크를 결합합니다.
-
-```python
-from greeum import BlockManager
-from greeum.search_engine import SearchEngine, BertReranker
-
-# 블록 매니저에 데이터 추가
-block_manager = BlockManager()
-block_manager.add_block(
-    context="머신러닝 알고리즘을 사용하여 이미지 분류 모델을 개발했습니다.",
-    keywords=["머신러닝", "이미지", "분류", "모델"]
-)
-block_manager.add_block(
-    context="딥러닝 프레임워크를 활용한 자연어 처리 시스템을 구축했습니다.",
-    keywords=["딥러닝", "자연어", "처리", "시스템"]
-)
-
-# BERT 재랭크 초기화 (선택사항)
-try:
-    reranker = BertReranker(model_name="cross-encoder/ms-marco-MiniLM-L-6-v2")
-    print("BERT 재랭크 활성화됨")
-except ImportError:
-    reranker = None
-    print("BERT 재랭크 비활성화 (sentence-transformers 미설치)")
-
-# 검색 엔진 초기화
-search_engine = SearchEngine(block_manager=block_manager, reranker=reranker)
-
-# 검색 실행
-query = "머신러닝으로 이미지를 분석하는 방법"
-results = search_engine.search(query, top_k=3)
-
-print(f"검색 결과: {len(results['blocks'])}개 블록")
-print(f"성능 지표: {results['timing']}")
-
-for block in results["blocks"]:
-    relevance = block.get("relevance_score", "N/A")
-    print(f"[관련도: {relevance}] {block['context'][:50]}...")
-```
-
-### STMWorkingSet으로 작업 기억 관리
-
-인간의 작업 기억을 모사한 STMWorkingSet을 사용할 수 있습니다.
-
-```python
-from greeum import STMWorkingSet
-from datetime import datetime
-
-# 작업 기억 세트 초기화 (최대 8개 슬롯, 10분 TTL)
-working_set = STMWorkingSet(capacity=8, ttl_seconds=600)
-
-# 다양한 유형의 기억 추가
-working_set.add(
-    content="프로젝트 킥오프 미팅이 오후 2시에 예정되어 있습니다.",
-    speaker="user",
-    task_id="project-001",
-    step_id="meeting-setup"
-)
-
-working_set.add(
-    content="클라이언트 요구사항 문서를 검토해야 합니다.",
-    speaker="assistant",
-    task_id="project-001",
-    step_id="requirement-review",
-    metadata={"priority": "high", "deadline": "today"}
-)
-
-working_set.add(
-    content="팀 멤버들에게 작업 분배를 완료했습니다.",
-    speaker="user",
-    task_id="project-001",
-    step_id="task-assignment"
-)
-
-# 최근 기억 조회
-recent_memories = working_set.get_recent(n=5)
-print(f"최근 {len(recent_memories)}개 기억:")
-
-for memory in recent_memories:
-    task_info = f"[{memory.task_id}/{memory.step_id}]" if memory.task_id else ""
-    print(f"{task_info} {memory.speaker}: {memory.content}")
-    if memory.metadata:
-        print(f"  메타데이터: {memory.metadata}")
-    print(f"  시간: {memory.timestamp}")
-    print("-" * 40)
-
-# 전체 기억 조회
-all_memories = working_set.get_recent()
-print(f"\n전체 작업 기억: {len(all_memories)}개")
-```
-
-### 통합 워크플로우 예제
-
-v0.6.0의 새 기능들을 조합한 완전한 워크플로우:
-
-```python
-from greeum import BlockManager, STMWorkingSet
-from greeum.search_engine import SearchEngine, BertReranker
-from greeum.vector_index import FaissVectorIndex
-
-class AdvancedMemorySystem:
-    def __init__(self):
-        # 핵심 컴포넌트 초기화
-        self.block_manager = BlockManager()
-        self.working_set = STMWorkingSet(capacity=10, ttl_seconds=1800)  # 30분
-        
-        # 검색 엔진 설정 (BERT 재랭크 포함)
-        try:
-            reranker = BertReranker()
-            self.search_engine = SearchEngine(self.block_manager, reranker)
-            print("고급 검색 엔진 활성화 (BERT 재랭크 포함)")
-        except ImportError:
-            self.search_engine = SearchEngine(self.block_manager)
-            print("기본 검색 엔진 활성화")
+class GreeumAPIClient:
+    """Professional Python client for Greeum v2.0.5 API"""
     
-    def add_conversation_turn(self, user_input: str, assistant_response: str, 
-                            task_id: str = None, step_id: str = None):
-        """대화 턴을 장기/단기 기억에 저장"""
-        # 단기 기억에 대화 저장
-        self.working_set.add(
-            content=user_input,
-            speaker="user",
-            task_id=task_id,
-            step_id=step_id
-        )
+    def __init__(self, base_url: str = "http://localhost:5000/api/v1", api_key: Optional[str] = None):
+        self.base_url = base_url
+        self.session = requests.Session()
         
-        self.working_set.add(
-            content=assistant_response,
-            speaker="assistant",
-            task_id=task_id,
-            step_id=step_id
-        )
-        
-        # 중요한 정보는 장기 기억에도 저장
-        combined_context = f"사용자: {user_input}\n어시스턴트: {assistant_response}"
-        self.block_manager.add_block(
-            context=combined_context,
-            keywords=["대화", "상호작용"],
-            importance=0.6
-        )
+        if api_key:
+            self.session.headers.update({"Authorization": f"Bearer {api_key}"})
     
-    def smart_search(self, query: str, include_working_memory: bool = True):
-        """장기 기억과 작업 기억을 모두 고려한 스마트 검색"""
-        # 장기 기억에서 검색
-        long_term_results = self.search_engine.search(query, top_k=5)
-        
-        result = {
-            "long_term": long_term_results["blocks"],
-            "timing": long_term_results["timing"]
+    def add_memory(self, content: str, keywords: List[str] = None, 
+                   importance: float = 0.7, validate_quality: bool = True) -> Dict:
+        """Add new memory with optional quality validation"""
+        data = {
+            "content": content,
+            "keywords": keywords or [],
+            "importance": importance,
+            "validate_quality": validate_quality
         }
         
-        # 작업 기억 포함
-        if include_working_memory:
-            working_memories = self.working_set.get_recent(n=5)
-            result["working_memory"] = [
-                {
-                    "content": mem.content,
-                    "speaker": mem.speaker,
-                    "timestamp": mem.timestamp.isoformat(),
-                    "task_info": f"{mem.task_id}/{mem.step_id}" if mem.task_id else None
-                }
-                for mem in working_memories
-            ]
+        response = self.session.post(f"{self.base_url}/memories", json=data)
+        response.raise_for_status()
+        return response.json()
+    
+    def search_memories(self, query: str, method: str = "hybrid", 
+                       limit: int = 10, min_quality: float = None) -> Dict:
+        """Search memories using various methods"""
+        params = {
+            "q": query,
+            "method": method,  # keyword, embedding, hybrid
+            "limit": limit
+        }
         
-        return result
-
-# 사용 예제
-memory_system = AdvancedMemorySystem()
-
-# 대화 시뮬레이션
-memory_system.add_conversation_turn(
-    user_input="머신러닝 프로젝트의 데이터 전처리 방법을 알려줘",
-    assistant_response="데이터 전처리에는 결측값 처리, 정규화, 피처 엔지니어링 등이 포함됩니다.",
-    task_id="ml-project",
-    step_id="data-preprocessing"
-)
-
-memory_system.add_conversation_turn(
-    user_input="정규화 방법 중 어떤 것이 가장 효과적인가?",
-    assistant_response="MinMax 스케일링과 Standard 스케일링이 일반적으로 사용되며, 데이터 분포에 따라 선택합니다.",
-    task_id="ml-project",
-    step_id="normalization-discussion"
-)
-
-# 스마트 검색 실행
-search_results = memory_system.smart_search("데이터 정규화 방법")
-
-print(f"장기 기억 검색 결과: {len(search_results['long_term'])}개")
-print(f"작업 기억: {len(search_results['working_memory'])}개")
-print(f"검색 성능: {search_results['timing']}")
-```
-
-## 고급 기능
-
-Greeum의 고급 기능을 사용하는 방법을 알아봅니다.
-
-### 하이브리드 검색
-
-```python
-from greeum.temporal_reasoner import TemporalReasoner
-from greeum.text_utils import process_user_input
-
-# 설정
-block_manager = BlockManager()
-temporal_reasoner = TemporalReasoner(db_manager=block_manager)
-
-# 사용자 쿼리 처리
-query = "어제 머신러닝 프로젝트에서 발생한 문제에 대해 알려줘"
-processed = process_user_input(query)
-
-# 하이브리드 검색 실행
-results = temporal_reasoner.hybrid_search(
-    query=query,
-    embedding=processed["embedding"],
-    keywords=processed["keywords"],
-    time_weight=0.4,       # 시간 가중치 증가
-    embedding_weight=0.4,  # 임베딩 가중치
-    keyword_weight=0.2,    # 키워드 가중치
-    top_k=10               # 상위 10개 결과
-)
-
-print(f"하이브리드 검색 결과: {len(results.get('blocks', []))} 블록 찾음")
-print(f"적용된 가중치: {results.get('weights')}")
-
-# 결과 표시
-for block in results.get('blocks', []):
-    print(f"[점수: {block.get('relevance_score', 0):.2f}] {block['context'][:50]}...")
-```
-
-### 임베딩 모델 커스텀
-
-```python
-from greeum import BlockManager
-from greeum.embedding_models import DefaultEmbedding
-
-# 기본 임베딩 모델 대신 커스텀 모델 구현
-class CustomEmbedding(DefaultEmbedding):
-    def encode(self, text):
-        # 여기에 원하는 외부 임베딩 모델을 호출하는 코드 작성
-        # 예: sentence-transformers, OpenAI embeddings 등
-        print(f"커스텀 임베딩: '{text[:30]}...'")
+        if min_quality:
+            params["min_quality"] = min_quality
         
-        # 예시 임베딩 반환 (실제 구현에서는 실제 모델 사용)
-        import numpy as np
-        vector = np.random.randn(384)  # 384차원 랜덤 벡터
-        return vector.tolist()
+        response = self.session.get(f"{self.base_url}/memories/search", params=params)
+        response.raise_for_status()
+        return response.json()
+    
+    def validate_quality(self, content: str, importance: float = 0.7) -> Dict:
+        """Validate content quality"""
+        data = {"content": content, "importance": importance}
+        response = self.session.post(f"{self.base_url}/quality/validate", json=data)
+        response.raise_for_status()
+        return response.json()
+    
+    def check_duplicates(self, content: str, threshold: float = 0.85) -> Dict:
+        """Check for duplicate content"""
+        data = {"content": content, "threshold": threshold}
+        response = self.session.post(f"{self.base_url}/quality/duplicates", json=data)
+        response.raise_for_status()
+        return response.json()
+    
+    def get_analytics(self, days: int = 7, detailed: bool = False) -> Dict:
+        """Get usage analytics"""
+        params = {"days": days, "detailed": detailed}
+        response = self.session.get(f"{self.base_url}/analytics", params=params)
+        response.raise_for_status()
+        return response.json()
+    
+    def get_system_stats(self) -> Dict:
+        """Get system statistics"""
+        response = self.session.get(f"{self.base_url}/stats")
+        response.raise_for_status()
+        return response.json()
 
-# 커스텀 임베딩 모델로 블록 매니저 초기화
-custom_embedding = CustomEmbedding()
-block_manager = BlockManager(embedding_model=custom_embedding)
+# Example usage
+client = GreeumAPIClient()
 
-# 블록 추가 시 커스텀 임베딩 사용
-block = block_manager.add_block(
-    context="커스텀 임베딩 모델을 사용한 기억 저장 테스트입니다.",
-    keywords=["임베딩", "커스텀", "테스트"]
+# Add high-quality memory
+print("Adding memory...")
+memory_result = client.add_memory(
+    content="Successfully implemented distributed caching system using Redis cluster. Achieved 40% performance improvement in API response times and 60% reduction in database load.",
+    keywords=["redis", "caching", "performance", "distributed"],
+    importance=0.9,
+    validate_quality=True
 )
 
-print(f"임베딩 벡터 길이: {len(block['embedding'])}")
+print(f"✅ Memory added: {memory_result['success']}")
+if 'quality_score' in memory_result:
+    print(f"📊 Quality score: {memory_result['quality_score']:.3f}")
+
+# Search with different methods
+print("\n🔍 Searching memories...")
+search_methods = ["keyword", "embedding", "hybrid"]
+
+for method in search_methods:
+    results = client.search_memories(
+        query="caching performance optimization",
+        method=method,
+        limit=3
+    )
+    
+    print(f"\n{method.upper()} search: {len(results.get('memories', []))} results")
+    for i, memory in enumerate(results.get('memories', [])[:2], 1):
+        score = memory.get('relevance_score', 'N/A')
+        print(f"  {i}. [Score: {score}] {memory['content'][:60]}...")
+
+# Get analytics
+print("\n📈 System Analytics:")
+analytics = client.get_analytics(days=30, detailed=True)
+print(f"Total memories: {analytics.get('total_memories', 'N/A')}")
+print(f"Average quality: {analytics.get('avg_quality_score', 'N/A')}")
+print(f"Search performance: {analytics.get('avg_search_time', 'N/A')}ms")
+
+# Validate content quality
+print("\n🔍 Quality validation:")
+test_content = "This is a very short text."
+quality_result = client.validate_quality(test_content)
+print(f"Quality score: {quality_result['quality_score']:.3f}")
+print(f"Suggestions: {', '.join(quality_result.get('suggestions', []))}")
 ```
 
-이 튜토리얼을 통해 Greeum v0.6.0의 기본 기능부터 최신 고급 기능까지 다양한 사용법을 배웠습니다. v0.6.0에서 새로 추가된 FaissVectorIndex, SearchEngine, STMWorkingSet 등의 기능을 활용하여 더욱 강력한 메모리 시스템을 구축할 수 있습니다. 더 많은 정보와 세부 사항은 [API 레퍼런스](api-reference.md)를 참조하세요. 
+---
+
+## Conclusion
+
+This comprehensive tutorial covered Greeum v2.0.5's advanced features:
+
+✅ **Quality Management**: 7-factor assessment system
+✅ **Advanced CLI**: New `quality`, `analytics`, `optimize` commands
+✅ **MCP Integration**: 12 tools for Claude Code
+✅ **Multi-language Support**: Korean, English, Japanese, Chinese
+✅ **Production Features**: Analytics, optimization, monitoring
+✅ **REST API**: Complete web service integration
+
+For more information:
+- [Get Started Guide](get-started.md) - Installation and setup
+- [API Reference](api-reference.md) - Complete API documentation  
+- [Official Website](https://greeum.app) - Latest updates and resources
+
+Contact: playtart@play-t.art
+```
+
+ 

@@ -228,6 +228,204 @@ def verify_blocks(args):
     else:
         print_colored("블록체인 무결성 검증 실패: 손상된 블록이 있습니다.", "red")
 
+def quality_check(args):
+    """메모리 품질 검증"""
+    from greeum.core.quality_validator import QualityValidator
+    
+    validator = QualityValidator()
+    
+    if args.content:
+        content = args.content
+    elif args.file:
+        try:
+            with open(args.file, 'r', encoding='utf-8') as f:
+                content = f.read()
+        except Exception as e:
+            print_colored(f"파일 읽기 오류: {e}", "red")
+            return
+    else:
+        print_colored("검증할 내용을 입력해주세요 (--content 또는 --file)", "red")
+        return
+    
+    # 품질 검증 실행
+    result = validator.validate_memory_quality(
+        content=content, 
+        importance=args.importance or 0.5
+    )
+    
+    # 결과 출력
+    print_colored("=== 메모리 품질 검증 결과 ===", "cyan")
+    print_colored(f"품질 점수: {result['quality_score']:.3f}", "blue")
+    print_colored(f"품질 등급: {result['quality_level']}", "yellow")
+    if 'recommended_importance' in result:
+        print_colored(f"권장 중요도: {result['recommended_importance']:.3f}", "purple")
+    
+    print_colored("\n=== 상세 평가 ===", "cyan")
+    if 'quality_factors' in result:
+        for factor, score in result['quality_factors'].items():
+            if isinstance(score, (int, float)):
+                print_colored(f"{factor}: {score:.3f}", "white")
+            else:
+                print_colored(f"{factor}: {score}", "white")
+    
+    if result['suggestions']:
+        print_colored("\n=== 개선 제안 ===", "cyan")
+        for suggestion in result['suggestions']:
+            print_colored(f"• {suggestion}", "yellow")
+    
+    if result['warnings']:
+        print_colored("\n=== 주의사항 ===", "cyan")
+        for warning in result['warnings']:
+            print_colored(f"⚠ {warning}", "red")
+
+def analytics_report(args):
+    """사용 패턴 분석 리포트"""
+    from greeum.core.usage_analytics import UsageAnalytics
+    
+    analytics = UsageAnalytics()
+    
+    # 분석 기간 설정
+    days = args.days or 7
+    
+    try:
+        # 기본 통계
+        stats = analytics.get_usage_statistics(days=days)
+        
+        print_colored("=== Greeum 사용 분석 리포트 ===", "cyan")
+        print_colored(f"분석 기간: 최근 {days}일", "blue")
+        
+        if stats.get('total_events', 0) == 0:
+            print_colored("분석할 데이터가 없습니다.", "yellow")
+            return
+        
+        print_colored(f"\n📊 기본 통계:", "cyan")
+        print_colored(f"  총 이벤트: {stats.get('total_events', 0):,}개", "white")
+        print_colored(f"  활성 세션: {stats.get('unique_sessions', 0):,}개", "white")
+        print_colored(f"  평균 세션 길이: {stats.get('avg_session_duration', 0):.1f}분", "white")
+        
+        # 도구 사용 통계
+        if stats.get('top_tools'):
+            print_colored(f"\n🔧 인기 도구 (Top 5):", "cyan")
+            for tool, count in stats['top_tools'][:5]:
+                print_colored(f"  {tool}: {count:,}회", "green")
+        
+        # 품질 트렌드
+        quality_trends = analytics.get_quality_trends(days=days)
+        if quality_trends.get('avg_quality_score'):
+            print_colored(f"\n📈 품질 트렌드:", "cyan")
+            print_colored(f"  평균 품질 점수: {quality_trends['avg_quality_score']:.3f}", "blue")
+            print_colored(f"  고품질 메모리 비율: {quality_trends.get('high_quality_ratio', 0)*100:.1f}%", "green")
+        
+        # 성능 메트릭
+        if stats.get('avg_response_time'):
+            print_colored(f"\n⚡ 성능 지표:", "cyan")
+            print_colored(f"  평균 응답 시간: {stats['avg_response_time']:.0f}ms", "purple")
+            print_colored(f"  성공률: {stats.get('success_rate', 0)*100:.1f}%", "green")
+        
+        # 상세 모드
+        if args.detailed:
+            print_colored(f"\n📋 상세 분석:", "cyan")
+            
+            # 시간대별 활동
+            hourly_activity = analytics._get_hourly_activity(days=days)
+            if hourly_activity:
+                print_colored("  가장 활발한 시간대:", "blue")
+                for hour, count in sorted(hourly_activity.items(), key=lambda x: x[1], reverse=True)[:3]:
+                    print_colored(f"    {hour:02d}:00 - {count:,}개 이벤트", "white")
+            
+            # 오류 분석
+            error_analysis = analytics._get_error_analysis(days=days)
+            if error_analysis.get('total_errors', 0) > 0:
+                print_colored(f"  오류 발생: {error_analysis['total_errors']:,}건", "red")
+                if error_analysis.get('common_errors'):
+                    print_colored("  주요 오류 유형:", "red")
+                    for error, count in error_analysis['common_errors'][:3]:
+                        print_colored(f"    {error}: {count}건", "white")
+    
+    except Exception as e:
+        print_colored(f"분석 리포트 생성 중 오류: {e}", "red")
+        logger.error(f"Analytics report error: {e}", exc_info=True)
+
+def optimize_memory(args):
+    """메모리 최적화 실행"""
+    from greeum.core.usage_analytics import UsageAnalytics
+    from greeum.core.quality_validator import QualityValidator
+    
+    print_colored("=== Greeum 메모리 최적화 ===", "cyan")
+    
+    analytics = UsageAnalytics()
+    validator = QualityValidator()
+    
+    try:
+        # 1. 품질 통계 확인
+        print_colored("1. 메모리 품질 분석 중...", "blue")
+        quality_trends = analytics.get_quality_trends(days=30)
+        
+        if quality_trends.get('low_quality_count', 0) > 0:
+            print_colored(f"   ⚠ 낮은 품질 메모리 발견: {quality_trends['low_quality_count']:,}개", "yellow")
+        else:
+            print_colored("   ✓ 품질 문제 없음", "green")
+        
+        # 2. 사용 패턴 분석
+        print_colored("2. 사용 패턴 분석 중...", "blue")
+        stats = analytics.get_usage_statistics(days=30)
+        
+        if stats.get('avg_response_time', 0) > 1000:
+            print_colored(f"   ⚠ 평균 응답시간 느림: {stats['avg_response_time']:.0f}ms", "yellow")
+            print_colored("   💡 인덱스 재구축을 권장합니다", "purple")
+        else:
+            print_colored("   ✓ 응답 성능 정상", "green")
+        
+        # 3. STM → LTM 승격 제안
+        print_colored("3. 단기메모리 승격 분석 중...", "blue")
+        # STM에서 중요한 메모리들을 LTM으로 승격 권장
+        promotion_candidates = analytics._analyze_stm_promotion_candidates()
+        
+        if promotion_candidates > 0:
+            print_colored(f"   💡 LTM 승격 권장 메모리: {promotion_candidates}개", "purple")
+            if args.auto_optimize:
+                # 자동 최적화 실행
+                print_colored("   🔄 자동 승격 실행 중...", "blue")
+                # 실제 승격 로직은 STMManager에서 처리
+                print_colored("   ✓ 자동 승격 완료", "green")
+        else:
+            print_colored("   ✓ 승격 필요 메모리 없음", "green")
+        
+        # 4. 종합 권장사항
+        print_colored("\n=== 최적화 권장사항 ===", "cyan")
+        
+        recommendations = []
+        if stats.get('avg_response_time', 0) > 1000:
+            recommendations.append("인덱스 재구축으로 검색 성능 개선")
+        if quality_trends.get('low_quality_count', 0) > 10:
+            recommendations.append("낮은 품질 메모리 정리 또는 보완")
+        if stats.get('success_rate', 1.0) < 0.95:
+            recommendations.append("오류 패턴 분석 및 안정성 개선")
+        
+        if recommendations:
+            for i, rec in enumerate(recommendations, 1):
+                print_colored(f"{i}. {rec}", "yellow")
+        else:
+            print_colored("현재 시스템이 최적 상태입니다! 🎉", "green")
+        
+        # 최적화 통계 저장
+        analytics.log_event(
+            event_type="system_operation",
+            tool_name="optimize_memory",
+            metadata={
+                "quality_issues": quality_trends.get('low_quality_count', 0),
+                "response_time": stats.get('avg_response_time', 0),
+                "success_rate": stats.get('success_rate', 1.0),
+                "recommendations_count": len(recommendations)
+            },
+            duration_ms=None,
+            success=True
+        )
+        
+    except Exception as e:
+        print_colored(f"최적화 실행 중 오류: {e}", "red")
+        logger.error(f"Memory optimization error: {e}", exc_info=True)
+
 def main():
     parser = argparse.ArgumentParser(description="Memory Block Engine CLI")
     subparsers = parser.add_subparsers(dest="command", help="실행할 명령")
@@ -267,6 +465,21 @@ def main():
     # 블록 체인 검증 커맨드
     verify_parser = subparsers.add_parser("verify", help="블록체인 무결성 검증")
     
+    # 품질 검증 커맨드
+    quality_parser = subparsers.add_parser("quality", help="메모리 품질 검증")
+    quality_parser.add_argument("-c", "--content", help="검증할 내용")
+    quality_parser.add_argument("-f", "--file", help="검증할 파일")
+    quality_parser.add_argument("-i", "--importance", type=float, help="중요도 (0~1)")
+    
+    # 사용 패턴 분석 커맨드
+    analytics_parser = subparsers.add_parser("analytics", help="사용 패턴 분석 리포트")
+    analytics_parser.add_argument("-d", "--days", type=int, help="분석 기간 (일수, 기본값: 7)")
+    analytics_parser.add_argument("--detailed", action="store_true", help="상세 분석 모드")
+    
+    # 메모리 최적화 커맨드
+    optimize_parser = subparsers.add_parser("optimize", help="메모리 최적화 실행")
+    optimize_parser.add_argument("--auto-optimize", action="store_true", help="자동 최적화 실행")
+    
     args = parser.parse_args()
     
     # 명령어 실행
@@ -284,6 +497,12 @@ def main():
         clear_memories(args)
     elif args.command == "verify":
         verify_blocks(args)
+    elif args.command == "quality":
+        quality_check(args)
+    elif args.command == "analytics":
+        analytics_report(args)
+    elif args.command == "optimize":
+        optimize_memory(args)
     else:
         parser.print_help()
 

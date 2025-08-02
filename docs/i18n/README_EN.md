@@ -1,254 +1,228 @@
-# 🧠 Greeum v2.0.1
+# 🧠 Greeum v2.0.5
 
 <p align="center">
   <a href="../../README.md">🇰🇷 한국어</a> |
-  <a href="README_EN.md">🇺🇸 English</a>
+  <a href="README_EN.md">🇺🇸 English</a> |
+  <a href="README_JP.md">🇯🇵 日本語</a> |
+  <a href="README_ZH.md">🇨🇳 中文</a>
 </p>
 
-Multilingual LLM-independent Memory Management System
+Intelligent Memory Management System for LLMs
 
 ## 📌 Overview
 
-**Greeum** (pronounced: gri-eum) is a **universal memory module** that can connect to any LLM (Large Language Model) and provides the following features:
-- Long-term tracking of user utterances, goals, emotions, and intentions
-- Recall of memories related to the current context
-- Recognition and processing of temporal expressions in multilingual environments
-- Functions as an "AI with memory"
+**Greeum** (pronounced: gri-eum) is a **universal memory module** that connects to any LLM (Large Language Model):
 
-The name "Greeum" is inspired by the Korean word "그리움" (longing/reminiscence), perfectly capturing the essence of the memory system.
+- **Long-term Memory**: Permanent storage of user context, preferences, and goals
+- **Short-term Memory**: Session-based important information management
+- **Intelligent Search**: Context-based automatic memory recall
+- **Quality Management**: Automatic memory quality verification and optimization
+- **Multilingual Support**: Full support for Korean, English, Japanese, and Chinese
 
-Greeum is an LLM-independent memory system based on the RAG (Retrieval-Augmented Generation) architecture. It implements key components of RAG including information storage and retrieval (block_manager.py), related memory management (cache_manager.py), and prompt augmentation (prompt_wrapper.py) to generate more accurate and contextually relevant responses.
+The name "Greeum" is inspired by the Korean word "그리움" (longing/reminiscence), symbolizing AI's ability to remember and long for the past.
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+# Install with pipx (recommended)
+pipx install greeum
+
+# Or install with pip
+pip install greeum
+```
+
+### Basic Usage
+
+```bash
+# Add memory
+python3 -m greeum.cli memory add "Started a new project today. Planning to develop a web application with Python."
+
+# Search memories
+python3 -m greeum.cli memory search "project Python" --limit 5
+
+# Analyze long-term memory
+python3 -m greeum.cli ltm analyze --period 30d --trends
+
+# Add short-term memory
+python3 -m greeum.cli stm add "Temporary note" --ttl 1h
+
+# Run MCP server
+python3 -m greeum.mcp.claude_code_mcp_server
+```
 
 ## 🔑 Key Features
 
-- **Blockchain-like Long-Term Memory (LTM)**: Block-based memory storage with immutability
-- **TTL-based Short-Term Memory (STM)**: Efficient management of temporarily important information
-- **Semantic Relevance**: Keyword/tag/vector-based memory recall system
-- **Waypoint Cache**: Automatic retrieval of memories related to the current context
-- **Prompt Composer**: Automatic generation of LLM prompts with relevant memories
-- **Temporal Reasoner**: Advanced temporal expression recognition in multilingual environments
-- **Multilingual Support**: Automatic language detection and processing for Korean, English, etc.
-- **Model Control Protocol**: Built-in MCP server from v2.0.1 for direct integration with Claude Code and other external tools
+### 📚 Multi-layer Memory System
+- **LTM (Long-term Memory)**: Permanent storage with blockchain-like structure
+- **STM (Short-term Memory)**: TTL-based temporary memory management
+- **Waypoint Cache**: Automatic loading of context-related memories
 
-## ⚙️ Installation
+### 🧠 Intelligent Memory Management
+- **Quality Verification**: Automatic quality assessment based on 7 metrics
+- **Duplicate Detection**: Prevents duplicates with 85% similarity threshold
+- **Usage Analysis**: Pattern analysis and optimization recommendations
+- **Auto Cleanup**: Quality-based memory cleanup
 
-### 🚀 Recommended: pipx Installation
+### 🔍 Advanced Search
+- **Keyword Search**: Tag and keyword-based search
+- **Vector Search**: Semantic similarity search
+- **Temporal Search**: Natural language time expressions like "3 days ago", "last week"
+- **Hybrid Search**: Combined keyword + vector + temporal search
 
-```bash
-# Install pipx if you don't have it
-brew install pipx  # macOS
-# or pip install --user pipx
+### 🌐 MCP Integration
+- **Claude Code**: Complete integration with 12 MCP tools
+- **Real-time Sync**: Real-time memory creation/search reflection
+- **Quality Verification**: Automatic quality check and feedback
 
-# Install Greeum v2.0 with all features
-pipx install greeum[all]
+## 🛠️ Advanced Usage
 
-# Verify installation
-greeum --version
-```
-
-### 📋 Claude Code MCP Integration
-
-```bash
-# Start MCP server
-greeum mcp serve
-
-# Available 9 memory tools in Claude Code:
-# - add_memory, search_memory, get_memory_stats
-# - ltm_analyze, ltm_verify, ltm_export  
-# - stm_add, stm_promote, stm_cleanup
-```
-
-### 🔧 For Developers: Install from Source
-
-```bash
-git clone https://github.com/DryRainEnt/Greeum.git
-cd Greeum
-pip install -e .
-```
-
-## 🧪 Usage
-
-### CLI Interface
-
-```bash
-# Add long-term memory
-python cli/memory_cli.py add -c "Started a new project and it's really exciting"
-
-# Search memories by keywords
-python cli/memory_cli.py search -k "project,exciting"
-
-# Search memories by temporal expression
-python cli/memory_cli.py search-time -q "What did I do 3 days ago?" -l "en"
-
-# Add short-term memory
-python cli/memory_cli.py stm "The weather is nice today"
-
-# Get short-term memories
-python cli/memory_cli.py get-stm
-
-# Generate prompt
-python cli/memory_cli.py prompt -i "How is the project going?"
-```
-
-### REST API Server
-
-```bash
-# Run API server
-python api/memory_api.py
-```
-
-Web interface: http://localhost:5000
-
-API endpoints:
-- GET `/api/v1/health` - Health check
-- GET `/api/v1/blocks` - List blocks
-- POST `/api/v1/blocks` - Add block
-- GET `/api/v1/search?keywords=keyword1,keyword2` - Search by keywords
-- GET `/api/v1/search/time?query=yesterday&language=en` - Search by temporal expression
-- GET, POST, DELETE `/api/v1/stm` - Manage short-term memories
-- POST `/api/v1/prompt` - Generate prompt
-- GET `/api/v1/verify` - Verify blockchain integrity
-
-### Python Library
-
+### API Usage
 ```python
-from greeum import BlockManager, STMManager, CacheManager, PromptWrapper
-from greeum.text_utils import process_user_input
-from greeum.temporal_reasoner import TemporalReasoner
+from greeum import BlockManager, STMManager, PromptWrapper
 
-# Process user input
-user_input = "Started a new project and it's really exciting"
-processed = process_user_input(user_input)
+# Initialize memory system
+bm = BlockManager()
+stm = STMManager()
+pw = PromptWrapper()
 
-# Store memory with block manager
-block_manager = BlockManager()
-block = block_manager.add_block(
-    context=processed["context"],
-    keywords=processed["keywords"],
-    tags=processed["tags"],
-    embedding=processed["embedding"],
-    importance=processed["importance"]
+# Add memory
+bm.add_block(
+    context="Important meeting content",
+    keywords=["meeting", "decisions"],
+    importance=0.9
 )
 
-# Time-based search (multilingual)
-temporal_reasoner = TemporalReasoner(db_manager=block_manager, default_language="auto")
-time_query = "What did I do 3 days ago?"
-time_results = temporal_reasoner.search_by_time_reference(time_query)
-
-# Generate prompt
-cache_manager = CacheManager(block_manager=block_manager)
-prompt_wrapper = PromptWrapper(cache_manager=cache_manager)
-
-user_question = "How is the project going?"
-prompt = prompt_wrapper.compose_prompt(user_question)
-
-# Pass to LLM
-# llm_response = call_your_llm(prompt)
+# Generate context-based prompt
+enhanced_prompt = pw.compose_prompt("What did we decide in the last meeting?")
 ```
 
-## 🧱 Architecture
-
+### MCP Tools (for Claude Code)
 ```
-greeum/
-├── greeum/                # Core library
-│   ├── block_manager.py    # Long-term memory management
-│   ├── stm_manager.py      # Short-term memory management
-│   ├── cache_manager.py    # Waypoint cache
-│   ├── prompt_wrapper.py   # Prompt composition
-│   ├── text_utils.py       # Text processing utilities
-│   ├── temporal_reasoner.py # Temporal reasoning
-│   ├── embedding_models.py  # Embedding model integration
-├── api/                   # REST API interface
-├── cli/                   # Command-line tools
-├── data/                  # Data storage directory
-├── tests/                 # Test suite
-```
-
-## Branch Management Rules
-
-- **main**: Stable release version branch
-- **dev**: Core feature development branch (merged to main after development and testing)
-- **test-collect**: Performance metrics and A/B test data collection branch
-
-## 📊 Performance Tests
-
-Greeum conducts performance tests in the following areas:
-
-### T-GEN-001: Response Specificity Increase Rate
-- Measurement of response quality improvement when using Greeum memory
-- 18.6% average quality improvement confirmed
-- 4.2 specific information inclusions increase
-
-### T-MEM-002: Memory Search Latency
-- Measurement of search speed improvement through waypoint cache
-- 5.04x average speed improvement confirmed
-- Up to 8.67x speed improvement for 1,000+ memory blocks
-
-### T-API-001: API Call Efficiency
-- Measurement of re-questioning reduction rate due to memory-based context provision
-- 78.2% reduction in re-questioning necessity confirmed
-- Cost reduction effect due to decreased API calls
-
-## 📊 Memory Block Structure
-
-```json
-{
-  "block_index": 143,
-  "timestamp": "2025-05-08T01:02:33",
-  "context": "Started a new project and it's really exciting",
-  "keywords": ["project", "start", "exciting"],
-  "tags": ["positive", "beginning", "motivation"],
-  "embedding": [0.131, 0.847, ...],
-  "importance": 0.91,
-  "hash": "...",
-  "prev_hash": "..."
-}
+Available tools:
+- add_memory: Add new memory
+- search_memory: Search memories
+- get_memory_stats: Memory statistics
+- ltm_analyze: Long-term memory analysis
+- stm_add: Add short-term memory
+- quality_check: Quality verification
+- check_duplicates: Duplicate checking
+- usage_analytics: Usage analysis
+- ltm_verify: Integrity verification
+- ltm_export: Data export
+- stm_promote: STM→LTM promotion
+- stm_cleanup: STM cleanup
 ```
 
-## 🔤 Supported Languages
+## 📊 Memory Quality Management
 
-Greeum supports temporal expression recognition in the following languages:
-- 🇰🇷 Korean: Basic support for Korean temporal expressions (어제, 지난주, 3일 전, etc.)
-- 🇺🇸 English: Full support for English temporal formats (yesterday, 3 days ago, etc.)
-- 🌐 Auto-detection: Automatically detects language and processes accordingly
+Greeum v2.0.5 provides intelligent quality management system:
 
-## 🔍 Temporal Reasoning Examples
+### Quality Assessment Metrics
+1. **Length**: Appropriate information volume
+2. **Richness**: Meaningful word ratio
+3. **Structure**: Sentence/paragraph composition
+4. **Language**: Grammar and expression quality
+5. **Information Density**: Specific information inclusion
+6. **Searchability**: Future search convenience
+7. **Temporal Relevance**: Current context relevance
 
+### Automatic Optimization
+- **Quality-based importance adjustment**
+- **Automatic duplicate memory detection**
+- **STM→LTM promotion suggestions**
+- **Usage pattern-based recommendations**
+
+## 🔗 Integration Guide
+
+### Claude Code MCP Setup
+1. **Check Installation**
+   ```bash
+   greeum --version  # v2.0.5 or higher
+   ```
+
+2. **Claude Desktop Configuration**
+   ```json
+   {
+     "mcpServers": {
+       "greeum": {
+         "command": "python3",
+         "args": ["-m", "greeum.mcp.claude_code_mcp_server"],
+         "env": {
+           "GREEUM_DATA_DIR": "/path/to/data"
+         }
+       }
+     }
+   }
+   ```
+
+3. **Verify Connection**
+   ```bash
+   claude mcp list  # Check greeum server
+   ```
+
+### Other LLM Integration
 ```python
-# Korean
-result = evaluate_temporal_query("3일 전에 뭐 했어?", language="ko")
-# Return value: {detected: True, language: "ko", best_ref: {term: "3일 전"}}
+# OpenAI GPT
+from greeum.client import MemoryClient
+client = MemoryClient(llm_type="openai")
 
-# English
-result = evaluate_temporal_query("What did I do 3 days ago?", language="en")
-# Return value: {detected: True, language: "en", best_ref: {term: "3 days ago"}}
-
-# Auto-detection
-result = evaluate_temporal_query("What happened yesterday?")
-# Return value: {detected: True, language: "en", best_ref: {term: "yesterday"}}
+# Local LLM
+client = MemoryClient(llm_type="local", endpoint="http://localhost:8080")
 ```
 
-## 🔧 Project Expansion Plans
+## 📈 Performance & Benchmarks
 
-- **Model Control Protocol**: Check the [GreeumMCP](https://github.com/DryRainEnt/GreeumMCP) repository for MCP support - a separate package that allows Greeum to connect with tools like Cursor, Unity, Discord, etc.
-- **Enhanced Multilingual Support**: Additional language support for Japanese, Chinese, Spanish, etc.
-- **Improved Embeddings**: Integration of actual embedding models (e.g., sentence-transformers)
-- **Enhanced Keyword Extraction**: Implementation of language-specific keyword extraction
-- **Cloud Integration**: Addition of database backends (SQLite, MongoDB, etc.)
-- **Distributed Processing**: Implementation of distributed processing for large-scale memory management
+- **Response Quality**: 18.6% average improvement (benchmark basis)
+- **Search Speed**: 5.04x improvement (with waypoint cache)
+- **Re-questioning Reduction**: 78.2% reduction (improved context understanding)
+- **Memory Efficiency**: 50% memory usage optimization
 
-## 🌐 Website
+## 📚 Documentation & Resources
 
-Visit the website: [greeum.app](https://greeum.app)
+- **[Get Started](../get-started.md)**: Detailed installation and setup guide
+- **[API Reference](../api-reference.md)**: Complete API reference
+- **[Tutorials](../tutorials.md)**: Step-by-step usage examples
+- **[Developer Guide](../developer_guide.md)**: How to contribute
+
+## 🤝 Contributing
+
+Greeum is an open-source project. Contributions are welcome!
+
+### How to Contribute
+1. **Issue Reports**: Report bugs or issues you encounter
+2. **Feature Suggestions**: New ideas and improvements
+3. **Code Contributions**: Pull requests welcome
+4. **Documentation**: Translation and improvement
+
+### Development Environment Setup
+```bash
+# After downloading source code
+pip install -e .[dev]
+tox  # Run tests
+```
+
+## 📞 Support & Contact
+
+- **📧 Official Email**: playtart@play-t.art
+- **🌐 Official Website**: [greeum.app](https://greeum.app)
+- **📚 Documentation**: Refer to this README and docs/ folder
 
 ## 📄 License
 
-MIT License
+This project is distributed under the MIT License. See the [LICENSE](../../LICENSE) file for details.
 
-## 👥 Contribution
+## 🏆 Acknowledgments
 
-All contributions are welcome, including bug reports, feature suggestions, pull requests, etc.!
+- **OpenAI**: Embedding API support
+- **Anthropic**: Claude MCP platform
+- **NumPy**: Efficient vector computation
+- **SQLite**: Reliable data storage
 
-## 📱 Contact
+---
 
-Email: playtart@play-t.art 
+<p align="center">
+  Made with ❤️ by the Greeum Team<br>
+  <em>"Making AI more human through memory"</em>
+</p>

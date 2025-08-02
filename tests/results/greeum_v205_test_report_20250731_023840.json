@@ -1,0 +1,142 @@
+{
+  "timestamp": "2025-07-31T02:38:40.397856",
+  "total_tests": 103,
+  "total_failures": 7,
+  "total_errors": 24,
+  "overall_success_rate": 69.90291262135922,
+  "module_results": {
+    "UsageAnalytics": {
+      "tests_run": 16,
+      "failures": 0,
+      "errors": 16,
+      "success_rate": 0.0,
+      "duration": 0.006158113479614258,
+      "failure_details": [],
+      "error_details": [
+        "test_data_cleanup (test_usage_analytics.TestUsageAnalytics.test_data_cleanup)",
+        "test_database_initialization (test_usage_analytics.TestUsageAnalytics.test_database_initialization)",
+        "test_database_path_validation (test_usage_analytics.TestUsageAnalytics.test_database_path_validation)",
+        "test_error_handling (test_usage_analytics.TestUsageAnalytics.test_error_handling)",
+        "test_event_logging_basic (test_usage_analytics.TestUsageAnalytics.test_event_logging_basic)",
+        "test_event_logging_edge_cases (test_usage_analytics.TestUsageAnalytics.test_event_logging_edge_cases)",
+        "test_input_sanitization (test_usage_analytics.TestUsageAnalytics.test_input_sanitization)",
+        "test_memory_usage_limits (test_usage_analytics.TestUsageAnalytics.test_memory_usage_limits)",
+        "test_performance_benchmarks (test_usage_analytics.TestUsageAnalytics.test_performance_benchmarks)",
+        "test_performance_insights (test_usage_analytics.TestUsageAnalytics.test_performance_insights)",
+        "test_performance_metrics_logging (test_usage_analytics.TestUsageAnalytics.test_performance_metrics_logging)",
+        "test_quality_metrics_logging (test_usage_analytics.TestUsageAnalytics.test_quality_metrics_logging)",
+        "test_quality_trends_analysis (test_usage_analytics.TestUsageAnalytics.test_quality_trends_analysis)",
+        "test_session_management (test_usage_analytics.TestUsageAnalytics.test_session_management)",
+        "test_thread_safety (test_usage_analytics.TestUsageAnalytics.test_thread_safety)",
+        "test_usage_statistics_generation (test_usage_analytics.TestUsageAnalytics.test_usage_statistics_generation)"
+      ]
+    },
+    "UsageAnalytics_Integration": {
+      "tests_run": 1,
+      "failures": 0,
+      "errors": 1,
+      "success_rate": 0.0,
+      "duration": 0.0004138946533203125,
+      "failure_details": [],
+      "error_details": [
+        "test_real_world_usage_simulation (test_usage_analytics.TestUsageAnalyticsIntegration.test_real_world_usage_simulation)"
+      ]
+    },
+    "QualityValidator": {
+      "tests_run": 25,
+      "failures": 2,
+      "errors": 0,
+      "success_rate": 92.0,
+      "duration": 0.6692080497741699,
+      "failure_details": [
+        "test_comprehensive_validation_poor_content (test_quality_validator.TestQualityValidator.test_comprehensive_validation_poor_content)",
+        "test_searchability_assessment (test_quality_validator.TestQualityValidator.test_searchability_assessment)"
+      ],
+      "error_details": []
+    },
+    "QualityValidator_Integration": {
+      "tests_run": 2,
+      "failures": 1,
+      "errors": 0,
+      "success_rate": 50.0,
+      "duration": 0.0006241798400878906,
+      "failure_details": [
+        "test_realistic_user_inputs (test_quality_validator.TestQualityValidatorIntegration.test_realistic_user_inputs)"
+      ],
+      "error_details": []
+    },
+    "DuplicateDetector": {
+      "tests_run": 23,
+      "failures": 2,
+      "errors": 0,
+      "success_rate": 91.30434782608695,
+      "duration": 0.22376394271850586,
+      "failure_details": [
+        "test_context_window_optimization (test_duplicate_detector.TestDuplicateDetector.test_context_window_optimization)",
+        "test_partial_similarity_detection (test_duplicate_detector.TestDuplicateDetector.test_partial_similarity_detection)"
+      ],
+      "error_details": []
+    },
+    "DuplicateDetector_Integration": {
+      "tests_run": 2,
+      "failures": 1,
+      "errors": 0,
+      "success_rate": 50.0,
+      "duration": 0.0007989406585693359,
+      "failure_details": [
+        "test_realistic_duplicate_scenarios (test_duplicate_detector.TestDuplicateDetectorIntegration.test_realistic_duplicate_scenarios)"
+      ],
+      "error_details": []
+    },
+    "EnhancedToolSchema": {
+      "tests_run": 22,
+      "failures": 1,
+      "errors": 0,
+      "success_rate": 95.45454545454545,
+      "duration": 0.0009648799896240234,
+      "failure_details": [
+        "test_schema_descriptions_quality (test_enhanced_tool_schema.TestEnhancedToolSchema.test_schema_descriptions_quality)"
+      ],
+      "error_details": []
+    },
+    "EnhancedToolSchema_Integration": {
+      "tests_run": 5,
+      "failures": 0,
+      "errors": 0,
+      "success_rate": 100.0,
+      "duration": 0.00013685226440429688,
+      "failure_details": [],
+      "error_details": []
+    },
+    "V205_Integration": {
+      "tests_run": 7,
+      "failures": 0,
+      "errors": 7,
+      "success_rate": 0.0,
+      "duration": 0.0031900405883789062,
+      "failure_details": [],
+      "error_details": [
+        "test_batch_processing_integration (test_v205_integration.TestV205Integration.test_batch_processing_integration)",
+        "test_complete_memory_workflow (test_v205_integration.TestV205Integration.test_complete_memory_workflow)",
+        "test_error_handling_integration (test_v205_integration.TestV205Integration.test_error_handling_integration)",
+        "test_mcp_server_simulation (test_v205_integration.TestV205Integration.test_mcp_server_simulation)",
+        "test_performance_under_load (test_v205_integration.TestV205Integration.test_performance_under_load)",
+        "test_quality_and_duplicate_correlation (test_v205_integration.TestV205Integration.test_quality_and_duplicate_correlation)",
+        "test_schema_driven_workflow (test_v205_integration.TestV205Integration.test_schema_driven_workflow)"
+      ]
+    }
+  },
+  "performance_metrics": {
+    "total_duration_seconds": 0.9058690071105957,
+    "tests_per_second": 113.7029738201706,
+    "average_test_duration": 0.008794844729229085
+  },
+  "status": "FAILED",
+  "coverage_areas": [
+    "UsageAnalytics - Database operations, event logging, session management",
+    "QualityValidator - Content analysis, quality scoring, recommendations",
+    "DuplicateDetector - Similarity algorithms, batch processing, performance",
+    "EnhancedToolSchema - MCP integration, parameter validation, usage hints",
+    "Integration - End-to-end workflows, error handling, performance benchmarks"
+  ]
+}
