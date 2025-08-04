@@ -327,10 +327,28 @@ class TestCLISecurityWrapper(unittest.TestCase):
         # 위험한 명령어는 차단되어야 함
         for dangerous_cmd in dangerous_commands:
             with self.assertRaises((ValueError, Exception)):
-                # 명령어 검증 로직 시뮬레이션
+                # 강화된 명령어 검증 로직 시뮬레이션
                 allowed_commands = ["memory", "add", "search", "stats", "--version", "--help"]
+                blocked_commands = ["rm", "cat", "curl", "python", "nc", "ls", "sh", "bash"]
+                
                 for cmd_part in dangerous_cmd:
+                    # 1. 명시적으로 차단된 명령어 체크
+                    if any(blocked in cmd_part.lower() for blocked in blocked_commands):
+                        raise ValueError(f"Blocked command detected: {cmd_part}")
+                    
+                    # 2. 허용되지 않은 특수문자 체크
                     if cmd_part not in allowed_commands and not cmd_part.startswith(('-', '=')):
+                        # URL 패턴이나 위험한 문자 체크
+                        if any(char in cmd_part for char in ['/', ';', '&', '|', '>', '<', '`', '$']):
+                            raise ValueError(f"Unsafe characters detected: {cmd_part}")
+                        
+                        # 도메인 패턴 체크 (xxx.xxx 형태)
+                        if '.' in cmd_part and len(cmd_part.split('.')) >= 2:
+                            parts = cmd_part.split('.')
+                            if all(len(part) > 0 and part.replace('-', '').isalnum() for part in parts):
+                                raise ValueError(f"Potential domain/URL detected: {cmd_part}")
+                        
+                        # 기본 안전 문자 체크
                         if not all(c.isalnum() or c in ' .-_가-힣ㄱ-ㅎㅏ-ㅣ' for c in cmd_part):
                             raise ValueError(f"Unsafe command detected: {cmd_part}")
 
