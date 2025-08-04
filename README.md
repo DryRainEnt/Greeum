@@ -43,9 +43,9 @@ pip install greeum[all]  # includes vector search, embeddings
 
 ### For Claude Code Users
 ```bash
-# Install and configure MCP server
+# Install and start MCP server
 pip install greeum
-greeum mcp configure
+greeum mcp serve
 ```
 
 ## 📝 Usage
@@ -64,8 +64,8 @@ greeum stm add "Working on login page today" --ttl 24h
 # Find relevant memories
 greeum memory search "UI design preferences" --count 5
 
-# Search recent context
-greeum stm search "login" --recent
+# Search with options
+greeum memory search "login" --count 10
 ```
 
 ### Python API
@@ -76,11 +76,17 @@ from greeum import BlockManager, DatabaseManager
 db_manager = DatabaseManager()
 memory = BlockManager(db_manager)
 
-# Add memory
-memory.add_memory("User wants dark mode toggle")
+# Add block to long-term memory
+block = memory.add_block(
+    context="User wants dark mode toggle",
+    keywords=["dark", "mode", "toggle"],
+    tags=["ui", "preference"],
+    embedding=[],  # Auto-generated if empty
+    importance=0.7
+)
 
-# Search
-results = memory.search_memories("dark mode", top_k=3)
+# Search memories
+results = memory.search_memories("dark mode", limit=3)
 ```
 
 ## 🤖 Claude Integration
@@ -105,7 +111,7 @@ Add to your Claude Desktop config:
 ### Available Tools
 - `add_memory` - Store important context
 - `search_memory` - Find relevant memories
-- `analyze_patterns` - Discover insights
+- `get_memory_stats` - View memory statistics
 
 ## 📚 Documentation
 
