@@ -5,80 +5,27 @@ Tests similarity detection algorithms, hash-based exact matching,
 batch duplicate checking, performance optimization, and edge cases.
 """
 
-import unittest
-import sys
-import os
 import hashlib
 import time
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
 
-# Add the greeum package to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
+from tests.base_test_case import BaseGreeumTestCase
 from greeum.core.duplicate_detector import DuplicateDetector
 
 
-class TestDuplicateDetector(unittest.TestCase):
+class TestDuplicateDetector(BaseGreeumTestCase):
     """Comprehensive test suite for DuplicateDetector class"""
     
     def setUp(self):
         """Set up test fixtures before each test method"""
-        # Mock database manager
-        self.mock_db_manager = Mock()
+        super().setUp()
         
         # Initialize detector with test database
         self.detector = DuplicateDetector(
             db_manager=self.mock_db_manager,
             similarity_threshold=0.85
         )
-        
-        # Test content samples
-        self.test_contents = {
-            'original': "Today I completed the machine learning project with 95% accuracy",
-            'exact_duplicate': "Today I completed the machine learning project with 95% accuracy",
-            'similar': "Today I finished the machine learning project with 95% accuracy",
-            'partial_similar': "I completed a project today with good results",
-            'different': "The weather is nice and sunny today",
-            'empty': "",
-            'short': "Hi",
-            'long': "This is a very long content piece that contains multiple sentences and various information about different topics including technology, science, and daily life experiences that might be relevant for testing duplicate detection algorithms.",
-            'special_chars': "Special!@#$%^&*()characters_content",
-            'unicode': "유니코드 한글 내용입니다 😊",
-            'code': "def hello_world():\n    print('Hello, World!')\n    return True"
-        }
-        
-        # Mock database responses
-        self.setup_mock_responses()
-    
-    def setup_mock_responses(self):
-        """Set up mock database responses"""
-        # Mock memory blocks for testing
-        self.mock_memories = [
-            {
-                'block_index': 1,
-                'context': self.test_contents['original'],
-                'timestamp': '2025-07-30T10:00:00',
-                'importance': 0.7
-            },
-            {
-                'block_index': 2,
-                'context': self.test_contents['different'],
-                'timestamp': '2025-07-30T11:00:00',
-                'importance': 0.5
-            },
-            {
-                'block_index': 3,
-                'context': "Another completely different memory content",
-                'timestamp': '2025-07-30T12:00:00',
-                'importance': 0.6
-            }
-        ]
-        
-        # Configure mock methods
-        self.mock_db_manager.search_blocks_by_embedding.return_value = self.mock_memories
-        self.mock_db_manager.search_blocks_by_keyword.return_value = self.mock_memories
-        self.mock_db_manager.get_blocks_since_time.return_value = self.mock_memories
     
     def test_detector_initialization(self):
         """Test DuplicateDetector initialization"""
@@ -91,10 +38,10 @@ class TestDuplicateDetector(unittest.TestCase):
         """Test exact duplicate detection using hash matching"""
         # Mock return exact duplicate
         self.mock_db_manager.search_blocks_by_embedding.return_value = [
-            {'block_index': 1, 'context': self.test_contents['exact_duplicate']}
+            {'block_index': 1, 'context': self.duplicate_test_contents['exact_duplicate']}
         ]
         
-        result = self.detector.check_duplicate(self.test_contents['original'])
+        result = self.detector.check_duplicate(self.duplicate_test_contents['original'])
         
         self.assertTrue(result['is_duplicate'])
         self.assertEqual(result['duplicate_type'], 'exact')
@@ -106,10 +53,10 @@ class TestDuplicateDetector(unittest.TestCase):
         """Test similar content detection"""
         # Mock return similar content
         self.mock_db_manager.search_blocks_by_embedding.return_value = [
-            {'block_index': 1, 'context': self.test_contents['similar']}
+            {'block_index': 1, 'context': self.duplicate_test_contents['similar']}
         ]
         
-        result = self.detector.check_duplicate(self.test_contents['original'])
+        result = self.detector.check_duplicate(self.duplicate_test_contents['original'])
         
         self.assertTrue(result['is_duplicate'])
         self.assertEqual(result['duplicate_type'], 'similar')
@@ -121,10 +68,10 @@ class TestDuplicateDetector(unittest.TestCase):
         """Test partial similarity detection (not considered duplicate)"""
         # Mock return partially similar content
         self.mock_db_manager.search_blocks_by_embedding.return_value = [
-            {'block_index': 1, 'context': self.test_contents['partial_similar']}
+            {'block_index': 1, 'context': self.duplicate_test_contents['partial_similar']}
         ]
         
-        result = self.detector.check_duplicate(self.test_contents['original'])
+        result = self.detector.check_duplicate(self.duplicate_test_contents['original'])
         
         self.assertFalse(result['is_duplicate'])
         self.assertEqual(result['duplicate_type'], 'partial')
@@ -137,10 +84,10 @@ class TestDuplicateDetector(unittest.TestCase):
         """Test when no duplicates are found"""
         # Mock return different content
         self.mock_db_manager.search_blocks_by_embedding.return_value = [
-            {'block_index': 1, 'context': self.test_contents['different']}
+            {'block_index': 1, 'context': self.duplicate_test_contents['different']}
         ]
         
-        result = self.detector.check_duplicate(self.test_contents['original'])
+        result = self.detector.check_duplicate(self.duplicate_test_contents['original'])
         
         self.assertFalse(result['is_duplicate'])
         self.assertEqual(result['duplicate_type'], 'none')
@@ -173,7 +120,7 @@ class TestDuplicateDetector(unittest.TestCase):
         self.mock_db_manager.search_blocks_by_keyword.return_value = []
         self.mock_db_manager.get_blocks_since_time.return_value = []
         
-        result = self.detector.check_duplicate(self.test_contents['original'])
+        result = self.detector.check_duplicate(self.duplicate_test_contents['original'])
         
         self.assertFalse(result['is_duplicate'])
         self.assertEqual(result['duplicate_type'], 'none')
@@ -183,7 +130,7 @@ class TestDuplicateDetector(unittest.TestCase):
     
     def test_keyword_extraction(self):
         """Test keyword extraction functionality"""
-        keywords = self.detector._extract_keywords(self.test_contents['original'])
+        keywords = self.detector._extract_keywords(self.duplicate_test_contents['original'])
         
         self.assertIsInstance(keywords, list)
         self.assertLessEqual(len(keywords), 5)  # Should return max 5 keywords
@@ -204,26 +151,26 @@ class TestDuplicateDetector(unittest.TestCase):
     def test_similarity_analysis(self):
         """Test similarity analysis between content and memories"""
         # Test exact match
-        memories = [{'context': self.test_contents['exact_duplicate'], 'block_index': 1}]
-        result = self.detector._analyze_similarity(self.test_contents['original'], memories)
+        memories = [{'context': self.duplicate_test_contents['exact_duplicate'], 'block_index': 1}]
+        result = self.detector._analyze_similarity(self.duplicate_test_contents['original'], memories)
         
         self.assertEqual(result['similarity'], 1.0)
         self.assertEqual(result['match_type'], 'exact_hash')
         
         # Test text similarity
-        memories = [{'context': self.test_contents['similar'], 'block_index': 1}]
-        result = self.detector._analyze_similarity(self.test_contents['original'], memories)
+        memories = [{'context': self.duplicate_test_contents['similar'], 'block_index': 1}]
+        result = self.detector._analyze_similarity(self.duplicate_test_contents['original'], memories)
         
         self.assertGreater(result['similarity'], 0.8)
         self.assertEqual(result['match_type'], 'text_similarity')
         
         # Test with multiple memories (should return best match)
         memories = [
-            {'context': self.test_contents['different'], 'block_index': 1},
-            {'context': self.test_contents['similar'], 'block_index': 2},
-            {'context': self.test_contents['partial_similar'], 'block_index': 3}
+            {'context': self.duplicate_test_contents['different'], 'block_index': 1},
+            {'context': self.duplicate_test_contents['similar'], 'block_index': 2},
+            {'context': self.duplicate_test_contents['partial_similar'], 'block_index': 3}
         ]
-        result = self.detector._analyze_similarity(self.test_contents['original'], memories)
+        result = self.detector._analyze_similarity(self.duplicate_test_contents['original'], memories)
         
         # Should match with the most similar one
         self.assertEqual(result['memory']['block_index'], 2)
@@ -367,7 +314,7 @@ class TestDuplicateDetector(unittest.TestCase):
         self.mock_db_manager.search_blocks_by_embedding.side_effect = Exception("Embedding search failed")
         
         # Should fall back to keyword search
-        result = self.detector.check_duplicate(self.test_contents['original'])
+        result = self.detector.check_duplicate(self.duplicate_test_contents['original'])
         
         # Should still work with keyword search
         self.assertIsInstance(result, dict)
@@ -380,7 +327,7 @@ class TestDuplicateDetector(unittest.TestCase):
         """Test context window optimization for performance"""
         # Test with custom context window
         result = self.detector.check_duplicate(
-            self.test_contents['original'], 
+            self.duplicate_test_contents['original'], 
             context_window_hours=12
         )
         
@@ -391,7 +338,7 @@ class TestDuplicateDetector(unittest.TestCase):
         self.mock_db_manager.search_blocks_by_keyword.return_value = []
         
         result = self.detector.check_duplicate(
-            self.test_contents['original'],
+            self.duplicate_test_contents['original'],
             context_window_hours=24
         )
         
@@ -412,7 +359,7 @@ class TestDuplicateDetector(unittest.TestCase):
         self.mock_db_manager.search_blocks_by_keyword.side_effect = Exception("Database error")  
         self.mock_db_manager.get_blocks_since_time.side_effect = Exception("Database error")
         
-        result = self.detector.check_duplicate(self.test_contents['original'])
+        result = self.detector.check_duplicate(self.duplicate_test_contents['original'])
         
         # Should return error result gracefully
         self.assertFalse(result['is_duplicate'])
@@ -548,12 +495,12 @@ class TestDuplicateDetector(unittest.TestCase):
         self.assertTrue(is_duplicate)
 
 
-class TestDuplicateDetectorIntegration(unittest.TestCase):
+class TestDuplicateDetectorIntegration(BaseGreeumTestCase):
     """Integration tests for DuplicateDetector with realistic scenarios"""
     
     def setUp(self):
         """Set up integration test fixtures"""
-        self.mock_db_manager = Mock()
+        super().setUp()
         self.detector = DuplicateDetector(self.mock_db_manager)
         
         # Realistic memory database

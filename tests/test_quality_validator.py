@@ -5,39 +5,19 @@ Tests memory-efficient content analysis, quality score calculation,
 edge cases, quality classification, and recommendation generation.
 """
 
-import unittest
-import sys
-import os
 from unittest.mock import Mock, patch
 
-# Add the greeum package to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
+from tests.base_test_case import BaseGreeumTestCase
 from greeum.core.quality_validator import QualityValidator, QualityLevel
 
 
-class TestQualityValidator(unittest.TestCase):
+class TestQualityValidator(BaseGreeumTestCase):
     """Comprehensive test suite for QualityValidator class"""
     
     def setUp(self):
         """Set up test fixtures before each test method"""
+        super().setUp()
         self.validator = QualityValidator()
-        
-        # Test content samples
-        self.test_contents = {
-            'excellent': "Today I completed the machine learning model training with 95.2% accuracy on the validation dataset. The model was deployed to production at 2025-07-31 10:30 AM using Docker containers on AWS ECS. Key hyperparameters: learning_rate=0.001, batch_size=32, epochs=100. Performance metrics show 15ms average inference time.",
-            'good': "프로젝트 회의에서 중요한 결정을 내렸습니다. React 18을 사용하여 새로운 대시보드를 개발하기로 했고, PostgreSQL 14를 데이터베이스로 선정했습니다. 개발 기간은 3개월로 예상됩니다.",
-            'acceptable': "오늘은 새로운 프로젝트를 시작했는데 정말 흥미로운 주제입니다. 앞으로 많은 것을 배울 수 있을 것 같아요.",
-            'poor': "안녕하세요 오늘 날씨가 좋네요",
-            'very_poor': "ㅎㅎㅎ",
-            'empty': "",
-            'too_long': "x" * 15000,  # Very long content
-            'special_chars': "!!!@@@###$$$%%%^^^&&&***((()))",
-            'mixed_languages': "Hello 안녕하세요 こんにちは Bonjour Hola",
-            'code_snippet': "def calculate_accuracy(predictions, labels):\n    correct = sum(p == l for p, l in zip(predictions, labels))\n    return correct / len(labels) * 100",
-            'repetitive': "test test test test test test test test test test",
-            'urls_and_data': "Check out https://example.com for the latest updates. Contact: user@domain.com, Phone: +1-555-123-4567"
-        }
     
     def test_validator_initialization(self):
         """Test QualityValidator initialization"""
@@ -508,11 +488,12 @@ class TestQualityValidator(unittest.TestCase):
             self.assertLessEqual(result['quality_score'], 1.0)
 
 
-class TestQualityValidatorIntegration(unittest.TestCase):
+class TestQualityValidatorIntegration(BaseGreeumTestCase):
     """Integration tests for QualityValidator with realistic scenarios"""
     
     def setUp(self):
         """Set up integration test fixtures"""
+        super().setUp()
         self.validator = QualityValidator()
     
     def test_realistic_user_inputs(self):
