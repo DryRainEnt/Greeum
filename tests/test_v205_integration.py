@@ -227,7 +227,7 @@ class TestV205Integration(unittest.TestCase):
         self.analytics.end_session(session_id)
         
         stats = self.analytics.get_usage_statistics(days=1)
-        batch_events = [event for event_type, count in stats['tool_usage'].items() 
+        batch_events = [event_type for event_type, count in stats['tool_usage'].items() 
                        if 'batch' in event_type or 'process' in event_type]
         self.assertGreater(len(batch_events), 0)
     
@@ -429,7 +429,7 @@ class TestV205Integration(unittest.TestCase):
                 if scenario.get('db_error'):
                     self.mock_db_manager.search_blocks_by_embedding.side_effect = Exception("DB Error")
                     duplicate_result = self.duplicate_detector.check_duplicate("test", 0.5)
-                    duplicate_success = not ('error' in duplicate_result.get('duplicate_type', ''))
+                    duplicate_success = 'error' not in duplicate_result.get('duplicate_type', '')
                 else:
                     self.mock_db_manager.search_blocks_by_embedding.side_effect = None
                     self.mock_db_manager.search_blocks_by_embedding.return_value = []

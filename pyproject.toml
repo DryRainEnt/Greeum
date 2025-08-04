@@ -37,6 +37,8 @@ include = ["greeum*"]
 
 [tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
 # Ignore some low-priority or legacy issues temporarily
 extend-ignore = [
     "F401", # unused imports

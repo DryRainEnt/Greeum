@@ -8,7 +8,8 @@ from .tools.memory_tools import MemoryTools
 from .tools.utility_tools import UtilityTools
 from .resources.memory_resources import MemoryResources
 import asyncio
-import logging, sys
+import logging
+import sys
 
 logger = logging.getLogger("greeummcp")
 if not logger.handlers:

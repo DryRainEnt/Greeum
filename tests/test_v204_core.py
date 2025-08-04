@@ -341,6 +341,11 @@ class TestMemoryLeak(unittest.TestCase):
     def test_large_data_handling(self):
         """대용량 데이터 처리 시 메모리 관리"""
         import gc
+        import psutil
+        
+        # 초기 메모리 사용량 측정
+        process = psutil.Process()
+        initial_memory = process.memory_info().rss / 1024 / 1024  # MB
         
         temp_dir = tempfile.mkdtemp()
         db_path = os.path.join(temp_dir, "test_memory.db")

@@ -617,15 +617,24 @@ class PracticalPerformanceTest:
         
         # 등급 부여
         def score_to_grade(score):
-            if score >= 90: return "A+", "Outstanding"
-            elif score >= 85: return "A", "Excellent"
-            elif score >= 80: return "B+", "Very Good"
-            elif score >= 75: return "B", "Good"
-            elif score >= 70: return "C+", "Above Average"
-            elif score >= 65: return "C", "Average"
-            elif score >= 60: return "D+", "Below Average"
-            elif score >= 55: return "D", "Poor"
-            else: return "F", "Critical"
+            if score >= 90:
+                return "A+", "Outstanding"
+            elif score >= 85:
+                return "A", "Excellent"
+            elif score >= 80:
+                return "B+", "Very Good"
+            elif score >= 75:
+                return "B", "Good"
+            elif score >= 70:
+                return "C+", "Above Average"
+            elif score >= 65:
+                return "C", "Average"
+            elif score >= 60:
+                return "D+", "Below Average"
+            elif score >= 55:
+                return "D", "Poor"
+            else:
+                return "F", "Critical"
         
         overall_grade, overall_desc = score_to_grade(overall_score)
         
