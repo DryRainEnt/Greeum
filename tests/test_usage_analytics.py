@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """
-Comprehensive Unit Tests for UsageAnalytics (Greeum v2.0.5)
+Comprehensive Unit Tests for UsageAnalytics (Greeum v2.1.0)
 Tests database initialization, event logging, quality metrics, statistics generation,
 session management, and data cleanup functionality.
 """
 
-import unittest
-import tempfile
 import os
 import json
 import sqlite3
@@ -15,37 +13,25 @@ from unittest.mock import Mock, patch, MagicMock
 import threading
 import time
 
-# Add the greeum package to the path
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
+from tests.base_test_case import BaseGreeumTestCase
 from greeum.core.usage_analytics import UsageAnalytics
 
 
-class TestUsageAnalytics(unittest.TestCase):
+class TestUsageAnalytics(BaseGreeumTestCase):
     """Comprehensive test suite for UsageAnalytics class"""
     
     def setUp(self):
         """Set up test fixtures before each test method"""
-        # Create temporary database for testing
-        self.temp_dir = tempfile.mkdtemp()
-        self.test_db_path = os.path.join(self.temp_dir, "test_analytics.db")
+        super().setUp()
         
-        # Mock database manager
-        self.mock_db_manager = Mock()
+        # Analytics 전용 데이터베이스 경로
+        self.analytics_db_path = os.path.join(self.temp_dir, "test_analytics.db")
         
         # Initialize analytics with test database
         self.analytics = UsageAnalytics(
             db_manager=self.mock_db_manager,
-            analytics_db_path=self.test_db_path
+            analytics_db_path=self.analytics_db_path
         )
-        
-    def tearDown(self):
-        """Clean up after each test method"""
-        # Clean up temporary files
-        if os.path.exists(self.test_db_path):
-            os.remove(self.test_db_path)
-        os.rmdir(self.temp_dir)
     
     def test_database_initialization(self):
         """Test database schema creation and initialization"""
@@ -53,7 +39,7 @@ class TestUsageAnalytics(unittest.TestCase):
         self.assertTrue(os.path.exists(self.test_db_path))
         
         # Verify all required tables exist
-        with sqlite3.connect(self.test_db_path) as conn:
+        with sqlite3.connect(self.analytics_db_path) as conn:
             cursor = conn.execute("""
                 SELECT name FROM sqlite_master 
                 WHERE type='table' AND name NOT LIKE 'sqlite_%'
@@ -67,7 +53,7 @@ class TestUsageAnalytics(unittest.TestCase):
         self.assertEqual(tables, expected_tables)
         
         # Verify table schemas
-        with sqlite3.connect(self.test_db_path) as conn:
+        with sqlite3.connect(self.analytics_db_path) as conn:
             # Check usage_events schema
             cursor = conn.execute("PRAGMA table_info(usage_events)")
             columns = {row[1] for row in cursor.fetchall()}
@@ -137,7 +123,7 @@ class TestUsageAnalytics(unittest.TestCase):
         self.assertTrue(result)
         
         # Verify event was stored in database
-        with sqlite3.connect(self.test_db_path) as conn:
+        with sqlite3.connect(self.analytics_db_path) as conn:
             cursor = conn.execute("""
                 SELECT event_type, tool_name, user_id, session_id, 
                        duration_ms, success, metadata
@@ -189,7 +175,7 @@ class TestUsageAnalytics(unittest.TestCase):
         self.assertTrue(result)
         
         # Verify truncation occurred
-        with sqlite3.connect(self.test_db_path) as conn:
+        with sqlite3.connect(self.analytics_db_path) as conn:
             cursor = conn.execute("""
                 SELECT event_type, tool_name, user_id, session_id, error_message
                 FROM usage_events
@@ -219,7 +205,7 @@ class TestUsageAnalytics(unittest.TestCase):
         self.assertTrue(result)
         
         # Verify metrics were stored
-        with sqlite3.connect(self.test_db_path) as conn:
+        with sqlite3.connect(self.analytics_db_path) as conn:
             cursor = conn.execute("""
                 SELECT content_length, quality_score, quality_level, 
                        importance, adjusted_importance, is_duplicate,
@@ -251,7 +237,7 @@ class TestUsageAnalytics(unittest.TestCase):
         self.assertTrue(result)
         
         # Verify performance metrics were stored
-        with sqlite3.connect(self.test_db_path) as conn:
+        with sqlite3.connect(self.analytics_db_path) as conn:
             cursor = conn.execute("""
                 SELECT metric_type, metric_name, metric_value, unit, metadata
                 FROM performance_metrics
@@ -291,7 +277,7 @@ class TestUsageAnalytics(unittest.TestCase):
         self.assertTrue(result)
         
         # Verify session was updated with statistics
-        with sqlite3.connect(self.test_db_path) as conn:
+        with sqlite3.connect(self.analytics_db_path) as conn:
             cursor = conn.execute("""
                 SELECT session_id, total_operations, memory_added, 
                        searches_performed, avg_quality_score, end_time
@@ -348,7 +334,7 @@ class TestUsageAnalytics(unittest.TestCase):
         base_time = datetime.now() - timedelta(days=5)
         
         # Manually insert data with specific timestamps
-        with sqlite3.connect(self.test_db_path) as conn:
+        with sqlite3.connect(self.analytics_db_path) as conn:
             for i in range(5):
                 timestamp = (base_time + timedelta(days=i)).isoformat()
                 conn.execute("""
@@ -423,7 +409,7 @@ class TestUsageAnalytics(unittest.TestCase):
         old_time = datetime.now() - timedelta(days=100)
         recent_time = datetime.now() - timedelta(days=1)
         
-        with sqlite3.connect(self.test_db_path) as conn:
+        with sqlite3.connect(self.analytics_db_path) as conn:
             # Add old events
             conn.execute("""
                 INSERT INTO usage_events (timestamp, event_type, tool_name)
@@ -463,7 +449,7 @@ class TestUsageAnalytics(unittest.TestCase):
         self.assertEqual(deleted_counts["user_sessions"], 1)
         
         # Verify recent data still exists
-        with sqlite3.connect(self.test_db_path) as conn:
+        with sqlite3.connect(self.analytics_db_path) as conn:
             cursor = conn.execute("SELECT COUNT(*) FROM usage_events WHERE event_type = 'recent_event'")
             self.assertEqual(cursor.fetchone()[0], 1)
     
@@ -494,14 +480,14 @@ class TestUsageAnalytics(unittest.TestCase):
             thread.join()
         
         # Verify all events were logged correctly
-        with sqlite3.connect(self.test_db_path) as conn:
+        with sqlite3.connect(self.analytics_db_path) as conn:
             cursor = conn.execute("SELECT COUNT(*) FROM usage_events WHERE event_type = 'thread_test'")
             total_events = cursor.fetchone()[0]
             
         self.assertEqual(total_events, num_threads * 10)
         
         # Verify data integrity (no corruption)
-        with sqlite3.connect(self.test_db_path) as conn:
+        with sqlite3.connect(self.analytics_db_path) as conn:
             cursor = conn.execute("""
                 SELECT DISTINCT tool_name FROM usage_events 
                 WHERE event_type = 'thread_test'
@@ -514,8 +500,8 @@ class TestUsageAnalytics(unittest.TestCase):
     
     def test_error_handling(self):
         """Test error handling and graceful degradation"""
-        # Test with corrupted database path
-        bad_analytics = UsageAnalytics(analytics_db_path="/dev/null/impossible.db")
+        # Test with inaccessible database path (permission denied scenario)
+        bad_analytics = UsageAnalytics(analytics_db_path="/root/impossible.db")
         
         # These should fail gracefully and return False
         result = bad_analytics.log_event("test", "test")
@@ -574,7 +560,7 @@ class TestUsageAnalytics(unittest.TestCase):
         self.assertTrue(result)
         
         # Verify metadata was truncated appropriately
-        with sqlite3.connect(self.test_db_path) as conn:
+        with sqlite3.connect(self.analytics_db_path) as conn:
             cursor = conn.execute("""
                 SELECT LENGTH(metadata) FROM usage_events 
                 WHERE event_type = 'large_test'
@@ -585,29 +571,20 @@ class TestUsageAnalytics(unittest.TestCase):
         self.assertLess(metadata_length, 2000)
 
 
-class TestUsageAnalyticsIntegration(unittest.TestCase):
+class TestUsageAnalyticsIntegration(BaseGreeumTestCase):
     """Integration tests for UsageAnalytics with other components"""
     
     def setUp(self):
         """Set up integration test fixtures"""
-        self.temp_dir = tempfile.mkdtemp()
-        self.test_db_path = os.path.join(self.temp_dir, "test_integration.db")
+        super().setUp()
         
-        # Mock database manager with realistic behavior
-        self.mock_db_manager = Mock()
-        self.mock_db_manager.search_blocks_by_embedding.return_value = []
-        self.mock_db_manager.search_blocks_by_keyword.return_value = []
+        # Analytics 전용 데이터베이스 경로
+        self.integration_db_path = os.path.join(self.temp_dir, "test_integration.db")
         
         self.analytics = UsageAnalytics(
             db_manager=self.mock_db_manager,
-            analytics_db_path=self.test_db_path
+            analytics_db_path=self.integration_db_path
         )
-        
-    def tearDown(self):
-        """Clean up integration test fixtures"""
-        if os.path.exists(self.test_db_path):
-            os.remove(self.test_db_path)
-        os.rmdir(self.temp_dir)
     
     def test_real_world_usage_simulation(self):
         """Simulate real-world usage patterns"""

@@ -14,20 +14,21 @@ Progressive Replacement Plan Phase 2의 핵심 검증 시스템입니다.
 """
 
 import unittest
-import tempfile
 import os
 import threading
 import time
 import shutil
+import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import random
 
+from tests.base_test_case import BaseGreeumTestCase
 # Thread-safe 구현체들 import
 from greeum.core.thread_safe_db import ThreadSafeDatabaseManager
 from greeum.core.database_manager_v2 import DatabaseManager
 
 
-class TestThreadSafeDatabaseManager(unittest.TestCase):
+class TestThreadSafeDatabaseManager(BaseGreeumTestCase):
     """ThreadSafeDatabaseManager 기본 thread-safe 기능 테스트"""
     
     def setUp(self):
@@ -107,7 +108,7 @@ class TestThreadSafeDatabaseManager(unittest.TestCase):
         self.assertIn(result[0].lower(), ['wal', 'delete'], "WAL mode should be enabled or fallback to delete")
 
 
-class TestDatabaseManagerV2Compatibility(unittest.TestCase):
+class TestDatabaseManagerV2Compatibility(BaseGreeumTestCase):
     """DatabaseManager V2 호환성 래퍼의 thread-safe 기능 테스트"""
     
     def setUp(self):
@@ -297,7 +298,7 @@ class TestDatabaseManagerV2Compatibility(unittest.TestCase):
         self.assertTrue(final_health, "Database should remain healthy after stress test")
 
 
-class TestPerformanceRegression(unittest.TestCase):
+class TestPerformanceRegression(BaseGreeumTestCase):
     """Thread-safe 구현의 성능 회귀 테스트"""
     
     def setUp(self):

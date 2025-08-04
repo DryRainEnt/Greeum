@@ -54,6 +54,25 @@ class BaseGreeumTestCase(unittest.TestCase):
     
     def tearDown(self):
         """테스트 후 정리 작업"""
+        # DB 연결 정리 (ResourceWarning 해결)
+        if hasattr(self, 'db_manager') and self.db_manager:
+            try:
+                if hasattr(self.db_manager, 'connection') and self.db_manager.connection:
+                    self.db_manager.connection.close()
+                if hasattr(self.db_manager, 'close'):
+                    self.db_manager.close()
+            except:
+                pass
+        
+        # BlockManager 정리
+        if hasattr(self, 'block_manager') and self.block_manager:
+            try:
+                if hasattr(self.block_manager, 'db_manager') and self.block_manager.db_manager:
+                    if hasattr(self.block_manager.db_manager, 'connection') and self.block_manager.db_manager.connection:
+                        self.block_manager.db_manager.connection.close()
+            except:
+                pass
+        
         # 임시 파일 및 디렉토리 정리
         if os.path.exists(self.test_db_path):
             try:

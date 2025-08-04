@@ -4,21 +4,23 @@ API 클라이언트 테스트
 
 import unittest
 import json
-from unittest.mock import patch, MagicMock
-import responses
+from unittest.mock import patch, MagicMock, Mock
 import requests
 from requests.exceptions import Timeout, ConnectionError
 
+from tests.base_test_case import BaseGreeumTestCase
 from greeum.client import (
     MemoryClient, SimplifiedMemoryClient,
     ClientError, ConnectionFailedError, RequestTimeoutError, APIError
 )
 
-class TestMemoryClient(unittest.TestCase):
+class TestMemoryClient(BaseGreeumTestCase):
     """MemoryClient 테스트 클래스"""
     
     def setUp(self):
         """테스트 설정"""
+        super().setUp()
+        
         self.base_url = "http://test.server.com"
         self.client = MemoryClient(
             base_url=self.base_url,
@@ -26,16 +28,15 @@ class TestMemoryClient(unittest.TestCase):
             retry_delay=0.01  # 빠른 테스트를 위해 짧게 설정
         )
     
-    @responses.activate
-    def test_successful_request(self):
+    @patch('requests.get')
+    def test_successful_request(self, mock_get):
         """성공적인 요청 테스트"""
         # 모의 응답 설정
-        responses.add(
-            responses.GET,
-            f"{self.base_url}/",
-            json={"status": "success", "version": "1.0.0"},
-            status=200
-        )
+        mock_response = Mock()
+        mock_response.json.return_value = {"status": "success", "version": "1.0.0"}
+        mock_response.status_code = 200
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
         
         # API 호출
         result = self.client.get_api_info()
@@ -44,41 +45,42 @@ class TestMemoryClient(unittest.TestCase):
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["version"], "1.0.0")
     
-    @responses.activate
-    def test_retry_on_server_error(self):
+    @patch('requests.get')
+    def test_retry_on_server_error(self, mock_get):
         """서버 오류 시 재시도 테스트"""
         # 첫 번째 요청은 실패, 두 번째는 성공
-        responses.add(
-            responses.GET,
-            f"{self.base_url}/",
-            json={"error": "Server error"},
-            status=503
-        )
+        mock_responses = []
         
-        responses.add(
-            responses.GET,
-            f"{self.base_url}/",
-            json={"status": "success", "version": "1.0.0"},
-            status=200
-        )
+        # 첫 번째 응답 (실패)
+        mock_error_response = Mock()
+        mock_error_response.json.return_value = {"error": "Server error"}
+        mock_error_response.status_code = 503
+        mock_error_response.raise_for_status.side_effect = requests.exceptions.HTTPError("503 Server Error")
+        
+        # 두 번째 응답 (성공)
+        mock_success_response = Mock()
+        mock_success_response.json.return_value = {"status": "success", "version": "1.0.0"}
+        mock_success_response.status_code = 200
+        mock_success_response.raise_for_status.return_value = None
+        
+        mock_get.side_effect = [mock_error_response, mock_success_response]
         
         # API 호출
         result = self.client.get_api_info()
         
         # 검증
         self.assertEqual(result["status"], "success")
-        self.assertEqual(len(responses.calls), 2)  # 두 번 호출되었는지 확인
+        self.assertEqual(mock_get.call_count, 2)  # 두 번 호출되었는지 확인
     
-    @responses.activate
-    def test_api_error(self):
+    @patch('requests.get')
+    def test_api_error(self, mock_get):
         """API 오류 테스트"""
         # 모의 응답 설정
-        responses.add(
-            responses.GET,
-            f"{self.base_url}/",
-            json={"status": "error", "message": "Invalid request"},
-            status=400
-        )
+        mock_response = Mock()
+        mock_response.json.return_value = {"status": "error", "message": "Invalid request"}
+        mock_response.status_code = 400
+        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("400 Client Error")
+        mock_get.return_value = mock_response
         
         # API 호출 및 예외 확인
         with self.assertRaises(APIError) as context:
@@ -107,16 +109,16 @@ class TestMemoryClient(unittest.TestCase):
         with self.assertRaises(RequestTimeoutError):
             self.client.get_api_info()
     
-    @responses.activate
-    def test_non_json_response(self):
+    @patch('requests.get')
+    def test_non_json_response(self, mock_get):
         """JSON이 아닌 응답 테스트"""
         # 모의 응답 설정 (JSON이 아닌 텍스트)
-        responses.add(
-            responses.GET,
-            f"{self.base_url}/",
-            body="Not a JSON response",
-            status=200
-        )
+        mock_response = Mock()
+        mock_response.json.side_effect = ValueError("No JSON object could be decoded")
+        mock_response.text = "Not a JSON response"
+        mock_response.status_code = 200
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
         
         # API 호출
         result = self.client.get_api_info()
@@ -125,16 +127,15 @@ class TestMemoryClient(unittest.TestCase):
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["data"], "Not a JSON response")
     
-    @responses.activate
-    def test_add_memory(self):
+    @patch('requests.post')
+    def test_add_memory(self, mock_post):
         """기억 추가 테스트"""
         # 모의 응답 설정
-        responses.add(
-            responses.POST,
-            f"{self.base_url}/memory/",
-            json={"status": "success", "block_index": 123},
-            status=200
-        )
+        mock_response = Mock()
+        mock_response.json.return_value = {"status": "success", "block_index": 123}
+        mock_response.status_code = 200
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
         
         # API 호출
         result = self.client.add_memory(
@@ -147,16 +148,21 @@ class TestMemoryClient(unittest.TestCase):
         self.assertEqual(result["block_index"], 123)
         
         # 요청 데이터 검증
-        request_data = json.loads(responses.calls[0].request.body)
+        mock_post.assert_called_once()
+        call_args = mock_post.call_args
+        self.assertIn("json", call_args.kwargs)
+        request_data = call_args.kwargs["json"]
         self.assertEqual(request_data["context"], "Test memory")
         self.assertEqual(request_data["importance"], 0.7)
 
 
-class TestSimplifiedMemoryClient(unittest.TestCase):
+class TestSimplifiedMemoryClient(BaseGreeumTestCase):
     """SimplifiedMemoryClient 테스트 클래스"""
     
     def setUp(self):
         """테스트 설정"""
+        super().setUp()
+        
         self.base_url = "http://test.server.com"
         
         # MemoryClient를 모킹하기 위한 패치

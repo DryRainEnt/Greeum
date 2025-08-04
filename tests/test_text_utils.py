@@ -4,6 +4,8 @@
 
 import unittest
 import numpy as np
+
+from tests.base_test_case import BaseGreeumTestCase
 from greeum.text_utils import (
     convert_numpy_types,
     extract_keywords_from_text,
@@ -11,7 +13,7 @@ from greeum.text_utils import (
     compute_text_importance
 )
 
-class TestConvertNumpyTypes(unittest.TestCase):
+class TestConvertNumpyTypes(BaseGreeumTestCase):
     """convert_numpy_types 함수 테스트"""
     
     def test_convert_numpy_scalar_types(self):
@@ -119,7 +121,7 @@ class TestConvertNumpyTypes(unittest.TestCase):
         self.assertIs(convert_numpy_types(test_obj), test_obj)
 
 
-class TestTextUtilsFunctions(unittest.TestCase):
+class TestTextUtilsFunctions(BaseGreeumTestCase):
     """다른 텍스트 유틸리티 함수 테스트"""
     
     def test_extract_keywords(self):

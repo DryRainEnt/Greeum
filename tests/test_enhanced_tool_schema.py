@@ -1,27 +1,24 @@
 #!/usr/bin/env python3
 """
-Comprehensive Unit Tests for EnhancedToolSchema (Greeum v2.0.5)
+Comprehensive Unit Tests for EnhancedToolSchema (Greeum v2.1.0)
 Tests schema generation for all 10 MCP tools, parameter validation,
 usage hints, best practices content, and integration scenarios.
 """
 
-import unittest
-import sys
-import os
 import json
 from typing import Dict, Any
 
-# Add the greeum package to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
+from tests.base_test_case import BaseGreeumTestCase
 from greeum.mcp.enhanced_tool_schema import EnhancedToolSchema
 
 
-class TestEnhancedToolSchema(unittest.TestCase):
+class TestEnhancedToolSchema(BaseGreeumTestCase):
     """Comprehensive test suite for EnhancedToolSchema class"""
     
     def setUp(self):
         """Set up test fixtures before each test method"""
+        super().setUp()
+        
         self.schema = EnhancedToolSchema()
         
         # Expected tool names
@@ -544,7 +541,7 @@ class TestEnhancedToolSchema(unittest.TestCase):
                                       f"{schema['name']}.{param_name} description is just parameter name")
 
 
-class TestEnhancedToolSchemaIntegration(unittest.TestCase):
+class TestEnhancedToolSchemaIntegration(BaseGreeumTestCase):
     """Integration tests for EnhancedToolSchema with MCP scenarios"""
     
     def test_mcp_server_integration_scenario(self):

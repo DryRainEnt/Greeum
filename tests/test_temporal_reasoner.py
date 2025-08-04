@@ -1,18 +1,15 @@
-import sys
-import os
-import unittest
 from datetime import datetime, timedelta
 
-# 상위 디렉토리 추가
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+from tests.base_test_case import BaseGreeumTestCase
 from greeum.temporal_reasoner import TemporalReasoner, evaluate_temporal_query
 
-class TestTemporalReasoner(unittest.TestCase):
+class TestTemporalReasoner(BaseGreeumTestCase):
     """TemporalReasoner 클래스 테스트"""
     
     def setUp(self):
         """테스트 설정"""
+        super().setUp()
+        
         # 한국어를 기본 언어로 설정
         self.reasoner = TemporalReasoner(default_language="ko")
         # 영어를 위한 별도의 인스턴스
