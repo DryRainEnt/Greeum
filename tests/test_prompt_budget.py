@@ -1,7 +1,7 @@
-from greeum.prompt_wrapper import PromptWrapper
-from greeum.working_memory import STMWorkingSet
-from greeum.cache_manager import CacheManager
-from greeum.block_manager import BlockManager
+from greeum.core.prompt_wrapper import PromptWrapper
+from greeum.core.working_memory import STMWorkingSet
+from greeum.core.cache_manager import CacheManager
+from greeum.core.block_manager import BlockManager
 
 
 def test_token_budget():

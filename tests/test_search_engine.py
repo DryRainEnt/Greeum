@@ -1,5 +1,5 @@
-from greeum.search_engine import SearchEngine
-from greeum.block_manager import BlockManager
+from greeum.core.search_engine import SearchEngine
+from greeum.core.block_manager import BlockManager
 
 
 def test_search_engine():

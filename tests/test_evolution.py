@@ -1,5 +1,5 @@
 from greeum.memory_evolution import MemoryEvolutionManager
-from greeum.block_manager import BlockManager
+from greeum.core.block_manager import BlockManager
 
 
 def test_summarize_blocks():

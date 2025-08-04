@@ -7,7 +7,7 @@ import time
 import logging
 
 from .block_manager import BlockManager
-from .embedding_models import get_embedding
+from ..embedding_models import get_embedding
 
 try:
     from sentence_transformers import CrossEncoder  # type: ignore

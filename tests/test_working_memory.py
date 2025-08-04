@@ -1,5 +1,5 @@
 import pytest
-from greeum.working_memory import STMWorkingSet
+from greeum.core.working_memory import STMWorkingSet
 
 
 def test_add_and_get_recent():

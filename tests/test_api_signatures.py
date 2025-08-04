@@ -1,6 +1,6 @@
 import inspect
-from greeum.block_manager import BlockManager
-from greeum.stm_manager import STMManager
+from greeum.core.block_manager import BlockManager
+from greeum.core.stm_manager import STMManager
 
 
 def test_blockmanager_add_block_signature():
