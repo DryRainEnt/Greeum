@@ -135,12 +135,16 @@ class TestDatabaseManager(unittest.TestCase):
         """동시 접근 안전성 테스트"""
         import threading
         import time
+        from greeum.core.database_manager import DatabaseManager
         
         results = []
         errors = []
         
         def add_blocks(thread_id):
             try:
+                # 각 스레드마다 독립적인 DatabaseManager 생성
+                thread_db_manager = DatabaseManager(connection_string=self.db_path)
+                
                 for i in range(10):
                     block = {
                         "block_index": thread_id * 100 + i,
@@ -153,8 +157,11 @@ class TestDatabaseManager(unittest.TestCase):
                         "hash": f"hash_{thread_id}_{i}",
                         "prev_hash": ""
                     }
-                    self.db_manager.add_block(block)
+                    thread_db_manager.add_block(block)
                     time.sleep(0.01)  # 짧은 지연
+                
+                # 스레드별 DB 연결 정리
+                thread_db_manager.close()
                 results.append(f"Thread {thread_id} completed")
             except Exception as e:
                 errors.append(f"Thread {thread_id} error: {e}")
