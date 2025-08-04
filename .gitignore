@@ -46,4 +46,17 @@ config_local.py
 
 # 시스템 파일
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# 레거시 문서 (아카이브용)
+Design/Legacy/
+
+# 가상환경 (추가)
+deployment_env/
+test_install/
+venv-build/
+test_v204_env/
+
+# 과도한 테스트 결과 (선택적)
+results/visualizations/
+tests/performance_suite/results/ 
