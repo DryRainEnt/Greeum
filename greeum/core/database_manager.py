@@ -718,4 +718,65 @@ class DatabaseManager:
             if block:
                 blocks.append(block)
         
-        return blocks 
+        return blocks
+    
+    def health_check(self) -> bool:
+        """
+        데이터베이스 상태 및 무결성 검사
+        
+        Returns:
+            bool: 데이터베이스가 정상 상태이면 True
+        """
+        import time
+        
+        try:
+            cursor = self.conn.cursor()
+            
+            # 1. 기본 연결 테스트
+            cursor.execute("SELECT 1")
+            
+            # 2. 필수 테이블 존재 확인
+            required_tables = ['blocks', 'block_keywords', 'block_tags', 'block_metadata']
+            for table in required_tables:
+                cursor.execute("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name=?
+                """, (table,))
+                if not cursor.fetchone():
+                    logger.error(f"Required table '{table}' not found")
+                    return False
+            
+            # 3. 테이블 스키마 검증 (blocks 테이블)
+            cursor.execute("PRAGMA table_info(blocks)")
+            columns = {row[1] for row in cursor.fetchall()}
+            required_columns = {
+                'block_index', 'timestamp', 'context', 
+                'importance', 'hash', 'prev_hash'
+            }
+            if not required_columns.issubset(columns):
+                logger.error("Blocks table missing required columns")
+                return False
+            
+            # 4. 기본 무결성 테스트
+            cursor.execute("PRAGMA integrity_check(1)")
+            result = cursor.fetchone()
+            if result[0] != 'ok':
+                logger.error(f"Database integrity check failed: {result[0]}")
+                return False
+            
+            # 5. 읽기/쓰기 권한 테스트
+            test_table = f"health_check_test_{int(time.time())}"
+            cursor.execute(f"CREATE TEMP TABLE {test_table} (id INTEGER)")
+            cursor.execute(f"INSERT INTO {test_table} VALUES (1)")
+            cursor.execute(f"SELECT id FROM {test_table}")
+            if cursor.fetchone()[0] != 1:
+                return False
+            cursor.execute(f"DROP TABLE {test_table}")
+            
+            self.conn.commit()
+            logger.info("Database health check passed")
+            return True
+        
+        except Exception as e:
+            logger.error(f"Database health check failed: {e}")
+            return False 

@@ -156,4 +156,60 @@ class BlockManager:
         #     if len(result) >= limit:
         #         break
         # return result 
-        return self.db_manager.filter_blocks_by_importance(threshold=threshold, limit=limit, order='desc') 
+        return self.db_manager.filter_blocks_by_importance(threshold=threshold, limit=limit, order='desc')
+    
+    def verify_integrity(self) -> bool:
+        """
+        블록체인 무결성 검증
+        
+        Returns:
+            bool: 블록체인이 무결성을 유지하면 True
+        """
+        try:
+            # 1. 모든 블록 조회 (인덱스 순)
+            blocks = self.db_manager.get_blocks()
+            if not blocks:
+                logger.info("No blocks to verify")
+                return True
+            
+            # 2. 정렬 및 연속성 확인
+            sorted_blocks = sorted(blocks, key=lambda x: x['block_index'])
+            
+            prev_hash = ""
+            for i, block in enumerate(sorted_blocks):
+                # 인덱스 연속성 확인
+                expected_index = i
+                if block['block_index'] != expected_index:
+                    logger.error(f"Block index discontinuity: expected {expected_index}, got {block['block_index']}")
+                    return False
+                
+                # 해시 체인 검증
+                if block['prev_hash'] != prev_hash:
+                    logger.error(f"Hash chain broken at block {i}: expected prev_hash '{prev_hash}', got '{block['prev_hash']}'")
+                    return False
+                
+                # 현재 블록 해시 재계산 및 검증 (keywords, tags, embedding은 해시 계산에서 제외)
+                calculated_hash = self._compute_hash({
+                    'block_index': block['block_index'],
+                    'timestamp': block['timestamp'],
+                    'context': block['context'],
+                    'importance': block['importance'],
+                    'prev_hash': block['prev_hash']
+                })
+                
+                if calculated_hash != block['hash']:
+                    logger.error(f"Block {i} hash mismatch: calculated '{calculated_hash}', stored '{block['hash']}'")
+                    return False
+                
+                prev_hash = block['hash']
+            
+            # 3. 메타데이터 일관성 확인 (블록 개수)
+            total_blocks = len(sorted_blocks)
+            last_block_index = sorted_blocks[-1]['block_index'] if sorted_blocks else -1
+            
+            logger.info(f"Blockchain integrity verified: {total_blocks} blocks")
+            return True
+        
+        except Exception as e:
+            logger.error(f"Integrity verification failed: {e}")
+            return False 
