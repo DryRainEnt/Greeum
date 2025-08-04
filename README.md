@@ -128,6 +128,16 @@ Your Input → Working Memory → Cache → Checkpoints → Long-term Storage
 
 Four-layer memory system optimized for speed and relevance.
 
+## 📋 Version Updates
+
+### v2.1.1 (2025-08)
+- Enhanced search with temporal boost for recent information prioritization
+- Optimized codebase with 955 lines of code reduction and improved test architecture
+- Resolved import dependencies and improved memory management
+- Added intelligent date keyword detection for search result ranking
+- Improved test stability with BaseGreeumTestCase standardization
+- Performance optimizations with minimal overhead (+1.0%)
+
 ## 🤝 Contributing
 
 1. Fork the repository
