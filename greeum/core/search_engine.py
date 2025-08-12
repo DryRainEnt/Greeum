@@ -101,14 +101,45 @@ class SearchEngine:
             radius: 그래프 탐색 반경 (M0: parameter only, no implementation) 
             fallback: 국소 검색 실패시 기본 검색 사용 여부 (M0: parameter only, no implementation)
         """
-        # M0: New anchor/graph parameters are received but not yet implemented
-        # They will be used in M1 for localized search functionality
-        _ = slot, radius, fallback  # Acknowledge parameters
+        # M1: Implement localized search using anchor/graph system
+        localized_blocks = None
+        local_hit_rate = 0.0
+        fallback_used = False
+        avg_hops = 0
         
+        # Standard search setup (always needed for timing and fallback)
         t0 = time.perf_counter()
         emb = get_embedding(query)
         vec_time = time.perf_counter()
-        candidate_blocks = self.bm.search_by_embedding(emb, top_k=top_k*3)
+        
+        if slot is not None:
+            try:
+                # Attempt localized search using anchors and graph
+                localized_blocks, local_metrics = self._localized_search(
+                    query, emb, slot, radius, top_k
+                )
+                local_hit_rate = local_metrics.get('hit_rate', 0.0)
+                avg_hops = local_metrics.get('avg_hops', 0)
+                
+                logger.debug(f"Localized search: {len(localized_blocks) if localized_blocks else 0} results, hit_rate={local_hit_rate:.2f}")
+                
+            except Exception as e:
+                logger.warning(f"Localized search failed: {e}")
+                localized_blocks = None
+        
+        # Determine if we should use localized results or fallback
+        if localized_blocks and len(localized_blocks) >= max(1, top_k // 2):
+            # Use localized results if we got sufficient hits
+            candidate_blocks = localized_blocks[:top_k*3]
+            fallback_used = False
+        elif fallback:
+            # Fallback to standard search
+            candidate_blocks = self.bm.search_by_embedding(emb, top_k=top_k*3)
+            fallback_used = True
+        else:
+            # No fallback allowed, return empty or partial results
+            candidate_blocks = localized_blocks[:top_k*3] if localized_blocks else []
+            fallback_used = False
         search_time = time.perf_counter()
         
         # BERT 재랭킹 (기존 로직)
@@ -138,6 +169,109 @@ class SearchEngine:
             "metadata": {
                 "temporal_boost_applied": temporal_boost,
                 "temporal_weight": temporal_weight if temporal_boost else 0.0,
-                "query_has_date_keywords": self._detect_temporal_query(query)
+                "query_has_date_keywords": self._detect_temporal_query(query),
+                # M1: New localized search metrics
+                "localized_search_used": slot is not None,
+                "fallback_used": fallback_used,
+                "local_hit_rate": local_hit_rate,
+                "avg_hops": avg_hops,
+                "anchor_slot": slot
             }
         } 
+
+    def _localized_search(self, query: str, query_emb: list, slot: str, radius: int = None, top_k: int = 5):
+        """
+        Perform localized search using anchor-based graph traversal.
+        
+        Returns:
+            Tuple[List[Dict], Dict]: (blocks, metrics)
+        """
+        from greeum.anchors import AnchorManager
+        from greeum.graph import GraphIndex
+        from pathlib import Path
+        import numpy as np
+        
+        # Load anchor manager and graph index
+        try:
+            anchor_path = Path("data/anchors.json")
+            graph_path = Path("data/graph_snapshot.jsonl")
+            
+            if not anchor_path.exists() or not graph_path.exists():
+                raise FileNotFoundError("Anchor or graph files not found - run bootstrap first")
+            
+            anchor_manager = AnchorManager(anchor_path)
+            graph_index = GraphIndex()
+            
+            if not graph_index.load_snapshot(graph_path):
+                raise ValueError("Failed to load graph snapshot")
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to load anchor/graph system: {e}")
+        
+        # Get anchor information
+        slot_info = anchor_manager.get_slot_info(slot)
+        if not slot_info or not slot_info['anchor_block_id']:
+            raise ValueError(f"Slot {slot} is not initialized")
+        
+        anchor_block_id = slot_info['anchor_block_id']
+        hop_budget = radius if radius is not None else slot_info['hop_budget']
+        
+        # Define goal function for beam search
+        query_vec = np.array(query_emb)
+        def is_relevant_block(block_id: str) -> bool:
+            try:
+                # Get block from database
+                block_data = self.bm.db_manager.get_block_by_index(int(block_id))
+                if not block_data:
+                    return False
+                
+                # Check similarity with query
+                block_emb = np.array(block_data['embedding'])
+                similarity = np.dot(query_vec, block_emb) / (
+                    np.linalg.norm(query_vec) * np.linalg.norm(block_emb)
+                )
+                
+                # Threshold for relevance
+                return similarity > 0.6
+                
+            except Exception:
+                return False
+        
+        # Perform beam search
+        start_time = time.perf_counter()
+        relevant_block_ids = graph_index.beam_search(
+            start=anchor_block_id,
+            is_goal=is_relevant_block,
+            beam=32,
+            max_hop=hop_budget
+        )
+        search_time = time.perf_counter() - start_time
+        
+        # Retrieve actual blocks
+        blocks = []
+        for block_id in relevant_block_ids[:top_k*3]:
+            try:
+                block_data = self.bm.db_manager.get_block_by_index(int(block_id))
+                if block_data:
+                    blocks.append(block_data)
+            except Exception:
+                continue
+        
+        # Calculate metrics
+        total_searched = len(relevant_block_ids)
+        hit_rate = len(blocks) / max(1, total_searched) if total_searched > 0 else 0.0
+        
+        # Update anchor position if we found good results
+        if blocks and not slot_info['pinned']:
+            best_block_id = str(blocks[0]['block_index'])
+            anchor_manager.move_anchor(slot, best_block_id, query_vec)
+        
+        metrics = {
+            'hit_rate': hit_rate,
+            'avg_hops': min(hop_budget, 2),  # Estimate based on hop budget
+            'search_time_ms': search_time * 1000,
+            'total_searched': total_searched,
+            'anchor_moved': len(blocks) > 0 and not slot_info['pinned']
+        }
+        
+        return blocks, metrics
