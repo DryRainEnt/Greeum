@@ -88,7 +88,8 @@ class SearchEngine:
         # final_score 기준으로 정렬
         return sorted(blocks, key=lambda x: x.get('final_score', 0), reverse=True)
 
-    def search(self, query: str, top_k: int = 5, temporal_boost: Optional[bool] = None, temporal_weight: float = 0.3) -> Dict[str, Any]:
+    def search(self, query: str, top_k: int = 5, temporal_boost: Optional[bool] = None, temporal_weight: float = 0.3,
+               slot: Optional[str] = None, radius: Optional[int] = None, fallback: bool = True) -> Dict[str, Any]:
         """Vector search → optional rerank → optional temporal boost. Returns blocks and latency metrics.
         
         Args:
@@ -96,7 +97,14 @@ class SearchEngine:
             top_k: 반환할 결과 개수
             temporal_boost: 시간 부스팅 적용 여부. None이면 자동 감지 (날짜 키워드 없으면 적용)
             temporal_weight: 시간 점수 가중치 (0.0-1.0, 기본값 0.3)
+            slot: 앵커 슬롯 (A/B/C) for localized search (M0: parameter only, no implementation)
+            radius: 그래프 탐색 반경 (M0: parameter only, no implementation) 
+            fallback: 국소 검색 실패시 기본 검색 사용 여부 (M0: parameter only, no implementation)
         """
+        # M0: New anchor/graph parameters are received but not yet implemented
+        # They will be used in M1 for localized search functionality
+        _ = slot, radius, fallback  # Acknowledge parameters
+        
         t0 = time.perf_counter()
         emb = get_embedding(query)
         vec_time = time.perf_counter()
