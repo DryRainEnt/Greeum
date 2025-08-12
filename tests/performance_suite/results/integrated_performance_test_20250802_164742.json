@@ -1,7 +1,0 @@
-{
-  "test_start_time": "2025-08-02T16:47:42.296717",
-  "greeum_version": "2.0.5",
-  "test_type": "Phase 1+2 Integration Performance Test",
-  "error": "DatabaseManager.__init__() got an unexpected keyword argument 'db_path'",
-  "test_end_time": "2025-08-02T16:47:42.297583"
-}
