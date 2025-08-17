@@ -10,6 +10,7 @@ from typing import Dict, List, Tuple, Set, Callable, Optional
 from pathlib import Path
 
 from .snapshot import save_graph_snapshot, load_graph_snapshot
+from ..core.metrics import update_edge_count
 
 
 class GraphIndex:
@@ -136,6 +137,7 @@ class GraphIndex:
         
         # Update edge count estimate
         self._edge_count = sum(len(neighbors) for neighbors in self.adj.values())
+        update_edge_count(self._edge_count)  # Record for metrics
     
     def add_node(self, node_id: str) -> None:
         """Add node to graph (creates empty adjacency list if not exists)."""

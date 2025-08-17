@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Dict, Optional, Tuple, List
 
 from .schema import AnchorState, AnchorsSnapshot, save_anchors_snapshot, load_anchors_snapshot, create_empty_snapshot
+from ..core.metrics import record_anchor_move, record_anchor_switch
 
 
 class AnchorManager:
@@ -42,15 +43,40 @@ class AnchorManager:
         }
         save_anchors_snapshot(snapshot, self.store_path)
     
+    def _normalize_vector_dimension(self, input_vec: np.ndarray) -> np.ndarray:
+        """
+        Normalize input vector to match system's embedding dimension.
+        
+        Handles dimension mismatches by truncating or padding vectors.
+        System uses 128-dimensional embeddings by default.
+        """
+        target_dim = 128  # Standard Greeum embedding dimension
+        current_dim = len(input_vec)
+        
+        if current_dim == target_dim:
+            return input_vec  # Already correct dimension
+        elif current_dim > target_dim:
+            # Truncate longer vectors
+            return input_vec[:target_dim]
+        else:
+            # Pad shorter vectors with zeros
+            padded = np.zeros(target_dim)
+            padded[:current_dim] = input_vec
+            return padded
+    
     def select_active_slot(self, input_vec: np.ndarray) -> str:
         """
         Select most relevant anchor slot based on topic vector similarity.
         
         Uses cosine similarity with hysteresis to avoid excessive slot switching.
         Defaults to slot 'A' for empty or uninitialized vectors.
+        Automatically handles dimension mismatches.
         """
         if len(input_vec) == 0:
             return 'A'
+            
+        # Normalize input vector dimension to match system embeddings
+        input_vec = self._normalize_vector_dimension(input_vec)
         
         best_slot = 'A'
         best_similarity = -1.0
@@ -96,11 +122,18 @@ class AnchorManager:
             return
         
         # Update anchor block
+        old_block_id = slot_state['anchor_block_id']
         slot_state['anchor_block_id'] = new_block_id
         slot_state['last_used_ts'] = int(datetime.now().timestamp())
         
+        # Record metrics
+        record_anchor_move(slot)
+        
         # Update topic vector with EMA if provided
         if topic_vec is not None and len(topic_vec) > 0:
+            # Normalize topic vector dimension
+            topic_vec = self._normalize_vector_dimension(topic_vec)
+            
             if not slot_state['topic_vec']:
                 # First topic vector
                 slot_state['topic_vec'] = topic_vec.tolist()
@@ -112,15 +145,21 @@ class AnchorManager:
         
         self._save_state()
     
-    def pin_anchor(self, slot: str, block_id: str) -> None:
-        """Pin anchor to specific block, preventing automatic movement."""
+    def pin_anchor(self, slot: str, block_id: Optional[str] = None) -> None:
+        """Pin anchor, preventing automatic movement.
+        
+        Args:
+            slot: Slot to pin (A, B, or C)
+            block_id: Optional block ID to set as anchor. If None, pins current anchor.
+        """
         if slot not in self.state:
             return
+        
+        if block_id is not None:
+            self.state[slot]['anchor_block_id'] = block_id
             
-        self.state[slot]['anchor_block_id'] = block_id
         self.state[slot]['pinned'] = True
         self.state[slot]['last_used_ts'] = int(datetime.now().timestamp())
-        
         self._save_state()
     
     def unpin_anchor(self, slot: str) -> None:
@@ -173,3 +212,30 @@ class AnchorManager:
     def is_initialized(self) -> bool:
         """Check if any anchors are initialized with actual blocks."""
         return any(state['anchor_block_id'] for state in self.state.values())
+    
+    def set_hop_budget(self, slot: str, hop_budget: int) -> None:
+        """Set hop budget for specific slot."""
+        if slot not in self.state:
+            raise ValueError(f"Slot {slot} not found")
+        
+        if not isinstance(hop_budget, int) or not (1 <= hop_budget <= 3):
+            raise ValueError("hop_budget must be integer between 1-3")
+        
+        self.state[slot]['hop_budget'] = hop_budget
+        self.state[slot]['last_used_ts'] = int(datetime.now().timestamp())
+        self._save_state()
+    
+    def get_hop_budget(self, slot: str) -> int:
+        """Get current hop budget for slot."""
+        if slot not in self.state:
+            raise ValueError(f"Slot {slot} not found")
+        return self.state[slot]['hop_budget']
+    
+    def update_summary(self, slot: str, summary: str) -> None:
+        """Update summary description for slot."""
+        if slot not in self.state:
+            raise ValueError(f"Slot {slot} not found")
+        
+        self.state[slot]['summary'] = summary
+        self.state[slot]['last_used_ts'] = int(datetime.now().timestamp())
+        self._save_state()
