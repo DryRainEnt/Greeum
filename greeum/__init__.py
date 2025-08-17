@@ -5,7 +5,7 @@ This package contains independent modules to provide a human-like
 memory system for Large Language Models.
 """
 
-__version__ = "2.2.2a1"
+__version__ = "2.2.3a1"
 
 # Core components imports
 try:
@@ -26,6 +26,7 @@ try:
         DatabaseManager, SearchEngine, BertReranker, 
         STMWorkingSet
     )
+    from .core.ltm_links_cache import LTMLinksCache, create_neighbor_link, calculate_link_weight
 except ImportError:
     pass
 
@@ -121,6 +122,11 @@ __all__ = [
     
     # Database management
     "DatabaseManager",
+    
+    # LTM Links Cache (M2.3)
+    "LTMLinksCache",
+    "create_neighbor_link",
+    "calculate_link_weight",
     
     # Embedding models
     "EmbeddingModel",
