@@ -19,7 +19,7 @@ import sys
 from typing import Optional
 
 @click.group()
-@click.version_option(version="2.2.3a1")
+@click.version_option(version="2.2.4a1")
 def main():
     """Greeum Universal Memory System v2.0"""
     pass

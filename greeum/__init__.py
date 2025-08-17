@@ -5,7 +5,7 @@ This package contains independent modules to provide a human-like
 memory system for Large Language Models.
 """
 
-__version__ = "2.2.3a1"
+__version__ = "2.2.4a1"
 
 # Core components imports
 try:
@@ -27,6 +27,7 @@ try:
         STMWorkingSet
     )
     from .core.ltm_links_cache import LTMLinksCache, create_neighbor_link, calculate_link_weight
+    from .anchors.auto_movement import AutoAnchorMovement
 except ImportError:
     pass
 
@@ -127,6 +128,9 @@ __all__ = [
     "LTMLinksCache",
     "create_neighbor_link",
     "calculate_link_weight",
+    
+    # Auto Anchor Movement (M2.4)
+    "AutoAnchorMovement",
     
     # Embedding models
     "EmbeddingModel",
