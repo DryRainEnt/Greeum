@@ -199,6 +199,129 @@ def process_text():
     
     return jsonify(result)
 
+# Anchor 엔드포인트 추가
+@app.route('/api/v1/anchors', methods=['GET'])
+def get_anchors():
+    """Get current anchor states for all slots"""
+    try:
+        sys.path.insert(0, parent_dir)
+        from greeum.anchors import AnchorManager
+        
+        anchor_path = Path(parent_dir) / "data" / "anchors.json"
+        if not anchor_path.exists():
+            return jsonify({
+                "error": "Anchor system not initialized. Run bootstrap first."
+            }), 404
+        
+        anchor_manager = AnchorManager(anchor_path)
+        
+        # Get all slot info
+        slots = []
+        for slot_name in ['A', 'B', 'C']:
+            slot_info = anchor_manager.get_slot_info(slot_name)
+            if slot_info:
+                slots.append({
+                    'slot': slot_info['slot'],
+                    'anchor_block_id': slot_info['anchor_block_id'],
+                    'hop_budget': slot_info['hop_budget'],
+                    'pinned': slot_info['pinned'],
+                    'last_used_ts': slot_info['last_used_ts'],
+                    'summary': slot_info['summary']
+                })
+        
+        # Get metadata
+        anchor_data = anchor_manager._load_state()
+        
+        return jsonify({
+            'version': anchor_data.get('version', 1),
+            'slots': slots,
+            'updated_at': anchor_data.get('updated_at', int(datetime.now().timestamp()))
+        })
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to get anchors: {str(e)}"}), 500
+
+@app.route('/api/v1/anchors/<slot>', methods=['PATCH'])
+def update_anchor(slot):
+    """Update specific anchor slot configuration"""
+    if slot not in ['A', 'B', 'C']:
+        return jsonify({"error": f"Invalid slot: {slot}. Must be A, B, or C"}), 400
+    
+    try:
+        sys.path.insert(0, parent_dir)
+        from greeum.anchors import AnchorManager
+        from greeum.core import BlockManager, DatabaseManager
+        import numpy as np
+        
+        update_data = request.get_json() or {}
+        
+        # Load anchor manager
+        anchor_path = Path(parent_dir) / "data" / "anchors.json"
+        if not anchor_path.exists():
+            return jsonify({
+                "error": "Anchor system not initialized. Run bootstrap first."
+            }), 404
+        
+        anchor_manager = AnchorManager(anchor_path)
+        
+        # Check if slot exists
+        current_info = anchor_manager.get_slot_info(slot)
+        if not current_info:
+            return jsonify({"error": f"Slot {slot} not found"}), 404
+        
+        # Update anchor block if requested
+        if 'anchor_block_id' in update_data:
+            block_id = update_data['anchor_block_id']
+            
+            # Validate block exists
+            db_manager = DatabaseManager()
+            block_manager_instance = BlockManager(db_manager)
+            
+            try:
+                block_data = block_manager_instance.db_manager.get_block_by_index(int(block_id))
+                if not block_data:
+                    return jsonify({
+                        "error": f"Block #{block_id} does not exist"
+                    }), 400
+            except ValueError:
+                return jsonify({"error": f"Invalid block ID: {block_id}"}), 400
+            
+            # Move anchor
+            block_embedding = np.array(block_data.get('embedding', [0.0] * 128))
+            anchor_manager.move_anchor(slot, block_id, block_embedding)
+        
+        # Update hop budget if requested
+        if 'hop_budget' in update_data:
+            hop_budget = update_data['hop_budget']
+            if not isinstance(hop_budget, int) or not (1 <= hop_budget <= 3):
+                return jsonify({"error": "hop_budget must be integer between 1-3"}), 400
+            anchor_manager.set_hop_budget(slot, hop_budget)
+        
+        # Update pin status if requested
+        if 'pinned' in update_data:
+            pinned = update_data['pinned']
+            if not isinstance(pinned, bool):
+                return jsonify({"error": "pinned must be boolean"}), 400
+            
+            if pinned:
+                anchor_manager.pin_anchor(slot)
+            else:
+                anchor_manager.unpin_anchor(slot)
+        
+        # Return updated state
+        updated_info = anchor_manager.get_slot_info(slot)
+        return jsonify({
+            'slot': updated_info['slot'],
+            'anchor_block_id': updated_info['anchor_block_id'],
+            'hop_budget': updated_info['hop_budget'],
+            'pinned': updated_info['pinned'],
+            'last_used_ts': updated_info['last_used_ts'],
+            'summary': updated_info['summary']
+        })
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to update anchor: {str(e)}"}), 500
+
 @app.route('/api/info')
 def api_info():
     """API 정보 조회"""

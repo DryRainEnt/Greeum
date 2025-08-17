@@ -9,6 +9,7 @@ from datetime import datetime
 
 from .block_manager import BlockManager
 from ..embedding_models import get_embedding
+from .metrics import record_local_search, record_fallback_search, update_beam_width
 
 try:
     from sentence_transformers import CrossEncoder  # type: ignore
@@ -134,6 +135,7 @@ class SearchEngine:
             fallback_used = False
         elif fallback:
             # Fallback to standard search
+            record_fallback_search()  # Record fallback metric
             candidate_blocks = self.bm.search_by_embedding(emb, top_k=top_k*3)
             fallback_used = True
         else:
@@ -231,18 +233,21 @@ class SearchEngine:
                     np.linalg.norm(query_vec) * np.linalg.norm(block_emb)
                 )
                 
-                # Threshold for relevance
-                return similarity > 0.6
+                # Threshold for relevance (based on actual data analysis: 90th percentile)
+                return similarity > 0.1
                 
             except Exception:
                 return False
         
         # Perform beam search
         start_time = time.perf_counter()
+        beam_width = 32
+        update_beam_width(beam_width)  # Record current beam width
+        
         relevant_block_ids = graph_index.beam_search(
             start=anchor_block_id,
             is_goal=is_relevant_block,
-            beam=32,
+            beam=beam_width,
             max_hop=hop_budget
         )
         search_time = time.perf_counter() - start_time
@@ -260,6 +265,10 @@ class SearchEngine:
         # Calculate metrics
         total_searched = len(relevant_block_ids)
         hit_rate = len(blocks) / max(1, total_searched) if total_searched > 0 else 0.0
+        hit = len(blocks) > 0
+        
+        # Record metrics
+        record_local_search(hit=hit, hops=hop_budget)
         
         # Update anchor position if we found good results
         if blocks and not slot_info['pinned']:

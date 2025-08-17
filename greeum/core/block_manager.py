@@ -61,6 +61,11 @@ class BlockManager:
         }
         current_hash = self._compute_hash(block_data_for_hash)
 
+        # M2: Add optional links.neighbors cache for anchor-based graph system
+        links = {}
+        if metadata and 'links' in metadata:
+            links = metadata['links']
+        
         block_to_store_in_db = {
             "block_index": new_block_index,
             "timestamp": current_timestamp,
@@ -72,7 +77,8 @@ class BlockManager:
             "hash": current_hash,
             "prev_hash": prev_h,
             "metadata": metadata or {},
-            "embedding_model": embedding_model
+            "embedding_model": embedding_model,
+            "links": links  # M2: Store neighbor links cache
         }
         
         try:
@@ -212,4 +218,62 @@ class BlockManager:
         
         except Exception as e:
             logger.error(f"Integrity verification failed: {e}")
-            return False 
+            return False
+    
+    def update_block_links(self, block_index: int, neighbors: List[Dict[str, Any]]) -> bool:
+        """
+        Update neighbor links cache for a block (M2 Implementation).
+        
+        Args:
+            block_index: Block index to update
+            neighbors: List of neighbor info [{"id": "block_123", "w": 0.61}, ...]
+            
+        Returns:
+            bool: True if update successful
+        """
+        try:
+            # Get current block
+            block = self.db_manager.get_block_by_index(block_index)
+            if not block:
+                logger.warning(f"Block {block_index} not found for links update")
+                return False
+            
+            # Update links in metadata
+            metadata = block.get('metadata', {})
+            metadata['links'] = {"neighbors": neighbors}
+            
+            # Update block in database
+            success = self.db_manager.update_block_metadata(block_index, metadata)
+            if success:
+                logger.debug(f"Updated links for block {block_index}: {len(neighbors)} neighbors")
+            else:
+                logger.warning(f"Failed to update links for block {block_index}")
+                
+            return success
+            
+        except Exception as e:
+            logger.error(f"Error updating block links: {e}")
+            return False
+    
+    def get_block_neighbors(self, block_index: int) -> List[Dict[str, Any]]:
+        """
+        Get cached neighbor links for a block.
+        
+        Args:
+            block_index: Block index
+            
+        Returns:
+            List of neighbor info or empty list if no cache
+        """
+        try:
+            block = self.db_manager.get_block_by_index(block_index)
+            if not block:
+                return []
+                
+            metadata = block.get('metadata', {})
+            links = metadata.get('links', {})
+            return links.get('neighbors', [])
+            
+        except Exception as e:
+            logger.debug(f"Error getting block neighbors: {e}")
+            return [] 

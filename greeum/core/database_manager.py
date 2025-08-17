@@ -779,4 +779,84 @@ class DatabaseManager:
         
         except Exception as e:
             logger.error(f"Database health check failed: {e}")
-            return False 
+            return False
+    
+    def update_block_metadata(self, block_index: int, metadata: Dict[str, Any]) -> bool:
+        """
+        Update metadata for a specific block (M2 Implementation).
+        
+        Args:
+            block_index: Block index to update
+            metadata: New metadata dictionary
+            
+        Returns:
+            bool: True if update successful
+        """
+        try:
+            cursor = self.conn.cursor()
+            
+            # Update blocks table metadata column if it exists
+            cursor.execute("PRAGMA table_info(blocks)")
+            columns = {row[1] for row in cursor.fetchall()}
+            
+            if 'metadata' in columns:
+                # Update metadata column in blocks table
+                cursor.execute('''
+                UPDATE blocks SET metadata = ? WHERE block_index = ?
+                ''', (json.dumps(metadata), block_index))
+            
+            # Update/insert into block_metadata table (using existing schema)
+            cursor.execute('''
+            INSERT OR REPLACE INTO block_metadata (block_index, metadata)
+            VALUES (?, ?)
+            ''', (block_index, json.dumps(metadata)))
+            
+            self.conn.commit()
+            logger.debug(f"Updated metadata for block {block_index}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to update metadata for block {block_index}: {e}")
+            return False
+    
+    def get_block_by_index(self, block_index: int) -> Optional[Dict[str, Any]]:
+        """
+        Get block by index (alias for get_block for compatibility).
+        """
+        return self.get_block(block_index)
+    
+    def get_block_embedding(self, block_index: int) -> Optional[Dict[str, Any]]:
+        """
+        Get embedding data for a specific block.
+        
+        Args:
+            block_index: Block index
+            
+        Returns:
+            Dict with embedding data or None if not found
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+            SELECT embedding, embedding_model, embedding_dim 
+            FROM block_embeddings 
+            WHERE block_index = ?
+            ''', (block_index,))
+            
+            row = cursor.fetchone()
+            if not row:
+                return None
+            
+            # Convert binary embedding back to numpy array
+            embedding_bytes = row[0]
+            embedding_array = np.frombuffer(embedding_bytes, dtype=np.float32)
+            
+            return {
+                'embedding': embedding_array.tolist(),
+                'embedding_model': row[1],
+                'embedding_dim': row[2]
+            }
+            
+        except Exception as e:
+            logger.debug(f"Failed to get embedding for block {block_index}: {e}")
+            return None 

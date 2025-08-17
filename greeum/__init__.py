@@ -5,7 +5,7 @@ This package contains independent modules to provide a human-like
 memory system for Large Language Models.
 """
 
-__version__ = "2.1.1"
+__version__ = "2.2.0"
 
 # Core components imports
 try:
@@ -106,8 +106,9 @@ except ImportError:
 # MCP integration (v2.0 feature) - optional import
 try:
     from . import mcp
-except ImportError:
-    # MCP is optional and requires 'pip install greeum[mcp]'
+except (ImportError, AttributeError) as e:
+    # MCP is optional and may have dependency conflicts
+    # Skip MCP import for now due to httpx compatibility issues
     pass
 
 __all__ = [

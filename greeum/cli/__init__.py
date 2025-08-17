@@ -19,7 +19,7 @@ import sys
 from typing import Optional
 
 @click.group()
-@click.version_option()
+@click.version_option(version="2.2.0")
 def main():
     """Greeum Universal Memory System v2.0"""
     pass
@@ -49,39 +49,59 @@ def api():
     """API server commands"""
     pass
 
+@main.group()
+def anchors():
+    """Anchor-based memory management (STM 3-slot system)"""
+    pass
+
 # Memory 서브명령어들
 @memory.command()
 @click.argument('content')
 @click.option('--importance', '-i', default=0.5, help='Importance score (0.0-1.0)')
 @click.option('--tags', '-t', help='Comma-separated tags')
-def add(content: str, importance: float, tags: Optional[str]):
+@click.option('--slot', '-s', type=click.Choice(['A', 'B', 'C']), help='Insert near specified anchor slot')
+def add(content: str, importance: float, tags: Optional[str], slot: Optional[str]):
     """Add new memory to long-term storage"""
-    from ..core import BlockManager, DatabaseManager
-    from ..text_utils import process_user_input
-    
     try:
-        db_manager = DatabaseManager()
-        block_manager = BlockManager(db_manager)
-        
-        # 텍스트 처리
-        processed = process_user_input(content)
-        keywords = processed.get('keywords', [])
-        tag_list = tags.split(',') if tags else processed.get('tags', [])
-        embedding = processed.get('embedding', [0.0] * 384)
-        
-        # 블록 추가
-        block = block_manager.add_block(
-            context=content,
-            keywords=keywords,
-            tags=tag_list,
-            embedding=embedding,
-            importance=importance
-        )
-        
-        if block:
-            click.echo(f"✅ Memory added (Block #{block['block_index']})")
+        if slot:
+            # Use anchor-based write
+            from ..api.write import write as anchor_write
+            
+            result = anchor_write(
+                text=content,
+                slot=slot,
+                policy={'importance': importance, 'tags': tags}
+            )
+            
+            click.echo(f"✅ Memory added near anchor {slot} (Block #{result})")
+            
         else:
-            click.echo("❌ Failed to add memory")
+            # Use traditional write
+            from ..core import BlockManager, DatabaseManager
+            from ..text_utils import process_user_input
+            
+            db_manager = DatabaseManager()
+            block_manager = BlockManager(db_manager)
+            
+            # 텍스트 처리
+            processed = process_user_input(content)
+            keywords = processed.get('keywords', [])
+            tag_list = tags.split(',') if tags else processed.get('tags', [])
+            embedding = processed.get('embedding', [0.0] * 384)
+            
+            # 블록 추가
+            block = block_manager.add_block(
+                context=content,
+                keywords=keywords,
+                tags=tag_list,
+                embedding=embedding,
+                importance=importance
+            )
+            
+            if block:
+                click.echo(f"✅ Memory added (Block #{block['block_index']})")
+            else:
+                click.echo("❌ Failed to add memory")
             
     except Exception as e:
         click.echo(f"❌ Error: {e}")
@@ -91,25 +111,63 @@ def add(content: str, importance: float, tags: Optional[str]):
 @click.argument('query')
 @click.option('--count', '-c', default=5, help='Number of results')
 @click.option('--threshold', '-th', default=0.1, help='Similarity threshold')
-def search(query: str, count: int, threshold: float):
+@click.option('--slot', '-s', type=click.Choice(['A', 'B', 'C']), help='Use anchor-based localized search')
+@click.option('--radius', '-r', type=int, help='Graph search radius (1-3)')
+@click.option('--no-fallback', is_flag=True, help='Disable fallback to global search')
+def search(query: str, count: int, threshold: float, slot: str, radius: int, no_fallback: bool):
     """Search memories by keywords/semantic similarity"""
-    from ..core import BlockManager, DatabaseManager
-    
     try:
-        db_manager = DatabaseManager()
-        block_manager = BlockManager(db_manager)
+        from ..core.search_engine import SearchEngine
         
-        results = block_manager.search_by_keywords([query], limit=count)
+        # Use enhanced search engine with anchor support
+        search_engine = SearchEngine()
         
-        if results:
-            click.echo(f"🔍 Found {len(results)} memories:")
-            for i, block in enumerate(results, 1):
-                click.echo(f"{i}. [{block.get('timestamp', 'Unknown')}] {block.get('context', 'No content')[:100]}...")
+        # Perform search with anchor parameters
+        result = search_engine.search(
+            query=query,
+            top_k=count,
+            slot=slot,
+            radius=radius,
+            fallback=not no_fallback
+        )
+        
+        blocks = result.get('blocks', [])
+        metadata = result.get('metadata', {})
+        timing = result.get('timing', {})
+        
+        if blocks:
+            # Display search info
+            if slot:
+                search_type = f"🎯 Anchor-based search (slot {slot})"
+                if metadata.get('fallback_used'):
+                    search_type += " → 🔄 Global fallback"
+                click.echo(search_type)
+                click.echo(f"   Hit rate: {metadata.get('local_hit_rate', 0):.1%}")
+                click.echo(f"   Avg hops: {metadata.get('avg_hops', 0)}")
+            else:
+                click.echo("🔍 Global semantic search")
+            
+            # Display timing
+            total_ms = sum(timing.values())
+            click.echo(f"   Search time: {total_ms:.1f}ms")
+            
+            click.echo(f"\n📋 Found {len(blocks)} memories:")
+            for i, block in enumerate(blocks, 1):
+                timestamp = block.get('timestamp', 'Unknown')
+                content = block.get('context', 'No content')[:80]
+                relevance = block.get('relevance_score', 0)
+                final_score = block.get('final_score', relevance)
+                
+                click.echo(f"{i}. [{timestamp}] {content}...")
+                click.echo(f"   Score: {final_score:.3f}")
         else:
-            click.echo("❌ No memories found")
+            if slot and not no_fallback:
+                click.echo(f"❌ No memories found in anchor slot {slot}, and fallback disabled")
+            else:
+                click.echo("❌ No memories found")
             
     except Exception as e:
-        click.echo(f"❌ Error: {e}")
+        click.echo(f"❌ Search failed: {e}")
         sys.exit(1)
 
 # MCP 서브명령어들
@@ -512,6 +570,186 @@ def cleanup(smart: bool, expired: bool, threshold: float):
                     
     except Exception as e:
         click.echo(f"❌ Cleanup failed: {e}")
+        sys.exit(1)
+
+# Anchors 서브명령어들
+@anchors.command()
+def status():
+    """Display current anchor status for all slots (A/B/C)"""
+    click.echo("⚓ Anchor Status Report")
+    click.echo("=" * 50)
+    
+    try:
+        from ..anchors import AnchorManager
+        from pathlib import Path
+        from datetime import datetime
+        
+        anchor_path = Path("data/anchors.json")
+        if not anchor_path.exists():
+            click.echo("❌ Anchor system not initialized. Run bootstrap first.")
+            sys.exit(1)
+        
+        anchor_manager = AnchorManager(anchor_path)
+        
+        for slot_name in ['A', 'B', 'C']:
+            slot_info = anchor_manager.get_slot_info(slot_name)
+            if slot_info:
+                anchor_id = slot_info['anchor_block_id']
+                hop_budget = slot_info['hop_budget']
+                pinned = "📌 PINNED" if slot_info['pinned'] else "🔄 Active"
+                last_used = datetime.fromtimestamp(slot_info['last_used_ts'])
+                summary = slot_info['summary']
+                
+                click.echo(f"\n🔹 Slot {slot_name}: {pinned}")
+                click.echo(f"   Anchor Block: #{anchor_id}")
+                click.echo(f"   Hop Budget: {hop_budget}")
+                click.echo(f"   Last Used: {last_used.strftime('%Y-%m-%d %H:%M:%S')}")
+                click.echo(f"   Summary: {summary}")
+            else:
+                click.echo(f"\n🔹 Slot {slot_name}: ❌ Not initialized")
+        
+        click.echo("\n" + "=" * 50)
+        click.echo("💡 Use 'greeum anchors set A <block_id>' to configure anchors")
+                    
+    except Exception as e:
+        click.echo(f"❌ Error reading anchor status: {e}")
+        sys.exit(1)
+
+@anchors.command()
+@click.argument('slot', type=click.Choice(['A', 'B', 'C']))
+@click.argument('block_id')
+def set(slot: str, block_id: str):
+    """Set anchor for specified slot to given block ID"""
+    click.echo(f"⚓ Setting anchor for slot {slot} to block #{block_id}...")
+    
+    try:
+        from ..anchors import AnchorManager
+        from ..core import BlockManager, DatabaseManager
+        from pathlib import Path
+        
+        # Validate block exists
+        db_manager = DatabaseManager()
+        block_manager = BlockManager(db_manager)
+        
+        try:
+            block_data = block_manager.db_manager.get_block_by_index(int(block_id))
+            if not block_data:
+                click.echo(f"❌ Block #{block_id} does not exist")
+                sys.exit(1)
+        except ValueError:
+            click.echo(f"❌ Invalid block ID: {block_id}")
+            sys.exit(1)
+        
+        # Load anchor manager
+        anchor_path = Path("data/anchors.json")
+        if not anchor_path.exists():
+            click.echo("❌ Anchor system not initialized. Run bootstrap first.")
+            sys.exit(1)
+        
+        anchor_manager = AnchorManager(anchor_path)
+        
+        # Get block embedding for topic vector
+        import numpy as np
+        block_embedding = np.array(block_data.get('embedding', [0.0] * 128))
+        
+        # Move anchor
+        anchor_manager.move_anchor(slot, block_id, block_embedding)
+        
+        # Display success
+        content_preview = block_data.get('context', '')[:60] + '...' if len(block_data.get('context', '')) > 60 else block_data.get('context', '')
+        click.echo(f"✅ Anchor {slot} set to block #{block_id}")
+        click.echo(f"📝 Content: {content_preview}")
+        
+    except Exception as e:
+        click.echo(f"❌ Failed to set anchor: {e}")
+        sys.exit(1)
+
+@anchors.command()
+@click.argument('slot', type=click.Choice(['A', 'B', 'C']))
+@click.argument('block_id')
+def pin(slot: str, block_id: str):
+    """Pin anchor for specified slot to prevent automatic movement"""
+    click.echo(f"📌 Pinning anchor for slot {slot} to block #{block_id}...")
+    
+    try:
+        from ..anchors import AnchorManager
+        from ..core import BlockManager, DatabaseManager
+        from pathlib import Path
+        
+        # Validate block exists
+        db_manager = DatabaseManager()
+        block_manager = BlockManager(db_manager)
+        
+        try:
+            block_data = block_manager.db_manager.get_block_by_index(int(block_id))
+            if not block_data:
+                click.echo(f"❌ Block #{block_id} does not exist")
+                sys.exit(1)
+        except ValueError:
+            click.echo(f"❌ Invalid block ID: {block_id}")
+            sys.exit(1)
+        
+        # Load anchor manager
+        anchor_path = Path("data/anchors.json")
+        if not anchor_path.exists():
+            click.echo("❌ Anchor system not initialized. Run bootstrap first.")
+            sys.exit(1)
+        
+        anchor_manager = AnchorManager(anchor_path)
+        
+        # Set and pin anchor
+        import numpy as np
+        block_embedding = np.array(block_data.get('embedding', [0.0] * 128))
+        
+        anchor_manager.move_anchor(slot, block_id, block_embedding)
+        anchor_manager.pin_anchor(slot)
+        
+        # Display success
+        content_preview = block_data.get('context', '')[:60] + '...' if len(block_data.get('context', '')) > 60 else block_data.get('context', '')
+        click.echo(f"✅ Anchor {slot} pinned to block #{block_id}")
+        click.echo(f"📝 Content: {content_preview}")
+        click.echo("🔒 This anchor will not move automatically during searches")
+        
+    except Exception as e:
+        click.echo(f"❌ Failed to pin anchor: {e}")
+        sys.exit(1)
+
+@anchors.command()
+@click.argument('slot', type=click.Choice(['A', 'B', 'C']))
+def unpin(slot: str):
+    """Unpin anchor for specified slot to allow automatic movement"""
+    click.echo(f"🔓 Unpinning anchor for slot {slot}...")
+    
+    try:
+        from ..anchors import AnchorManager
+        from pathlib import Path
+        
+        # Load anchor manager
+        anchor_path = Path("data/anchors.json")
+        if not anchor_path.exists():
+            click.echo("❌ Anchor system not initialized. Run bootstrap first.")
+            sys.exit(1)
+        
+        anchor_manager = AnchorManager(anchor_path)
+        
+        # Check current state
+        slot_info = anchor_manager.get_slot_info(slot)
+        if not slot_info:
+            click.echo(f"❌ Slot {slot} not found")
+            sys.exit(1)
+        
+        if not slot_info['pinned']:
+            click.echo(f"💡 Slot {slot} is already unpinned")
+            return
+        
+        # Unpin anchor
+        anchor_manager.unpin_anchor(slot)
+        
+        click.echo(f"✅ Anchor {slot} unpinned")
+        click.echo("🔄 This anchor will now move automatically during relevant searches")
+        
+    except Exception as e:
+        click.echo(f"❌ Failed to unpin anchor: {e}")
         sys.exit(1)
 
 if __name__ == '__main__':
