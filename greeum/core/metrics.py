@@ -219,6 +219,11 @@ def get_all_metrics() -> Dict[str, Any]:
     return get_metrics_collector().get_metrics()
 
 
+def get_edge_count() -> int:
+    """Get current edge count."""
+    return get_metrics_collector()._current_edge_count
+
+
 def export_prometheus() -> str:
     """Export metrics in Prometheus format."""
     return get_metrics_collector().export_prometheus_format()
