@@ -23,9 +23,15 @@ logger = logging.getLogger(__name__)
 class AnchorBasedWriter:
     """Writer that places new blocks near anchor neighborhoods."""
     
-    def __init__(self, db_manager: Optional[DatabaseManager] = None):
+    def __init__(self, db_manager: Optional[DatabaseManager] = None, 
+                 anchor_path: Optional[Path] = None, 
+                 graph_path: Optional[Path] = None):
         self.db_manager = db_manager or DatabaseManager()
         self.block_manager = BlockManager(self.db_manager)
+        
+        # Allow custom paths for testing
+        self.anchor_path = anchor_path or Path("data/anchors.json")
+        self.graph_path = graph_path or Path("data/graph_snapshot.jsonl")
         
         # Track metrics
         self.anchor_moves_count = 0
@@ -65,21 +71,23 @@ class AnchorBasedWriter:
         max_neighbors = policy.get("max_neighbors", 32)
         
         try:
-            # Load anchor and graph systems
-            anchor_path = Path("data/anchors.json")
-            graph_path = Path("data/graph_snapshot.jsonl")
-            
+            # Load anchor and graph systems using configured paths
             anchor_manager = None
             graph_index = None
             
-            if anchor_path.exists() and graph_path.exists():
+            if self.anchor_path.exists():
                 try:
-                    anchor_manager = AnchorManager(anchor_path)
-                    graph_index = GraphIndex()
+                    anchor_manager = AnchorManager(self.anchor_path)
                     
-                    if not graph_index.load_snapshot(graph_path):
-                        logger.warning("Failed to load graph snapshot")
-                        graph_index = None
+                    # Only load graph if it exists
+                    if self.graph_path.exists():
+                        graph_index = GraphIndex()
+                        if not graph_index.load_snapshot(self.graph_path):
+                            logger.warning("Failed to load graph snapshot")
+                            graph_index = None
+                    else:
+                        # Create new graph index for testing
+                        graph_index = GraphIndex()
                         
                 except Exception as e:
                     logger.warning(f"Failed to load anchor/graph system: {e}")
@@ -143,7 +151,7 @@ class AnchorBasedWriter:
                     self.edges_added_count += len(edge_weights)
                     
                     # Save updated graph
-                    graph_index.save_snapshot(graph_path)
+                    graph_index.save_snapshot(self.graph_path)
                     
                     logger.debug(f"Added {len(edge_weights)} edges for new block {new_block_id}")
                     

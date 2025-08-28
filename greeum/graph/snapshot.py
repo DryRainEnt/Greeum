@@ -55,9 +55,11 @@ def save_graph_snapshot(
         json.dump(snapshot, f, indent=2, ensure_ascii=False)
 
 
-def load_graph_snapshot(store_path: Path) -> Optional[Dict[str, List[Tuple[str, float]]]]:
+def load_graph_snapshot(store_path) -> Optional[Dict[str, List[Tuple[str, float]]]]:
     """Load graph adjacency from snapshot file."""
-    if not store_path.exists():
+    from pathlib import Path
+    path_obj = Path(store_path)
+    if not path_obj.exists():
         return None
     
     try:

@@ -34,9 +34,14 @@ class BertReranker:
         return docs[:top_k]
 
 class SearchEngine:
-    def __init__(self, block_manager: Optional[BlockManager] = None, reranker: Optional[BertReranker] = None):
+    def __init__(self, block_manager: Optional[BlockManager] = None, reranker: Optional[BertReranker] = None,
+                 anchor_path: Optional[str] = None, graph_path: Optional[str] = None):
         self.bm = block_manager or BlockManager()
         self.reranker = reranker
+        
+        # Allow custom paths for testing
+        self.anchor_path = anchor_path or "data/anchors.json"
+        self.graph_path = graph_path or "data/graph_snapshot.jsonl"
     
     def _detect_temporal_query(self, query: str) -> bool:
         """날짜 관련 키워드가 있는지 감지"""
@@ -195,17 +200,21 @@ class SearchEngine:
         
         # Load anchor manager and graph index
         try:
-            anchor_path = Path("data/anchors.json")
-            graph_path = Path("data/graph_snapshot.jsonl")
+            anchor_path = Path(self.anchor_path)
+            graph_path = Path(self.graph_path)
             
-            if not anchor_path.exists() or not graph_path.exists():
-                raise FileNotFoundError("Anchor or graph files not found - run bootstrap first")
+            if not anchor_path.exists():
+                raise FileNotFoundError(f"Anchor file not found: {anchor_path}")
             
             anchor_manager = AnchorManager(anchor_path)
             graph_index = GraphIndex()
             
-            if not graph_index.load_snapshot(graph_path):
-                raise ValueError("Failed to load graph snapshot")
+            # Only load graph if it exists, otherwise create empty
+            if graph_path.exists():
+                if not graph_index.load_snapshot(graph_path):
+                    logger.warning("Failed to load graph snapshot, using empty graph")
+            else:
+                logger.debug("Graph file not found, using empty graph")
             
         except Exception as e:
             raise RuntimeError(f"Failed to load anchor/graph system: {e}")

@@ -178,7 +178,7 @@ class GraphIndex:
         }
         save_graph_snapshot(self.adj, params, store_path)
     
-    def load_snapshot(self, store_path: Path) -> bool:
+    def load_snapshot(self, store_path) -> bool:
         """Load graph state from snapshot file. Returns True if successful."""
         adj = load_graph_snapshot(store_path)
         if adj is not None:
