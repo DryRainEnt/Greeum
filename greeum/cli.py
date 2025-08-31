@@ -174,7 +174,10 @@ def add_memory_command(text, db_path, keywords, tags, importance):
 @click.option("--db-path", default=None, help="데이터베이스 경로 (기본: data/memory.db)")
 @click.option("--limit", default=5, help="결과 개수 제한")
 @click.option("--mode", default="hybrid", help="검색 모드 (embedding, keyword, temporal, hybrid)")
-def search_command(query, db_path, limit, mode):
+@click.option("--slot", type=click.Choice(['A', 'B', 'C']), help="앵커 슬롯 기반 국소 검색")
+@click.option("--radius", default=2, type=int, help="국소 검색 반경 (홉 수)")
+@click.option("--fallback", is_flag=True, default=True, help="국소 검색 실패시 전역 검색")
+def search_command(query, db_path, limit, mode, slot, radius, fallback):
     """기억 검색"""
     try:
         # 데이터베이스 연결
@@ -184,46 +187,80 @@ def search_command(query, db_path, limit, mode):
         
         blocks = []
         
-        # 검색 모드에 따라 다른 방법 사용
-        if mode == "embedding":
-            # 임베딩 검색
-            from greeum.embedding_models import get_embedding
-            embedding = get_embedding(query)
-            blocks = db_manager.search_blocks_by_embedding(embedding, top_k=limit)
-            console.print("[blue]임베딩 검색 결과:[/blue]")
-        elif mode == "keyword":
-            # 키워드 검색
-            keywords = query.split()
-            blocks = db_manager.search_blocks_by_keyword(keywords, limit=limit)
-            console.print("[blue]키워드 검색 결과:[/blue]")
-        elif mode == "temporal":
-            # 시간적 검색
-            from greeum.temporal_reasoner import TemporalReasoner
-            reasoner = TemporalReasoner(db_manager)
-            result = reasoner.search_by_time_reference(query)
-            blocks = result.get("blocks", [])
-            
-            # 시간 참조 정보 출력
-            time_ref = result.get("time_ref")
-            if time_ref:
-                console.print(f"[blue]시간 표현 감지: {time_ref.get('term')}[/blue]")
-                from_date = time_ref.get("from_date")
-                to_date = time_ref.get("to_date")
-                if from_date and to_date:
-                    console.print(f"[blue]검색 범위: {from_date} ~ {to_date}[/blue]")
-            console.print("[blue]시간적 검색 결과:[/blue]")
-        elif mode == "hybrid":
-            # 하이브리드 검색 (기본값)
-            from greeum.temporal_reasoner import TemporalReasoner, get_embedding
-            reasoner = TemporalReasoner(db_manager)
-            embedding = get_embedding(query)
-            keywords = query.split()
-            result = reasoner.hybrid_search(query, embedding, keywords, top_k=limit)
-            blocks = result.get("blocks", [])
-            console.print("[blue]하이브리드 검색 결과:[/blue]")
-        else:
-            console.print(f"[red]지원하지 않는 검색 모드: {mode}[/red]")
-            return
+        # 앵커 기반 검색이 요청된 경우
+        if slot:
+            try:
+                from greeum.core.search_engine import SearchEngine
+                search_engine = SearchEngine(db_manager)
+                
+                # 앵커 기반 국소 검색 수행
+                result = search_engine.search(
+                    query=query,
+                    top_k=limit,
+                    slot=slot,
+                    radius=radius,
+                    fallback=fallback
+                )
+                
+                blocks = result.get('blocks', [])
+                metadata = result.get('metadata', {})
+                
+                # 검색 정보 출력
+                console.print(f"[blue]앵커 슬롯 {slot} 기반 검색 (반경: {radius}홉)[/blue]")
+                if metadata.get('local_search_used'):
+                    console.print(f"[green]✓ 국소 검색 성공 ({metadata.get('local_results', 0)}개 결과)[/green]")
+                if metadata.get('fallback_used'):
+                    console.print(f"[yellow]⚠ 전역 검색으로 후퇴 ({metadata.get('fallback_results', 0)}개 추가)[/yellow]")
+                    
+            except ImportError:
+                console.print("[red]앵커 기반 검색을 사용할 수 없습니다. 기본 검색을 사용합니다.[/red]")
+                slot = None  # 기본 검색으로 후퇴
+            except Exception as e:
+                console.print(f"[red]앵커 검색 오류: {e}. 기본 검색을 사용합니다.[/red]")
+                slot = None  # 기본 검색으로 후퇴
+        
+        # 기본 검색 모드 (앵커 기반이 아닌 경우)
+        if not slot:
+            # 검색 모드에 따라 다른 방법 사용
+            if mode == "embedding":
+                # 임베딩 검색
+                from greeum.embedding_models import get_embedding
+                embedding = get_embedding(query)
+                blocks = db_manager.search_blocks_by_embedding(embedding, top_k=limit)
+                console.print("[blue]임베딩 검색 결과:[/blue]")
+            elif mode == "keyword":
+                # 키워드 검색
+                keywords = query.split()
+                blocks = db_manager.search_blocks_by_keyword(keywords, limit=limit)
+                console.print("[blue]키워드 검색 결과:[/blue]")
+            elif mode == "temporal":
+                # 시간적 검색
+                from greeum.temporal_reasoner import TemporalReasoner
+                reasoner = TemporalReasoner(db_manager)
+                result = reasoner.search_by_time_reference(query)
+                blocks = result.get("blocks", [])
+                
+                # 시간 참조 정보 출력
+                time_ref = result.get("time_ref")
+                if time_ref:
+                    console.print(f"[blue]시간 표현 감지: {time_ref.get('term')}[/blue]")
+                    from_date = time_ref.get("from_date")
+                    to_date = time_ref.get("to_date")
+                    if from_date and to_date:
+                        console.print(f"[blue]검색 범위: {from_date} ~ {to_date}[/blue]")
+                console.print("[blue]시간적 검색 결과:[/blue]")
+            elif mode == "hybrid":
+                # 하이브리드 검색 (기본값)
+                from greeum.temporal_reasoner import TemporalReasoner, get_embedding
+                reasoner = TemporalReasoner(db_manager)
+                embedding = get_embedding(query)
+                keywords = query.split()
+                result = reasoner.hybrid_search(query, embedding, keywords, top_k=limit)
+                blocks = result.get("blocks", [])
+                console.print("[blue]하이브리드 검색 결과:[/blue]")
+            else:
+                console.print(f"[red]지원하지 않는 검색 모드: {mode}[/red]")
+                return
         
         # 결과 출력
         if not blocks:
@@ -416,6 +453,10 @@ def recent_memories_command(limit, db_path):
         
     except Exception as e:
         console.print(f"[bold red]기억 조회 오류: {str(e)}[/bold red]")
+
+# 앵커 명령어 등록
+from .cli.anchors import register_anchors_commands
+register_anchors_commands(main)
 
 if __name__ == "__main__":
     main() 

@@ -1,6 +1,6 @@
 # Greeum API Reference
 
-Complete API documentation for Greeum v2.0.5. This guide covers all classes, methods, and integration patterns for building advanced memory systems.
+Complete API documentation for Greeum v2.2.5a1. This guide covers all classes, methods, and integration patterns for building advanced memory systems with anchor-based exploration.
 
 ## Table of Contents
 
@@ -11,16 +11,27 @@ Complete API documentation for Greeum v2.0.5. This guide covers all classes, met
 - [PromptWrapper](#promptwrapper) - Enhanced prompt composition
 - [DatabaseManager](#databasemanager) - Database operations
 
-### Advanced Features (v2.0.5)
+### Anchor System (v2.2+)
+- [AnchorManager](#anchormanager) - 3-slot STM anchor management
+- [GraphIndex](#graphindex) - Graph-based memory traversal
+- [SearchEngine](#searchengine) - Anchor-aware search with localized exploration
+- [AnchorBasedWriter](#anchorbasedwriter) - Near-anchor block placement
+- [AutoAnchorMovement](#autoanchormovement) - Intelligent anchor optimization
+
+### Advanced Features
 - [QualityValidator](#qualityvalidator) - Memory quality assessment
 - [DuplicateDetector](#duplicatedetector) - Duplicate prevention
 - [UsageAnalytics](#usageanalytics) - Usage pattern analysis
 - [TemporalReasoner](#temporalreasoner) - Time-based reasoning
-- [SearchEngine](#searchengine) - Advanced search with reranking
+- [LTMLinksCache](#ltmlinkscache) - Neighbor relationship caching
 
 ### MCP Integration
 - [MCP Tools](#mcp-tools) - 12 MCP tools for Claude Code
 - [MCP Server](#mcp-server) - Server configuration and usage
+
+### CLI & REST API
+- [CLI Commands](#cli-commands) - Command-line interface
+- [REST Endpoints](#rest-endpoints) - HTTP API endpoints
 
 ### Utilities
 - [Embedding Models](#embedding-models) - Vector generation
@@ -442,15 +453,324 @@ reranker = BertReranker("cross-encoder/ms-marco-MiniLM-L-6-v2")
 engine = SearchEngine(reranker=reranker)
 ```
 
-#### `search(query, top_k=5)`
+#### `search(query, top_k=5, slot=None, radius=2, fallback=True)`
 
-Perform advanced search with metrics.
+Perform advanced search with optional anchor-based localized exploration.
 
 ```python
+# Basic search (no anchors)
 results = engine.search("project planning meeting", top_k=10)
 
+# Anchor-based localized search
+results = engine.search(
+    query="API authentication",
+    top_k=5,
+    slot='A',           # Use anchor slot A
+    radius=2,           # Search within 2-hop radius
+    fallback=True       # Fall back to global search if needed
+)
+
 print(f"Found {len(results['blocks'])} results")
-print(f"Search time: {results['search_time_ms']:.0f}ms")
+print(f"Search time: {results['metadata']['search_time_ms']:.0f}ms")
+print(f"Used local search: {results['metadata'].get('local_search_used', False)}")
+```
+
+**Parameters:**
+- `query` (str): Search query text
+- `top_k` (int): Maximum number of results to return  
+- `slot` (str, optional): Anchor slot to use ('A', 'B', or 'C')
+- `radius` (int): Number of hops for localized search (default: 2)
+- `fallback` (bool): Whether to use global search if local fails (default: True)
+
+---
+
+## Anchor System (v2.2+)
+
+### AnchorManager
+
+Manages 3-slot STM anchor state for context-aware memory exploration.
+
+#### `__init__(store_path)`
+
+Initialize anchor manager with persistent storage.
+
+```python
+from greeum.anchors.manager import AnchorManager
+from pathlib import Path
+
+anchor_manager = AnchorManager(Path("data/anchors.json"))
+```
+
+#### `get_slot_info(slot)`
+
+Get information about a specific anchor slot.
+
+```python
+slot_info = anchor_manager.get_slot_info('A')
+if slot_info:
+    print(f"Anchor block: {slot_info['anchor_block_id']}")
+    print(f"Summary: {slot_info['summary']}")
+    print(f"Hop budget: {slot_info.get('hop_budget', 3)}")
+    print(f"Pinned: {slot_info.get('pinned', False)}")
+```
+
+#### `move_anchor(slot, new_block_id, topic_vec, summary, hop_budget=3)`
+
+Move anchor to a new block with context.
+
+```python
+success = anchor_manager.move_anchor(
+    slot='A',
+    new_block_id='12345',
+    topic_vec=[0.1, 0.2, ...],  # 128-dim embedding
+    summary="API development discussion",
+    hop_budget=2
+)
+```
+
+#### `pin_anchor(slot)` / `unpin_anchor(slot)`
+
+Pin or unpin anchor to prevent/allow automatic movement.
+
+```python
+# Prevent automatic movement
+anchor_manager.pin_anchor('A')
+
+# Allow automatic movement
+anchor_manager.unpin_anchor('A')
+```
+
+### GraphIndex
+
+Lightweight graph structure for memory block relationships.
+
+#### `__init__(theta=0.4, kmax=16)`
+
+Initialize graph index with similarity threshold and max connections.
+
+```python
+from greeum.graph.index import GraphIndex
+
+graph = GraphIndex(theta=0.4, kmax=16)
+```
+
+#### `upsert_edges(block_id, neighbors)`
+
+Add or update edges for a block.
+
+```python
+# Add edges with weights
+neighbors = [("block_123", 0.8), ("block_456", 0.6)]
+graph.upsert_edges("block_789", neighbors)
+```
+
+#### `neighbors(block_id, k=5)`
+
+Get k nearest neighbors of a block.
+
+```python
+neighbors = graph.neighbors("block_789", k=3)
+for neighbor_id, weight in neighbors:
+    print(f"Neighbor: {neighbor_id}, weight: {weight:.3f}")
+```
+
+### AnchorBasedWriter
+
+Writer that places new blocks near anchor neighborhoods.
+
+#### `__init__(db_manager=None, anchor_path=None, graph_path=None)`
+
+Initialize writer with optional custom paths.
+
+```python
+from greeum.api.write import AnchorBasedWriter
+
+writer = AnchorBasedWriter(
+    db_manager=db_manager,
+    anchor_path=Path("data/anchors.json"),
+    graph_path=Path("data/graph_snapshot.jsonl")
+)
+```
+
+#### `write(text, slot=None, keywords=None, tags=None, importance=None)`
+
+Write a new block near specified anchor slot.
+
+```python
+# Write near anchor slot A
+block_id = writer.write(
+    text="New API endpoint implemented",
+    slot='A',
+    keywords=["api", "endpoint"],
+    tags=["development"],
+    importance=0.7
+)
+```
+
+### AutoAnchorMovement
+
+Intelligent anchor placement optimization based on usage patterns.
+
+#### `evaluate_anchor_movement(slot, search_results, query_topic_vec)`
+
+Evaluate whether an anchor should be moved.
+
+```python
+from greeum.anchors.auto_movement import AutoAnchorMovement
+
+auto_movement = AutoAnchorMovement(anchor_manager, links_cache, db_manager)
+
+evaluation = auto_movement.evaluate_anchor_movement(
+    slot='A',
+    search_results=recent_results,
+    query_topic_vec=topic_embedding
+)
+
+if evaluation['should_move']:
+    print(f"Recommended move: {evaluation['reason']}")
+    print(f"Target block: {evaluation['target_block_id']}")
+```
+
+---
+
+## CLI Commands
+
+### Anchor Management Commands
+
+#### `greeum anchors status`
+
+Display current anchor status for all slots.
+
+```bash
+greeum anchors status
+# Shows Rich-formatted table with anchor details
+
+greeum anchors status --verbose
+# Include additional metadata
+```
+
+#### `greeum anchors set <slot> <block_id>`
+
+Set anchor for specified slot.
+
+```bash
+# Set anchor for slot A
+greeum anchors set A 1234
+
+# With custom summary and hop budget  
+greeum anchors set B 5678 --summary "Machine learning project" --hop-budget 2
+```
+
+#### `greeum anchors pin/unpin <slot>`
+
+Pin or unpin anchor to control automatic movement.
+
+```bash
+# Pin anchor (prevent auto-movement)
+greeum anchors pin A
+
+# Unpin anchor (allow auto-movement)
+greeum anchors unpin A
+```
+
+### Search Commands
+
+#### `greeum search <query>`
+
+Enhanced search command with anchor support.
+
+```bash
+# Basic search (no anchors)
+greeum search "machine learning algorithms"
+
+# Anchor-based localized search
+greeum search "neural networks" --slot A --radius 2
+
+# Multiple search parameters
+greeum search "data analysis" --slot B --radius 1 --fallback --limit 10
+```
+
+**Parameters:**
+- `--slot` (A/B/C): Anchor slot for localized search
+- `--radius` (int): Search radius in hops (default: 2)  
+- `--fallback`: Enable global search fallback (default: true)
+- `--limit` (int): Maximum results (default: 5)
+
+---
+
+## REST Endpoints
+
+### Anchor Management
+
+#### `GET /v1/anchors`
+
+Get status of all anchor slots.
+
+```bash
+curl -X GET "http://localhost:5000/v1/anchors"
+```
+
+**Response:**
+```json
+{
+  "version": 1,
+  "slots": [
+    {
+      "slot": "A",
+      "anchor_block_id": "1234",
+      "hop_budget": 3,
+      "pinned": false,
+      "last_used_ts": 1693555200,
+      "summary": "API development"
+    }
+  ],
+  "updated_at": 1693555300
+}
+```
+
+#### `PATCH /v1/anchors/{slot}`
+
+Update anchor for specific slot.
+
+```bash
+curl -X PATCH "http://localhost:5000/v1/anchors/A" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "anchor_block_id": "9999",
+       "summary": "New project context",
+       "hop_budget": 2,
+       "pinned": true
+     }'
+```
+
+### Enhanced Search
+
+#### `GET /api/v1/search`
+
+Search with anchor support.
+
+```bash
+# Basic search
+curl -X GET "http://localhost:5000/api/v1/search?query=machine+learning"
+
+# Anchor-based search
+curl -X GET "http://localhost:5000/api/v1/search?query=neural+networks&slot=A&radius=2&limit=5"
+```
+
+**Response:**
+```json
+{
+  "results": [...],
+  "metadata": {
+    "local_search_used": true,
+    "local_results": 3,
+    "fallback_used": false,
+    "search_time_ms": 12.5
+  },
+  "search_type": "anchor_based",
+  "slot": "A",
+  "radius": 2
+}
 ```
 
 ---

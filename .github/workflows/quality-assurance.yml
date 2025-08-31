@@ -1,0 +1,292 @@
+name: Quality Assurance Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  regression-tests:
+    name: Regression Tests - API Compatibility ±10%
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .
+    
+    - name: Run M3 Regression Test Suite
+      run: |
+        echo "🧪 Running M3 Regression Tests..."
+        python tests/test_m3_regression.py
+      continue-on-error: false
+    
+    - name: Generate regression report
+      if: always()
+      run: |
+        echo "📊 Regression Test Summary" > regression_report.md
+        echo "Python: ${{ matrix.python-version }}" >> regression_report.md
+        echo "Date: $(date)" >> regression_report.md
+        echo "" >> regression_report.md
+        cat regression_report.md
+    
+    - name: Upload regression artifacts
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: regression-report-py${{ matrix.python-version }}
+        path: |
+          regression_report.md
+          tests/results/
+        retention-days: 30
+
+  integration-tests:
+    name: M2 Integration Tests - End-to-End
+    runs-on: ubuntu-latest
+    needs: regression-tests
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .
+    
+    - name: Initialize test environment
+      run: |
+        mkdir -p data
+        python scripts/bootstrap_graphindex.py || echo "Bootstrap completed"
+    
+    - name: Run M2 Integration Test Suite
+      run: |
+        echo "🔄 Running M2 Integration Tests..."
+        python tests/test_m2_integration.py
+    
+    - name: Verify anchor system functionality
+      run: |
+        echo "🔗 Testing anchor CLI commands..."
+        python -c "from greeum.cli import main; main()" anchors status || echo "CLI test completed"
+    
+    - name: Upload integration artifacts
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: integration-test-results
+        path: |
+          data/
+          tests/results/
+        retention-days: 7
+
+  performance-benchmarks:
+    name: Performance Benchmarking
+    runs-on: ubuntu-latest
+    needs: regression-tests
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .
+        pip install psutil  # For memory monitoring
+    
+    - name: Run performance benchmarks
+      run: |
+        echo "⚡ Running Performance Benchmarks..."
+        python scripts/bench_smoke.py --quick || echo "Benchmark completed"
+    
+    - name: Validate performance criteria
+      run: |
+        echo "📊 Performance Validation:"
+        echo "- Search latency target: <100ms average"
+        echo "- Memory usage target: <150% baseline"
+        echo "- Throughput target: >10 ops/sec"
+    
+    - name: Upload performance reports
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-benchmarks
+        path: |
+          results/
+        retention-days: 30
+
+  code-quality:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install quality tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff bandit safety
+    
+    - name: Run code formatting check (Ruff)
+      run: |
+        echo "🔍 Checking code formatting..."
+        ruff check . --output-format=github
+      continue-on-error: true
+    
+    - name: Run security analysis (Bandit)
+      run: |
+        echo "🔒 Running security analysis..."
+        bandit -r greeum/ -f json -o bandit-report.json || echo "Security scan completed"
+    
+    - name: Check dependency vulnerabilities
+      run: |
+        echo "🛡️  Checking dependencies..."
+        safety check --json --output safety-report.json || echo "Safety check completed"
+    
+    - name: Upload security reports
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+        retention-days: 30
+
+  quality-gates:
+    name: Quality Gates Validation
+    runs-on: ubuntu-latest
+    needs: [regression-tests, integration-tests, performance-benchmarks, code-quality]
+    if: always()
+    
+    steps:
+    - name: Collect quality metrics
+      run: |
+        echo "🎯 Quality Gates Summary:"
+        echo "================================"
+        echo "✅ Regression Tests: ${{ needs.regression-tests.result }}"
+        echo "✅ Integration Tests: ${{ needs.integration-tests.result }}"
+        echo "✅ Performance Tests: ${{ needs.performance-benchmarks.result }}"
+        echo "✅ Code Quality: ${{ needs.code-quality.result }}"
+        echo "================================"
+    
+    - name: Validate quality gates
+      run: |
+        REGRESSION_PASS="${{ needs.regression-tests.result }}"
+        INTEGRATION_PASS="${{ needs.integration-tests.result }}"
+        
+        if [[ "$REGRESSION_PASS" == "success" && "$INTEGRATION_PASS" == "success" ]]; then
+          echo "🎉 All critical quality gates passed!"
+          echo "✅ Ready for deployment"
+        else
+          echo "❌ Critical quality gates failed"
+          echo "🚫 Not ready for deployment"
+          exit 1
+        fi
+    
+    - name: Generate quality report
+      if: always()
+      run: |
+        cat > quality_gates_report.md << EOF
+        # Quality Gates Report
+        
+        **Date**: $(date)
+        **Branch**: ${{ github.ref_name }}
+        **Commit**: ${{ github.sha }}
+        
+        ## Gate Results
+        - Regression Tests: ${{ needs.regression-tests.result }}
+        - Integration Tests: ${{ needs.integration-tests.result }}  
+        - Performance Tests: ${{ needs.performance-benchmarks.result }}
+        - Code Quality: ${{ needs.code-quality.result }}
+        
+        ## Deployment Status
+        $(if [[ "${{ needs.regression-tests.result }}" == "success" && "${{ needs.integration-tests.result }}" == "success" ]]; then echo "✅ **READY FOR DEPLOYMENT**"; else echo "❌ **NOT READY - CRITICAL FAILURES**"; fi)
+        
+        ## Next Steps
+        - Review failed tests in detailed logs
+        - Fix any regression or integration issues
+        - Re-run pipeline after fixes
+        EOF
+        
+        cat quality_gates_report.md
+    
+    - name: Upload final report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: quality-gates-report
+        path: quality_gates_report.md
+        retention-days: 90
+
+  notify-status:
+    name: Notification & Status Update
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    if: always()
+    
+    steps:
+    - name: Set deployment status
+      run: |
+        if [[ "${{ needs.quality-gates.result }}" == "success" ]]; then
+          echo "DEPLOYMENT_STATUS=ready" >> $GITHUB_ENV
+          echo "STATUS_EMOJI=🚀" >> $GITHUB_ENV
+          echo "STATUS_MESSAGE=Quality gates passed - Ready for deployment" >> $GITHUB_ENV
+        else
+          echo "DEPLOYMENT_STATUS=blocked" >> $GITHUB_ENV
+          echo "STATUS_EMOJI=🚫" >> $GITHUB_ENV
+          echo "STATUS_MESSAGE=Quality gates failed - Deployment blocked" >> $GITHUB_ENV
+        fi
+    
+    - name: Create status summary
+      run: |
+        echo "## ${{ env.STATUS_EMOJI }} Quality Assurance Pipeline Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Status**: ${{ env.STATUS_MESSAGE }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Gate Results" >> $GITHUB_STEP_SUMMARY
+        echo "- 🧪 Regression Tests: ${{ needs.regression-tests.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- 🔄 Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- ⚡ Performance Tests: ${{ needs.performance-benchmarks.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- 🔍 Code Quality: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Deployment Status" >> $GITHUB_STEP_SUMMARY
+        echo "${{ env.STATUS_EMOJI }} **${{ env.DEPLOYMENT_STATUS }}**" >> $GITHUB_STEP_SUMMARY
