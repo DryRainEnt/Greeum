@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented in this file.
 
+## v2.2.6 (2025-09-01) - FastMCP Hotfix for WSL Compatibility
+
+### 🚨 Critical Hotfix
+- **FastMCP Integration**: Replaced custom JSON-RPC implementation with FastMCP framework
+- **WSL Compatibility**: Fixed stdin/stdout buffering issues in Windows PowerShell and WSL environments
+- **Claude CLI Support**: Resolved connection failures with Claude Code CLI in cross-platform environments
+
+### 🔧 Technical Changes
+- **MCP Server**: Migrated from direct JSON-RPC to FastMCP-based server implementation
+- **Transport Layer**: Standardized MCP protocol handling for better compatibility
+- **Error Handling**: Improved cross-platform error handling and logging
+
+### ✅ Compatibility Maintained
+- **100% API Compatibility**: All existing tools (add_memory, search_memory, etc.) unchanged
+- **CLI Commands**: `greeum mcp serve` works identically
+- **Data Format**: No changes to memory storage or retrieval
+- **User Experience**: Zero impact on existing users
+
+### 🎯 Resolved Issues
+- ✅ Fixed WSL Claude CLI connection timeout errors
+- ✅ Resolved PowerShell MCP server startup issues  
+- ✅ Standardized MCP protocol compliance
+- ✅ Improved cross-platform reliability
+
+**Breaking Changes**: None - Full backward compatibility maintained
+
 ## v2.2.5 (2025-09-01) - M3 Anchored Memory System Complete
 
 ### 🚀 Major Features

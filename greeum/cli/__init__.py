@@ -176,15 +176,16 @@ def search(query: str, count: int, threshold: float, slot: str, radius: int, no_
 @click.option('--port', '-p', default=3000, help='WebSocket port (if transport=ws)')
 def serve(transport: str, port: int):
     """Start MCP server for Claude Code integration"""  
-    click.echo(f"🚀 Starting Greeum MCP server ({transport})...")
+    click.echo(f"🚀 Starting Greeum FastMCP server ({transport})...")
     
     if transport == 'stdio':
-        from ..mcp.claude_code_mcp_server import main as mcp_main
+        # ✅ FastMCP 핫픽스 서버로 교체
+        from ..mcp.fastmcp_hotfix_server import main as fastmcp_main
         import asyncio
         try:
-            asyncio.run(mcp_main())
+            asyncio.run(fastmcp_main())
         except KeyboardInterrupt:
-            click.echo("\n👋 MCP server stopped")
+            click.echo("\n👋 FastMCP server stopped")
     else:
         click.echo(f"❌ Transport '{transport}' not supported yet")
         sys.exit(1)
