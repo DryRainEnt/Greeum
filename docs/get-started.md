@@ -1,6 +1,6 @@
 # 🚀 Get Started with Greeum
 
-Complete installation and setup guide for Greeum v2.0.5.
+Complete installation and setup guide for Greeum v2.2.5 with anchored memory system.
 
 ## 📋 Table of Contents
 
@@ -8,6 +8,7 @@ Complete installation and setup guide for Greeum v2.0.5.
 - [Installation](#installation)
 - [First Setup](#first-setup)
 - [Basic Usage](#basic-usage)
+- [Anchor System](#anchor-system)
 - [MCP Integration](#mcp-integration)
 - [Troubleshooting](#troubleshooting)
 
@@ -45,8 +46,8 @@ pipx ensurepath
 ### Option 1: Install with pipx (Recommended)
 
 ```bash
-# Install Greeum
-pipx install greeum
+# Install latest Greeum with anchor system
+pipx install "greeum>=2.2.5"
 
 # Verify installation
 python3 -m greeum.cli --version
@@ -90,25 +91,26 @@ export GREEUM_DATA_DIR="/path/to/your/data"
 ### 2. Create Your First Memory
 
 ```bash
-# Add your first memory
-greeum add -c "I'm starting to use Greeum for memory management. This is my first memory entry."
+# Add your first memory (v2.2.5+ syntax)
+greeum memory add "I'm starting to use Greeum for memory management. This is my first memory entry."
 
 # Verify it was created
-greeum search
+greeum memory search "Greeum" --count 5
 ```
 
 ### 3. Test Basic Functionality
 
 ```bash
 # Add a few more memories
-greeum add -c "Working on a Python project with FastAPI" -k "python,fastapi,project"
-greeum add -c "Meeting with team about Q4 goals" -k "meeting,goals,team"
+greeum memory add "Working on a Python project with FastAPI"
+greeum memory add "Meeting with team about Q4 goals"
 
-# Search by keywords
-greeum search -k "python"
+# Search memories
+greeum memory search "python" --count 3
+greeum memory search "meeting" --count 3
 
 # View recent memories
-greeum search
+greeum recent-memories --count 10
 ```
 
 ## Basic Usage
@@ -116,37 +118,60 @@ greeum search
 ### Adding Memories
 
 ```bash
-# Add memory with content
-greeum add -c "Your memory content here"
+# Add memory with content (v2.2.5+ syntax)
+greeum memory add "Your memory content here"
 
-# Add memory from file
-greeum add -f "/path/to/file.txt"
+# Add short-term memory with TTL
+greeum stm add "Working on login page today" --ttl 24h
 
-# Add with custom keywords and importance
-greeum add -c "Important meeting notes" -k "meeting,important" -i 0.9
-
-# Add with tags
-greeum add -c "Project milestone reached" -t "project,milestone,achievement"
+# Add memory with importance (via Python API)
+# CLI focuses on simplicity, use Python API for advanced options
 ```
 
 ### Searching Memories
 
 ```bash
-# Search recent memories (default: 5 most recent)
-greeum search
+# Search memories with query
+greeum memory search "project python" --count 5
 
-# Search by keywords
-greeum search -k "project,python"
+# Recent memories
+greeum recent-memories --count 10
 
-# Search specific number of results
-greeum search -k "meeting" -n 10
+# Anchor-based search (v2.2.5+ NEW!)
+greeum memory search "meeting" --slot A --radius 2
+```
+
+## Anchor System (v2.2.5+)
+
+### Understanding Anchors
+
+Anchors are fixed reference points in your memory graph that enable faster, more contextually relevant searches.
+
+### Basic Anchor Operations
+
+```bash
+# Check current anchor status
+greeum anchors status
+
+# Set anchors to important memories
+greeum anchors set A 1     # Pin memory block #1 to slot A
+greeum anchors set B 2     # Pin memory block #2 to slot B
+
+# Pin anchors to prevent auto-movement
+greeum anchors pin A       # Anchor A won't move automatically
+
+# Search near anchors (faster than global search)
+greeum memory search "python" --slot A --radius 3
+
+# Clear all anchors
+greeum anchors clear
 ```
 
 ### Memory Quality Management
 
 ```bash
-# Check quality of content
-greeum quality -c "This is a test memory for quality checking"
+# Check system statistics
+greeum recent-memories --count 5
 
 # Check quality of file
 greeum quality -f "/path/to/file.txt"

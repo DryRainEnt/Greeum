@@ -1,4 +1,4 @@
-# 🧠 Greeum v2.0.5
+# 🧠 Greeum v2.2.5
 
 <p align="center">
   <a href="../../README.md">🇰🇷 한국어</a> |
@@ -27,29 +27,35 @@ LLM向けインテリジェントメモリ管理システム
 
 ```bash
 # pipxでインストール（推奨）
-pipx install greeum
+pipx install greeum>=2.2.5
 
 # またはpipでインストール
-pip install greeum
+pip install greeum>=2.2.5
 ```
 
 ### 基本的な使用方法
 
 ```bash
 # メモリ追加
-python3 -m greeum.cli memory add "今日新しいプロジェクトを開始しました。Pythonでウェブアプリケーションを開発する予定です。"
+greeum memory add "今日新しいプロジェクトを開始しました。Pythonでウェブアプリケーションを開発する予定です。"
 
-# メモリ検索
-python3 -m greeum.cli memory search "プロジェクト Python" --limit 5
+# メモリアンカーの設定（v2.2.5+の新機能）
+greeum anchors set A 123  # 重要なメモリをスロットAにピン留め
+
+# アンカーベース検索
+greeum memory search "プロジェクト Python" --slot A --radius 3
+
+# アンカー状態確認
+greeum anchors status
 
 # 長期記憶分析
-python3 -m greeum.cli ltm analyze --period 30d --trends
+greeum ltm analyze --period 30d --trends
 
 # 短期記憶追加
-python3 -m greeum.cli stm add "一時メモ" --ttl 1h
+greeum stm add "一時メモ" --ttl 1h
 
 # MCPサーバー実行
-python3 -m greeum.mcp.claude_code_mcp_server
+greeum mcp serve
 ```
 
 ## 🔑 主要機能
@@ -69,7 +75,14 @@ python3 -m greeum.mcp.claude_code_mcp_server
 - **キーワード検索**: タグとキーワードベースの検索
 - **ベクトル検索**: 意味的類似度検索
 - **時間検索**: 「3日前」「先週」などの自然言語時間表現
-- **ハイブリッド検索**: キーワード + ベクトル + 時間の組み合わせ
+- **アンカーベース検索**: 固定点を中心とした局所化検索（v2.2.5+）
+- **ハイブリッド検索**: キーワード + ベクトル + 時間 + アンカーの組み合わせ
+
+### ⚓ アンカーシステム（v2.2.5新機能）
+- **メモリアンカー**: 重要なメモリをA-Zスロットに固定
+- **ピン機能**: アンカーの自動移動を防止・許可制御
+- **局所化検索**: アンカー周辺の関連メモリ高速検索
+- **自動最適化**: 使用パターンに基づくアンカー自動調整
 
 ### 🌐 MCP統合
 - **Claude Code**: 12のMCPツールとの完全統合
@@ -98,6 +111,26 @@ bm.add_block(
 enhanced_prompt = pw.compose_prompt("前回の会議で何を決めましたか？")
 ```
 
+### アンカーシステムの使用（v2.2.5+）
+```bash
+# アンカー状態確認
+greeum anchors status
+
+# 重要なメモリをアンカーに設定
+greeum anchors set A 123    # メモリ#123をスロットAに設定
+greeum anchors set B 456    # メモリ#456をスロットBに設定
+
+# アンカー周辺検索
+greeum memory search "会議内容" --slot A --radius 3
+
+# アンカーのピン留め/解除
+greeum anchors pin A        # Aの自動移動を防止
+greeum anchors unpin A      # Aの自動移動を許可
+
+# アンカーのクリア
+greeum anchors clear A      # スロットAをクリア
+```
+
 ### MCPツール（Claude Code用）
 ```
 利用可能なツール:
@@ -117,7 +150,7 @@ enhanced_prompt = pw.compose_prompt("前回の会議で何を決めましたか�
 
 ## 📊 メモリ品質管理
 
-Greeum v2.0.5はインテリジェント品質管理システムを提供します：
+Greeum v2.2.5はインテリジェント品質管理システムとアンカーシステムを提供します：
 
 ### 品質評価指標
 1. **長さ**: 適切な情報量
@@ -139,7 +172,7 @@ Greeum v2.0.5はインテリジェント品質管理システムを提供しま�
 ### Claude Code MCP設定
 1. **インストール確認**
    ```bash
-   greeum --version  # v2.0.5以上
+   greeum --version  # v2.2.5以上
    ```
 
 2. **Claude Desktop設定**

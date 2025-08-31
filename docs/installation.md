@@ -4,7 +4,7 @@ Greeum은 LLM 독립적인 기억 관리 시스템으로, 다양한 언어 모�
 
 ## 필수 요구사항
 
-- Python 3.10 이상 (v0.6.0부터 최소 버전 상향 조정)
+- Python 3.10 이상 (v2.2.5에서 앵커 시스템 추가됨)
 - pip (Python 패키지 관리자)
 - Git (선택사항, 저장소 복제용)
 
@@ -13,20 +13,20 @@ Greeum은 LLM 독립적인 기억 관리 시스템으로, 다양한 언어 모�
 ### 1. PyPI에서 직접 설치 (권장)
 
 ```bash
-# 기본 설치 (v0.6.0)
-pip install greeum
+# 기본 설치 (v2.2.5 - 앵커 시스템 포함)
+pip install "greeum>=2.2.5"
 
 # FAISS 벡터 인덱스 기능 포함
-pip install greeum[faiss]
+pip install "greeum[faiss]>=2.2.5"
 
 # OpenAI 임베딩 모델 지원
-pip install greeum[openai]
+pip install "greeum[openai]>=2.2.5"
 
 # Transformers 및 BERT 재랭크 기능
-pip install greeum[transformers]
+pip install "greeum[transformers]>=2.2.5"
 
 # 모든 기능 포함 설치 (추천)
-pip install greeum[all]
+pip install "greeum[all]>=2.2.5"
 ```
 
 ### 2. 저장소에서 설치

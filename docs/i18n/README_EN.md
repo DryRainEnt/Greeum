@@ -1,4 +1,4 @@
-# 🧠 Greeum v2.0.5
+# 🧠 Greeum v2.2.5
 
 <p align="center">
   <a href="../../README.md">🇰🇷 한국어</a> |
@@ -26,27 +26,29 @@ The name "Greeum" is inspired by the Korean word "그리움" (longing/reminiscen
 ### Installation
 
 ```bash
-# Install with pipx (recommended)
-pipx install greeum
+# Install with pipx (recommended) - Latest version with anchor system
+pipx install "greeum>=2.2.5"
 
 # Or install with pip
-pip install greeum
+pip install "greeum>=2.2.5"
 ```
 
 ### Basic Usage
 
 ```bash
-# Add memory
-python3 -m greeum.cli memory add "Started a new project today. Planning to develop a web application with Python."
+# Add memory (v2.2.5 syntax)
+greeum memory add "Started a new project today. Planning to develop a web application with Python."
 
 # Search memories
-python3 -m greeum.cli memory search "project Python" --limit 5
+greeum memory search "project Python" --count 5
 
-# Analyze long-term memory
-python3 -m greeum.cli ltm analyze --period 30d --trends
+# Memory Anchors (NEW in v2.2.5)
+greeum anchors status                     # Check anchor status
+greeum anchors set A 123                 # Pin memory #123 to slot A
+greeum memory search "Python" --slot A   # Search near anchor A
 
 # Add short-term memory
-python3 -m greeum.cli stm add "Temporary note" --ttl 1h
+greeum stm add "Temporary note" --ttl 1h
 
 # Run MCP server
 python3 -m greeum.mcp.claude_code_mcp_server

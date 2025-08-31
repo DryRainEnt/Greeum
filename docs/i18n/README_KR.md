@@ -1,4 +1,4 @@
-# 🧠 Greeum v0.6.0
+# 🧠 Greeum v2.2.5
 
 <p align="center">
   <a href="../../README.md">🇰🇷 한국어</a> |
@@ -43,9 +43,12 @@ Greeum은 RAG(Retrieval-Augmented Generation) 아키텍처에 기반한 LLM 독�
    cd Greeum
    ```
 
-2. 의존성 설치
+2. 의존성 설치 (v2.2.5 - 앵커 시스템 포함)
    ```bash
-   pip install -r requirements.txt
+   pip install "greeum>=2.2.5"
+   
+   # 또는 모든 기능 포함 설치
+   pip install "greeum[all]>=2.2.5"
    ```
 
 ## 🧪 사용 방법

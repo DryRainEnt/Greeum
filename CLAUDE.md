@@ -49,13 +49,19 @@ pip install -e .
 
 ### Running the Application
 
-#### CLI Interface
+#### CLI Interface (v2.2.5+)
 ```bash
 # Add long-term memory
-greeum add-memory -c "새로운 프로젝트를 시작했고 정말 흥미로워요"
+greeum memory add "새로운 프로젝트를 시작했고 정말 흥미로워요"
 
 # Search memories
-greeum search -q "프로젝트 흥미로운" --top-k 5
+greeum memory search "프로젝트 흥미로운" --count 5
+
+# Memory Anchors (NEW in v2.2.5)
+greeum anchors status                    # View anchor status
+greeum anchors set A 123                # Pin memory #123 to slot A
+greeum anchors pin A                     # Prevent auto-movement
+greeum memory search "query" --slot A   # Search near anchor A
 
 # Get recent memories
 greeum recent-memories --count 10
@@ -203,14 +209,14 @@ The system provides both REST API and Python client interfaces:
 ### Setting up GreeumMCP with Claude Code
 
 **Prerequisites:**
-- Greeum v1.0.0+ installed
+- Greeum v2.2.5+ installed (includes anchored memory system)
 - GreeumMCP v1.0.0+ installed
 - Claude Desktop application
 
 #### Step 1: Install Dependencies
 ```bash
-# Install core packages
-pip install greeum>=1.0.0
+# Install core packages (latest version with anchors)
+pip install greeum>=2.2.5
 pip install greeummcp>=1.0.0
 
 # Install required dependencies for MCP server
@@ -281,8 +287,12 @@ claude mcp list
 
 #### Step 5: Test MCP Functions
 In Claude Code, you can now use:
-- `add_memory(content)` - Add new memory blocks
-- `search_memory(query)` - Search existing memories
+- `add_memory(content, importance=0.5)` - Add new memory blocks
+- `search_memory(query, limit=5)` - Search existing memories
+- `get_memory_stats()` - View memory system statistics
+- `usage_analytics(days=7)` - Get usage analytics and insights
+
+**Note**: Anchor management is available through CLI only. Use `greeum anchors` commands in terminal for anchor operations.
 
 ### Troubleshooting
 

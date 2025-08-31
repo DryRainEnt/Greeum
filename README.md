@@ -16,8 +16,11 @@ pip install greeum
 # Add your first memory
 greeum memory add "Started working on the new dashboard project"
 
-# Search later
-greeum memory search "dashboard project"
+# Set memory anchors for quick access
+greeum anchors set A 123  # Pin important memory to slot A
+
+# Search with anchor-based localization
+greeum memory search "dashboard project" --slot A --radius 2
 ```
 
 That's it. Your AI now remembers.
@@ -59,12 +62,35 @@ greeum memory add "Client prefers minimal UI design"
 greeum stm add "Working on login page today" --ttl 24h
 ```
 
+### Memory Anchors (v2.2.5+)
+```bash
+# View current anchor status
+greeum anchors status
+
+# Set anchors for quick access
+greeum anchors set A 123     # Pin memory #123 to slot A
+greeum anchors set B 456     # Pin memory #456 to slot B
+
+# Search near anchored memories
+greeum memory search "UI design" --slot A --radius 3
+
+# Pin/unpin anchors
+greeum anchors pin A         # Prevent auto-movement
+greeum anchors unpin A       # Allow auto-movement
+
+# Clear all anchors
+greeum anchors clear
+```
+
 ### Searching
 ```bash
 # Find relevant memories
 greeum memory search "UI design preferences" --count 5
 
-# Search with options
+# Anchor-based localized search (faster)
+greeum memory search "login" --slot B --radius 2 --fallback
+
+# Global search (traditional)
 greeum memory search "login" --count 10
 ```
 
