@@ -1,6 +1,6 @@
 # Greeum Quality Benchmark Report
 
-**Date**: 2025-09-01T03:30:05.446458
+**Date**: 2025-09-01T04:15:41.801065
 **Version**: 2.2.5a1
 
 ## ✅ Overall Status: PASS
@@ -10,7 +10,7 @@
 
 ### ✅ Performance Gate
 - **Criteria**: Search <100ms, Add <10ms, Throughput >10ops/s
-- **Result**: Search 3.8ms, Add 0.5ms, Throughput 2485.7ops/s
+- **Result**: Search 2.1ms, Add 0.5ms, Throughput 2453.9ops/s
 - **Status**: pass
 
 ### ✅ Regression Gate
@@ -19,9 +19,9 @@
 - **Status**: pass
 
 ## Performance Metrics
-- Average Search Latency: 3.81ms
-- Average Add Block Latency: 0.50ms
-- Throughput: 2485.7 ops/sec
+- Average Search Latency: 2.11ms
+- Average Add Block Latency: 0.51ms
+- Throughput: 2453.9 ops/sec
 
 ## Regression Test Results
 - API Compatibility: 100.0%
