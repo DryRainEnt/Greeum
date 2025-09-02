@@ -692,6 +692,56 @@ class UsageAnalytics:
         # 현재는 임의의 값 반환
         import random
         return random.randint(0, 5)
+    
+    def get_usage_report(self, days: int = 7, report_type: str = "usage") -> Dict[str, Any]:
+        """
+        통합 사용 리포트 생성 (MCP 서버 호환성용)
+        
+        Args:
+            days: 분석 기간 (일)
+            report_type: 리포트 유형 ("usage", "quality", "performance", "all")
+            
+        Returns:
+            리포트 데이터 딕셔너리
+        """
+        try:
+            if report_type == "usage":
+                return self.get_usage_statistics(days=days)
+            elif report_type == "quality":
+                return self.get_quality_trends(days=days)
+            elif report_type == "performance":
+                return self.get_performance_insights(days=days)
+            elif report_type == "all":
+                # 모든 리포트 통합
+                usage_stats = self.get_usage_statistics(days=days)
+                quality_trends = self.get_quality_trends(days=days)
+                performance_insights = self.get_performance_insights(days=days)
+                
+                return {
+                    "report_type": "comprehensive",
+                    "period_days": days,
+                    "usage_statistics": usage_stats,
+                    "quality_trends": quality_trends,
+                    "performance_insights": performance_insights,
+                    "generated_at": datetime.now().isoformat()
+                }
+            else:
+                # 기본적으로 usage 리포트 반환
+                return self.get_usage_statistics(days=days)
+                
+        except Exception as e:
+            logger.error(f"get_usage_report failed: {e}")
+            # 실패 시 기본 데이터 반환
+            return {
+                "total_operations": 0,
+                "add_operations": 0,
+                "search_operations": 0,
+                "avg_quality_score": 0,
+                "high_quality_rate": 0,
+                "avg_response_time": 0,
+                "success_rate": 0,
+                "error": str(e)
+            }
 
 if __name__ == "__main__":
     # 테스트 코드
