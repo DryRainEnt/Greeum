@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "greeum"
-version = "2.2.6"
+version = "2.3.0"
 description = "Universal memory module for LLMs with enhanced MCP integration"
 authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -29,7 +29,7 @@ dependencies = [
     "numpy>=1.24.0",
     "sqlalchemy>=2.0.0",
     "pydantic>=2.0.0",
-    "mcp>=1.0.0",
+    "anyio>=4.5",
 ]
 
 [project.optional-dependencies]
