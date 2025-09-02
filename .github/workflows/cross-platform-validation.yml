@@ -50,7 +50,7 @@ jobs:
     - name: Create clean test environment
       shell: bash
       run: |
-        echo "=== 🧪 Testing on ${{ matrix.os }} ==="
+        echo "=== [TEST] Testing on ${{ matrix.os }} ==="
         python --version
         pip --version
         echo "Working directory: $(pwd)"
@@ -59,32 +59,32 @@ jobs:
     - name: "Phase 1: Clean Installation Test"
       shell: bash
       run: |
-        echo "📦 Phase 1: Testing clean installation..."
+        echo "[IMPORT] Phase 1: Testing clean installation..."
         
         # 실제 사용자가 하는 설치 방식
         pip install --upgrade pip
         pip install -e .
         
-        echo "✅ Installation completed"
-        greeum --version || echo "❌ CLI not accessible"
+        echo "OK Installation completed"
+        greeum --version || echo "FAIL CLI not accessible"
         
     - name: "Phase 1: Import Test"
       shell: bash
       run: |
-        echo "📦 Testing Python imports..."
+        echo "[IMPORT] Testing Python imports..."
         python -c "
         try:
             import greeum
-            print(f'✅ Greeum import OK - Version: {getattr(greeum, \"__version__\", \"unknown\")}')
+            print(f'OK Greeum import OK - Version: {getattr(greeum, \"__version__\", \"unknown\")}')
             
             from greeum.core import BlockManager, DatabaseManager, STMManager
-            print('✅ Core modules import OK')
+            print('OK Core modules import OK')
             
             from greeum.mcp.native import server, protocol, transport, tools
-            print('✅ MCP modules import OK')
+            print('OK MCP modules import OK')
             
         except Exception as e:
-            print(f'❌ Import failed: {e}')
+            print(f'FAIL Import failed: {e}')
             import traceback
             traceback.print_exc()
             exit(1)
@@ -95,7 +95,7 @@ jobs:
       if: success() || github.event.inputs.test_scenarios == 'full'
       shell: bash
       run: |
-        echo "⚡ Phase 2: Testing basic functionality..."
+        echo "[TEST] Phase 2: Testing basic functionality..."
         
         # 임시 데이터 디렉토리 생성
         mkdir -p test_data
@@ -109,7 +109,7 @@ jobs:
         # 환경 설정
         data_dir = Path(os.environ.get('GREEUM_DATA_DIR', tempfile.gettempdir()))
         data_dir.mkdir(exist_ok=True)
-        print(f'📁 Using data directory: {data_dir}')
+        print(f'[DATA] Using data directory: {data_dir}')
         
         # 기본 메모리 시스템 테스트
         from greeum.core.database_manager import DatabaseManager
@@ -120,16 +120,16 @@ jobs:
             # 1. 데이터베이스 초기화
             db_path = data_dir / 'test_user.db'
             db = DatabaseManager(str(db_path))
-            print('✅ Database initialization OK')
+            print('OK Database initialization OK')
             
             # 2. 블록 매니저 초기화
             block_mgr = BlockManager(db)
-            print('✅ Block manager initialization OK')
+            print('OK Block manager initialization OK')
             
             # 3. 텍스트 처리 테스트
             test_content = 'This is a test memory for cross-platform validation'
             processed = process_user_input(test_content)
-            print(f'✅ Text processing OK - Keywords: {len(processed.get(\"keywords\", []))}')
+            print(f'OK Text processing OK - Keywords: {len(processed.get(\"keywords\", []))}')
             
             # 4. 메모리 블록 추가 테스트
             block = block_mgr.add_block(
@@ -139,16 +139,16 @@ jobs:
                 embedding=processed.get('embedding', [0.1] * 128),
                 importance=0.8
             )
-            print(f'✅ Memory block creation OK - Index: {block.get(\"block_index\", \"unknown\")}')
+            print(f'OK Memory block creation OK - Index: {block.get(\"block_index\", \"unknown\")}')
             
             # 5. 검색 테스트
-            results = block_mgr.search_similar_blocks('test memory', limit=5)
-            print(f'✅ Memory search OK - Found: {len(results)} results')
+            results = block_mgr.search_by_keywords(['test', 'memory'], limit=5)
+            print(f'OK Memory search OK - Found: {len(results)} results')
             
-            print('🎉 All basic functionality tests PASSED')
+            print('SUCCESS All basic functionality tests PASSED')
             
         except Exception as e:
-            print(f'❌ Basic functionality test FAILED: {e}')
+            print(f'FAIL Basic functionality test FAILED: {e}')
             import traceback
             traceback.print_exc()
             exit(1)
@@ -159,7 +159,7 @@ jobs:
       if: success() && (github.event.inputs.test_scenarios == 'mcp_integration' || github.event.inputs.test_scenarios == 'full')
       shell: bash
       run: |
-        echo "🔗 Phase 3: Testing MCP integration..."
+        echo "[MCP] Phase 3: Testing MCP integration..."
         
         export GREEUM_DATA_DIR="$(pwd)/test_data"
         
@@ -175,35 +175,35 @@ jobs:
                 from greeum.mcp.native.server import GreeumMCPServer
                 from greeum.mcp.native.tools import GreeumTools
                 from greeum.mcp.native.protocol import MCPProtocol
-                print('✅ MCP server components import OK')
+                print('OK MCP server components import OK')
                 
                 # 도구 초기화 테스트
                 data_dir = Path(os.environ.get('GREEUM_DATA_DIR', 'test_data'))
                 tools = GreeumTools(data_dir=str(data_dir))
-                print('✅ MCP tools initialization OK')
+                print('OK MCP tools initialization OK')
                 
                 # 메모리 추가 시뮬레이션
                 add_result = await tools.add_memory(
                     content='MCP integration test memory',
                     importance=0.7
                 )
-                print(f'✅ MCP add_memory OK - Result: {add_result.get(\"success\", False)}')
+                print(f'OK MCP add_memory OK - Result: {add_result.get(\"success\", False)}')
                 
                 # 메모리 검색 시뮬레이션
                 search_result = await tools.search_memory(
                     query='integration test',
                     limit=5
                 )
-                print(f'✅ MCP search_memory OK - Found: {len(search_result.get(\"memories\", []))} memories')
+                print(f'OK MCP search_memory OK - Found: {len(search_result.get(\"memories\", []))} memories')
                 
                 # 통계 확인
                 stats_result = await tools.get_memory_stats()
-                print(f'✅ MCP get_memory_stats OK - Total: {stats_result.get(\"total_memories\", 0)}')
+                print(f'OK MCP get_memory_stats OK - Total: {stats_result.get(\"total_memories\", 0)}')
                 
-                print('🎉 All MCP integration tests PASSED')
+                print('SUCCESS All MCP integration tests PASSED')
                 
             except Exception as e:
-                print(f'❌ MCP integration test FAILED: {e}')
+                print(f'FAIL MCP integration test FAILED: {e}')
                 import traceback
                 traceback.print_exc()
                 exit(1)
@@ -220,7 +220,7 @@ jobs:
       if: success() && github.event.inputs.test_scenarios == 'full'
       shell: bash
       run: |
-        echo "💻 Phase 4: Testing CLI commands..."
+        echo "[CLI] Phase 4: Testing CLI commands..."
         
         export GREEUM_DATA_DIR="$(pwd)/test_data"
         
@@ -239,7 +239,7 @@ jobs:
         print(f'CLI test data: {data}')
         "
         
-        echo "✅ CLI commands test completed"
+        echo "OK CLI commands test completed"
         
     # 결과 수집 및 리포트 생성
     - name: Generate Test Report
@@ -250,7 +250,7 @@ jobs:
         test_status="${{ job.status }}"
         
         cat > "test-report-${os_name}.md" << EOF
-        # 🧪 Cross-Platform Test Report
+        # [TEST] Cross-Platform Test Report
         
         **OS**: ${os_name}
         **Python**: ${{ matrix.python-version }}
@@ -260,25 +260,25 @@ jobs:
         ## Test Results
         
         ### Phase 1: Installation
-        - ✅ Clean installation
-        - ✅ Python imports
-        - ✅ CLI accessibility
+        - OK Clean installation
+        - OK Python imports
+        - OK CLI accessibility
         
         ### Phase 2: Basic Functionality  
-        - ✅ Database initialization
-        - ✅ Memory operations
-        - ✅ Text processing
-        - ✅ Search functionality
+        - OK Database initialization
+        - OK Memory operations
+        - OK Text processing
+        - OK Search functionality
         
         ### Phase 3: MCP Integration
-        - ✅ MCP server components
-        - ✅ Memory add/search via MCP
-        - ✅ Statistics retrieval
+        - OK MCP server components
+        - OK Memory add/search via MCP
+        - OK Statistics retrieval
         
         ### Phase 4: CLI Commands
-        - ✅ Version command
-        - ✅ Help command
-        - ✅ Basic CLI operations
+        - OK Version command
+        - OK Help command
+        - OK Basic CLI operations
         
         ## Environment Details
         - Working Directory: $(pwd)
@@ -290,7 +290,7 @@ jobs:
         ${test_status} - Ready for ${os_name} users
         EOF
         
-        echo "📊 Test report generated: test-report-${os_name}.md"
+        echo "[REPORT] Test report generated: test-report-${os_name}.md"
         cat "test-report-${os_name}.md"
         
     - name: Upload Test Reports
@@ -313,29 +313,29 @@ jobs:
     steps:
     - name: Generate Overall Summary
       run: |
-        echo "# 🌍 Cross-Platform Validation Summary" >> $GITHUB_STEP_SUMMARY
+        echo "# [CROSS-PLATFORM] Cross-Platform Validation Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "## Test Results by Platform" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "| Platform | Status | Notes |" >> $GITHUB_STEP_SUMMARY
         echo "|----------|--------|--------|" >> $GITHUB_STEP_SUMMARY
-        echo "| 🪟 Windows | ${{ needs.cross-platform-test.result }} | Latest stable |" >> $GITHUB_STEP_SUMMARY
-        echo "| 🍎 macOS | ${{ needs.cross-platform-test.result }} | Latest stable |" >> $GITHUB_STEP_SUMMARY  
-        echo "| 🐧 Ubuntu | ${{ needs.cross-platform-test.result }} | Latest LTS |" >> $GITHUB_STEP_SUMMARY
+        echo "| Windows Windows | ${{ needs.cross-platform-test.result }} | Latest stable |" >> $GITHUB_STEP_SUMMARY
+        echo "| macOS macOS | ${{ needs.cross-platform-test.result }} | Latest stable |" >> $GITHUB_STEP_SUMMARY  
+        echo "| Ubuntu Ubuntu | ${{ needs.cross-platform-test.result }} | Latest LTS |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
         if [[ "${{ needs.cross-platform-test.result }}" == "success" ]]; then
-          echo "## ✅ All Platforms Ready" >> $GITHUB_STEP_SUMMARY
+          echo "## OK All Platforms Ready" >> $GITHUB_STEP_SUMMARY
           echo "Greeum is ready for deployment to all supported platforms!" >> $GITHUB_STEP_SUMMARY
         else
-          echo "## ⚠️ Platform Issues Detected" >> $GITHUB_STEP_SUMMARY
+          echo "## WARNING Platform Issues Detected" >> $GITHUB_STEP_SUMMARY
           echo "Some platforms have compatibility issues. Review individual reports." >> $GITHUB_STEP_SUMMARY
         fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## 📋 Tested Scenarios" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Clean installation from PyPI" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Python import compatibility" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Basic memory operations" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ MCP server integration" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ CLI command functionality" >> $GITHUB_STEP_SUMMARY
+        echo "## [CHECKLIST] Tested Scenarios" >> $GITHUB_STEP_SUMMARY
+        echo "- OK Clean installation from PyPI" >> $GITHUB_STEP_SUMMARY
+        echo "- OK Python import compatibility" >> $GITHUB_STEP_SUMMARY
+        echo "- OK Basic memory operations" >> $GITHUB_STEP_SUMMARY
+        echo "- OK MCP server integration" >> $GITHUB_STEP_SUMMARY
+        echo "- OK CLI command functionality" >> $GITHUB_STEP_SUMMARY
