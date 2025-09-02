@@ -53,7 +53,7 @@ jobs:
     
     - name: Upload regression artifacts
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: regression-report-py${{ matrix.python-version }}
         path: |
@@ -97,7 +97,7 @@ jobs:
     
     - name: Upload integration artifacts
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: integration-test-results
         path: |
@@ -139,7 +139,7 @@ jobs:
     
     - name: Upload performance reports
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: performance-benchmarks
         path: |
@@ -181,7 +181,7 @@ jobs:
     
     - name: Upload security reports
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
@@ -249,7 +249,7 @@ jobs:
     
     - name: Upload final report
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: quality-gates-report
         path: quality_gates_report.md

@@ -36,7 +36,7 @@ jobs:
         python scripts/benchmark_daily.py
         
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: daily-benchmark-results
         path: benchmark_results/
@@ -115,7 +115,7 @@ jobs:
         python scripts/stress_test_weekly.py
         
     - name: Upload stress test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: weekly-stress-test-results
         path: stress_test_results/
@@ -226,7 +226,7 @@ jobs:
         safety check
         
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
