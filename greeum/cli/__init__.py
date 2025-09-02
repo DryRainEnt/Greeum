@@ -19,7 +19,7 @@ import sys
 from typing import Optional
 
 @click.group()
-@click.version_option(version="2.2.4a1")
+@click.version_option()
 def main():
     """Greeum Universal Memory System v2.0"""
     pass
@@ -176,18 +176,46 @@ def search(query: str, count: int, threshold: float, slot: str, radius: int, no_
 @click.option('--port', '-p', default=3000, help='WebSocket port (if transport=ws)')
 def serve(transport: str, port: int):
     """Start MCP server for Claude Code integration"""  
-    click.echo(f"🚀 Starting Greeum FastMCP server ({transport})...")
+    click.echo(f"Starting Greeum MCP server ({transport})...")
     
     if transport == 'stdio':
-        # ✅ FastMCP 핫픽스 서버로 교체
-        from ..mcp.fastmcp_hotfix_server import main as fastmcp_main
-        import asyncio
         try:
-            asyncio.run(fastmcp_main())
+            # Native MCP Server 사용 (FastMCP 완전 배제, anyio 기반 안전한 실행)
+            from ..mcp.native import run_server_sync
+            run_server_sync()
+        except ImportError as e:
+            click.echo(f"Native MCP server import failed: {e}")
+            click.echo("Please ensure anyio>=4.5 is installed: pip install anyio>=4.5")
+            sys.exit(1)
         except KeyboardInterrupt:
-            click.echo("\n👋 FastMCP server stopped")
+            click.echo("\nMCP server stopped")
+        except Exception as e:
+            # anyio CancelledError도 여기서 캐치됨 - 조용히 처리
+            error_msg = str(e)
+            if "CancelledError" in error_msg or "cancelled" in error_msg.lower():
+                click.echo("\nMCP server stopped")
+            else:
+                click.echo(f"MCP server error: {e}")
+                sys.exit(1)
+    elif transport == 'websocket':
+        try:
+            # WebSocket transport (향후 확장)
+            from ..mcp.cli_entry import run_cli_server
+            run_cli_server(transport='websocket', port=port)
+        except ImportError as e:
+            click.echo(f"MCP server import failed: {e}")
+            click.echo("Please ensure all dependencies are installed")
+            sys.exit(1)
+        except NotImplementedError:
+            click.echo(f"WebSocket transport not implemented yet")
+            sys.exit(1)
+        except KeyboardInterrupt:
+            click.echo("\nMCP server stopped")
+        except Exception as e:
+            click.echo(f"MCP server error: {e}")
+            sys.exit(1)
     else:
-        click.echo(f"❌ Transport '{transport}' not supported yet")
+        click.echo(f"❌ Transport '{transport}' not supported")
         sys.exit(1)
 
 # API 서브명령어들  
