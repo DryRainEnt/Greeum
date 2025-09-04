@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "greeum_native": {
+      "command": "python3",
+      "args": [
+        "/Users/dryrain/DevRoom/Greeum/greeum/mcp/native_mcp_server.py"
+      ],
+      "env": {
+        "GREEUM_DATA_DIR": "/Users/dryrain/greeum-global",
+        "GREEUM_LOG_LEVEL": "INFO",
+        "PYTHONPATH": "/Users/dryrain/DevRoom/Greeum:/Users/dryrain/DevRoom/GreeumMCP"
+      }
+    }
+  }
+}
