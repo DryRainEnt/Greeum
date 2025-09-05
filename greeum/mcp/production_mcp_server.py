@@ -26,7 +26,8 @@ try:
     from .adapters.base_adapter import BaseAdapter
 except ImportError:
     # 직접 실행시 절대경로 사용
-    import sys, os
+    import sys
+    import os
     current_dir = os.path.dirname(os.path.abspath(__file__))
     parent_dir = os.path.dirname(current_dir)
     sys.path.insert(0, parent_dir)
@@ -122,7 +123,7 @@ class NativeMCPServer:
             },
             {
                 "name": "search_memory", 
-                "description": "🔍 Search existing memories using keywords or semantic similarity.",
+                "description": "🔍 Search existing memories using keywords or semantic similarity with association expansion.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -136,6 +137,20 @@ class NativeMCPServer:
                             "minimum": 1,
                             "maximum": 50,
                             "default": 5
+                        },
+                        "depth": {
+                            "type": "integer",
+                            "description": "Association expansion depth (0=basic, 1-3=expand with associations)",
+                            "minimum": 0,
+                            "maximum": 3,
+                            "default": 0
+                        },
+                        "tolerance": {
+                            "type": "number",
+                            "description": "Search tolerance (0.0=strict, 1.0=lenient)",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                            "default": 0.5
                         }
                     },
                     "required": ["query"]
@@ -194,7 +209,9 @@ class NativeMCPServer:
             elif tool_name == "search_memory":
                 query = arguments.get("query", "")
                 limit = arguments.get("limit", 5)
-                result_text = self.adapter.search_memory_tool(query, limit)
+                depth = arguments.get("depth", 0)
+                tolerance = arguments.get("tolerance", 0.5)
+                result_text = self.adapter.search_memory_tool(query, limit, depth, tolerance)
                 
             elif tool_name == "get_memory_stats":
                 result_text = self.adapter.get_memory_stats_tool()

@@ -57,7 +57,7 @@ class MemoryResources:
         
         return json.dumps(chain_info, ensure_ascii=False).encode('utf-8')
     
-    def get_stm_list(self, include_expired: bool = False, limit: int = 50) -> bytes:
+    def get_stm_list(self, include_expired: bool = False, limit: int = 200) -> bytes:
         """
         Get the short-term memory list as a resource.
         
