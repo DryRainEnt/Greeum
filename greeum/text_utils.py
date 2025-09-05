@@ -40,14 +40,20 @@ def convert_numpy_types(obj: Any) -> Any:
         return tuple(convert_numpy_types(item) for item in obj)
     return obj
 
-# 기본 감정 태그 사전
+# Multi-language emotion tag dictionary (English primary, Korean support)
 EMOTION_KEYWORDS = {
-    "긍정적": ["좋다", "행복", "기쁘", "즐겁", "만족", "감사", "좋은", "성공", "감동"],
-    "부정적": ["나쁘", "화나", "슬프", "실망", "걱정", "불안", "두렵", "실패", "후회"],
-    "중립적": ["생각", "고려", "판단", "분석", "관찰", "평가", "예상", "계획"],
-    "의욕": ["원하", "바라", "목표", "동기", "열정", "의지", "추진", "노력"],
-    "질문": ["무엇", "어떻게", "왜", "어디", "언제", "누구", "어느", "질문"],
-    "요청": ["해줘", "부탁", "도와", "알려", "설명", "조언", "추천", "가르쳐"]
+    "positive": ["good", "great", "happy", "excellent", "satisfied", "grateful", "success", "amazing", "wonderful",
+                "좋다", "행복", "기쁘", "즐겁", "만족", "감사", "좋은", "성공", "감동"],
+    "negative": ["bad", "angry", "sad", "disappointed", "worried", "anxious", "afraid", "failure", "regret",
+                "나쁘", "화나", "슬프", "실망", "걱정", "불안", "두렵", "실패", "후회"],
+    "neutral": ["think", "consider", "analyze", "observe", "evaluate", "expect", "plan", "study",
+               "생각", "고려", "판단", "분석", "관찰", "평가", "예상", "계획"],
+    "motivated": ["want", "hope", "goal", "motivation", "passion", "will", "effort", "drive",
+                 "원하", "바라", "목표", "동기", "열정", "의지", "추진", "노력"],
+    "question": ["what", "how", "why", "where", "when", "who", "which", "question",
+                "무엇", "어떻게", "왜", "어디", "언제", "누구", "어느", "질문"],
+    "request": ["please", "help", "assist", "explain", "advise", "recommend", "teach", "show",
+               "해줘", "부탁", "도와", "알려", "설명", "조언", "추천", "가르쳐"]
 }
 
 def extract_keywords(text: str, max_keywords: int = 5) -> List[str]:
@@ -64,13 +70,21 @@ def extract_keywords(text: str, max_keywords: int = 5) -> List[str]:
     # 텍스트 전처리
     text = text.lower()
     
-    # 불용어 목록
-    stopwords = set(["그리고", "하지만", "그런데", "그래서", "또한", "물론", "또는", "혹은", 
-                     "그렇게", "이렇게", "저렇게", "이런", "저런", "그런", "이것", "저것", "그것",
-                     "나는", "너는", "우리", "저는", "제가", "나의", "너의", "우리의", "저의", "제",
-                     "그리고", "하지만", "그런데", "그래서", "또한", "물론", "또는", "혹은", 
-                     "그러나", "따라서", "때문에", "위해서", "통해", "대해", "관해", "으로", "로", 
-                     "이다", "있다", "없다", "된다", "한다", "있는", "없는", "되는", "하는"])
+    # Multi-language stopwords (English primary, Korean support)
+    stopwords = set([
+        # English stopwords
+        "and", "but", "or", "so", "then", "also", "however", "therefore", "because", "through", "about", 
+        "with", "for", "from", "to", "in", "on", "at", "by", "of", "the", "a", "an", "this", "that", 
+        "these", "those", "i", "you", "we", "he", "she", "it", "they", "my", "your", "our", "his", 
+        "her", "its", "their", "is", "are", "was", "were", "be", "being", "been", "have", "has", "had",
+        "do", "does", "did", "will", "would", "should", "could", "can", "may", "might", "must",
+        # Korean stopwords (maintained for compatibility)
+        "그리고", "하지만", "그런데", "그래서", "또한", "물론", "또는", "혹은", 
+        "그렇게", "이렇게", "저렇게", "이런", "저런", "그런", "이것", "저것", "그것",
+        "나는", "너는", "우리", "저는", "제가", "나의", "너의", "우리의", "저의", "제",
+        "그러나", "따라서", "때문에", "위해서", "통해", "대해", "관해", "으로", "로", 
+        "이다", "있다", "없다", "된다", "한다", "있는", "없는", "되는", "하는"
+    ])
     
     # 단어 추출 및 카운트
     words = re.findall(r'\b\w+\b', text)

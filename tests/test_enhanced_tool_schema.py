@@ -117,7 +117,7 @@ class TestEnhancedToolSchema(BaseGreeumTestCase):
         self.assertEqual(limit_prop["type"], "integer")
         self.assertEqual(limit_prop["default"], 5)
         self.assertEqual(limit_prop["minimum"], 1)
-        self.assertEqual(limit_prop["maximum"], 50)
+        self.assertEqual(limit_prop["maximum"], 200)
         
         # Test usage hints
         usage_hints = schema["usage_hints"]
@@ -394,7 +394,7 @@ class TestEnhancedToolSchema(BaseGreeumTestCase):
         # Test limit validations
         limit_prop = search_schema["inputSchema"]["properties"]["limit"]
         self.assertEqual(limit_prop["minimum"], 1)
-        self.assertEqual(limit_prop["maximum"], 50)
+        self.assertEqual(limit_prop["maximum"], 200)
         
         # Test importance score validations
         importance_prop = add_memory_schema["inputSchema"]["properties"]["importance"]

@@ -20,11 +20,55 @@ class DatabaseManager:
             db_type: 데이터베이스 타입 (sqlite, postgres 등)
         """
         self.db_type = db_type
-        self.connection_string = connection_string or os.path.join('data', 'memory.db')
+        
+        # Smart Database Path Detection (옵션 3)
+        if connection_string:
+            self.connection_string = connection_string
+        else:
+            self.connection_string = self._get_smart_db_path()
         self._ensure_data_dir()
         self._setup_connection()
         self._create_schemas()
         logger.info(f"DatabaseManager 초기화 완료: {self.connection_string} (type: {self.db_type})")
+    
+    def _get_smart_db_path(self) -> str:
+        """
+        지능형 데이터베이스 경로 감지
+        
+        우선순위:
+        1. GREEUM_DATA_DIR 환경변수 (명시적 설정)
+        2. 현재 디렉토리의 data/memory.db (프로젝트 로컬)
+        3. ~/greeum-global/data/memory.db (글로벌 폴백)
+        
+        Returns:
+            str: 최적의 데이터베이스 파일 경로
+        """
+        # 1. 환경변수 우선 (명시적 설정)
+        if 'GREEUM_DATA_DIR' in os.environ:
+            env_path = os.path.join(os.environ['GREEUM_DATA_DIR'], 'data', 'memory.db')
+            logger.info(f"📁 Using environment variable path: {env_path}")
+            return env_path
+        
+        # 2. 현재 디렉토리에 기존 데이터베이스 존재하면 사용 (프로젝트 로컬)
+        current_dir = os.getcwd()
+        local_db_path = os.path.join(current_dir, 'data', 'memory.db')
+        
+        if os.path.exists(local_db_path):
+            logger.info(f"📂 Found existing local database: {local_db_path}")
+            return local_db_path
+        
+        # 3. 현재 디렉토리에 data 폴더가 있으면 사용 (새 프로젝트)
+        data_dir_path = os.path.join(current_dir, 'data')
+        if os.path.exists(data_dir_path) and os.path.isdir(data_dir_path):
+            new_local_path = os.path.join(data_dir_path, 'memory.db')
+            logger.info(f"📁 Using local data directory: {new_local_path}")
+            return new_local_path
+        
+        # 4. 글로벌 디렉토리 폴백
+        home_dir = os.path.expanduser('~')
+        global_db_path = os.path.join(home_dir, 'greeum-global', 'data', 'memory.db')
+        logger.info(f"🌐 Using global fallback path: {global_db_path}")
+        return global_db_path
     
     def _ensure_data_dir(self):
         """데이터 디렉토리 존재 확인"""
@@ -197,7 +241,7 @@ class DatabaseManager:
             ))
         
         self.conn.commit()
-        logger.info(f"블록 추가 완료: index={block_index}")
+        logger.info(f"Block added successfully: index={block_index}")
         return block_index
     
     def get_block(self, block_index: int) -> Optional[Dict[str, Any]]:
@@ -211,7 +255,7 @@ class DatabaseManager:
             블록 데이터 (없으면 None)
         """
         cursor = self.conn.cursor()
-        logger.debug(f"블록 조회 시도: index={block_index}")
+        logger.debug(f"Attempting to retrieve block: index={block_index}")
         
         # 1. 기본 블록 데이터 조회
         cursor.execute('''
@@ -220,7 +264,7 @@ class DatabaseManager:
         
         row = cursor.fetchone()
         if not row:
-            logger.warning(f"블록 조회 실패: index={block_index} 찾을 수 없음")
+            logger.warning(f"Block retrieval failed: index={block_index} not found")
             return None
             
         # dict로 변환
@@ -720,6 +764,63 @@ class DatabaseManager:
         
         return blocks
     
+    def count_blocks(self) -> int:
+        """
+        전체 블록 개수 조회
+        
+        Returns:
+            int: 전체 블록 개수
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM blocks")
+            result = cursor.fetchone()
+            return result[0] if result else 0
+        except Exception as e:
+            logger.error(f"Failed to count blocks: {e}")
+            return 0
+    
+    def get_recent_blocks(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        최근 블록들 조회
+        
+        Args:
+            limit: 조회할 블록 개수 (기본값: 10)
+            
+        Returns:
+            List[Dict[str, Any]]: 최근 블록들의 리스트
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT block_index, timestamp, context, importance, hash, prev_hash
+                FROM blocks 
+                ORDER BY block_index DESC 
+                LIMIT ?
+            """, (limit,))
+            
+            rows = cursor.fetchall()
+            blocks = []
+            
+            for row in rows:
+                block = {
+                    'block_index': row[0],
+                    'timestamp': row[1],
+                    'context': row[2],
+                    'keywords': [],  # 스키마에 없으므로 빈 리스트
+                    'tags': [],      # 스키마에 없으므로 빈 리스트
+                    'embedding': [], # 스키마에 없으므로 빈 리스트
+                    'importance': row[3],
+                    'hash': row[4],
+                    'prev_hash': row[5]
+                }
+                blocks.append(block)
+            
+            return blocks
+        except Exception as e:
+            logger.error(f"Failed to get recent blocks: {e}")
+            return []
+
     def health_check(self) -> bool:
         """
         데이터베이스 상태 및 무결성 검사

@@ -39,7 +39,7 @@ def get_package_version(package_name: str) -> Optional[str]:
     except ImportError:
         return None
     except Exception as e:
-        logger.debug(f"{package_name} 버전 확인 중 오류: {e}")
+        logger.debug(f"Error checking {package_name} version: {e}")
         return None
 
 def check_python_version() -> dict:
@@ -49,11 +49,11 @@ def check_python_version() -> dict:
     min_version_str = '.'.join(map(str, MIN_PYTHON_VERSION))
     
     status = "ok"
-    message = f"현재 Python 버전: {current_version_str}"
+    message = f"Current Python version: {current_version_str}"
     
     if tuple(map(int, current_version_tuple[:2])) < MIN_PYTHON_VERSION:
         status = "error"
-        message = f"현재 Python 버전({current_version_str})이 최소 요구 버전({min_version_str})보다 낮습니다."
+        message = f"Current Python version ({current_version_str}) is lower than minimum required version ({min_version_str})."
         
     return {
         "status": status,
@@ -74,7 +74,7 @@ def check_greeum_version() -> dict:
     
     # 위에서 이미 greeum_current_version 을 가져오도록 시도했음.
     status = "ok" if greeum_current_version != "unknown" else "error"
-    message = f"Greeum 버전: {greeum_current_version}"
+    message = f"Greeum version: {greeum_current_version}"
     if status == "error":
         message = "Greeum 패키지 버전을 확인할 수 없습니다."
         
@@ -97,14 +97,14 @@ def check_dependencies() -> dict:
             # status = "ok"
             # else:
             # status = "warning" # 또는 "error"
-            # message = f"{pkg_name} 버전 ({installed_version_str})이 권장 버전 ({min_version_str})과 다름/낮음"
+            # message = f"{pkg_name} version ({installed_version_str}) differs from/lower than recommended version ({min_version_str})"
             
             # 간단 비교: 최소 버전 이상인지 확인 (정확하지 않을 수 있음)
             try:
                 # 간단하게 첫번째 숫자만 비교하거나, 전체 문자열 비교
                 # 여기서는 존재 유무와 버전 문자열만 기록
                 status = "ok"
-                message = f"{pkg_name} 설치됨 (버전: {installed_version_str})"
+                message = f"{pkg_name} installed (version: {installed_version_str})"
             except Exception:
                  status = "warning"
                  message = f"{pkg_name} 버전 ({installed_version_str}) 비교 중 오류, 권장: {min_version_str}"
@@ -136,7 +136,7 @@ def check_database_connectivity() -> dict:
     except ImportError:
         return {"status": "error", "message": "DatabaseManager를 import할 수 없습니다."}
     except Exception as e:
-        logger.error(f"DB 연결 테스트 중 오류: {e}", exc_info=True)
+        logger.error(f"Error during DB connection test: {e}", exc_info=True)
         return {"status": "error", "message": f"데이터베이스 연결 테스트 실패: {e}"}
 
 def check_default_embedding_model() -> dict:
@@ -163,7 +163,7 @@ def check_default_embedding_model() -> dict:
     except ImportError:
         return {"status": "error", "message": "embedding_models 모듈을 import할 수 없습니다."}
     except Exception as e:
-        logger.error(f"기본 임베딩 모델 테스트 중 오류: {e}", exc_info=True)
+        logger.error(f"Error during default embedding model test: {e}", exc_info=True)
         return {"status": "error", "message": f"기본 임베딩 모델 테스트 실패: {e}"}
 
 def check_environment(verbose: bool = False) -> dict:
@@ -193,11 +193,11 @@ def check_environment(verbose: bool = False) -> dict:
     
     final_status = {"overall_status": "ok" if overall_ok else "error", "details": results}
     if not overall_ok:
-        logger.warning("Greeum 환경 진단: 일부 항목에서 문제가 발견되었습니다.")
+        logger.warning("Greeum environment diagnosis: Issues found in some areas.")
         for msg in summary_messages:
             logger.warning(msg)
     else:
-        logger.info("Greeum 환경 진단: 모든 항목이 정상입니다.")
+        logger.info("Greeum environment diagnosis: All systems operational.")
         
     return final_status
 

@@ -71,7 +71,7 @@ class MemoryClient:
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         
-        logger.debug(f"MemoryClient 초기화: {base_url}")
+        logger.debug(f"MemoryClient initialized: {base_url}")
     
     def _make_request(self, method: str, endpoint: str, 
                      params: Optional[Dict[str, Any]] = None,
@@ -117,7 +117,7 @@ class MemoryClient:
         if data:
             kwargs["data"] = request_data
             
-        logger.debug(f"API 요청: {method.upper()} {url}")
+        logger.debug(f"API request: {method.upper()} {url}")
         
         last_exception = None
         for attempt in range(1, self.max_retries + 1):
@@ -129,7 +129,7 @@ class MemoryClient:
                     try:
                         return response.json()
                     except ValueError:
-                        logger.warning(f"JSON 형식이 아닌 응답: {response.text[:100]}")
+                        logger.warning(f"Non-JSON response: {response.text[:100]}")
                         return {"status": "success", "data": response.text}
                         
                 # 재시도 가능한 오류 상태 코드
@@ -143,7 +143,7 @@ class MemoryClient:
                     else:
                         delay = self.retry_delay * attempt  # 지수 백오프
                         
-                    logger.warning(f"재시도 가능한 오류 (시도 {attempt}/{self.max_retries}): {response.status_code}, {delay}초 후 재시도")
+                    logger.warning(f"Retryable error (attempt {attempt}/{self.max_retries}): {response.status_code}, retrying after {delay}s")
                     time.sleep(delay)
                     continue
                     
@@ -165,7 +165,7 @@ class MemoryClient:
             except (ConnectionError, requests.exceptions.ProxyError) as e:
                 last_exception = e
                 if attempt < self.max_retries:
-                    logger.warning(f"연결 오류 (시도 {attempt}/{self.max_retries}): {str(e)}, {self.retry_delay}초 후 재시도")
+                    logger.warning(f"Connection error (attempt {attempt}/{self.max_retries}): {str(e)}, retrying after {self.retry_delay}s")
                     time.sleep(self.retry_delay)
                     continue
                 raise ConnectionFailedError(f"서버 연결 실패: {str(e)}")
@@ -173,7 +173,7 @@ class MemoryClient:
             except Timeout as e:
                 last_exception = e
                 if attempt < self.max_retries:
-                    logger.warning(f"타임아웃 (시도 {attempt}/{self.max_retries}): {str(e)}, {self.retry_delay}초 후 재시도")
+                    logger.warning(f"Timeout (attempt {attempt}/{self.max_retries}): {str(e)}, retrying after {self.retry_delay}s")
                     time.sleep(self.retry_delay)
                     continue
                 raise RequestTimeoutError(f"요청 타임아웃: {str(e)}")

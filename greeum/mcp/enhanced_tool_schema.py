@@ -388,6 +388,63 @@ USE FOR:
             }
         }
     
+    @staticmethod
+    def get_analyze_causality_schema() -> Dict[str, Any]:
+        """Enhanced schema for analyze_causality tool"""
+        return {
+            "name": "analyze_causality",
+            "description": """🔗 Analyze causal relationships between memories in real-time.
+            
+⚡ PURPOSE:
+• Find hidden connections between past experiences and new insights
+• Identify bridge memories that link unrelated concepts
+• Discover causal patterns in memory networks
+• Provide real-time causality insights without permanent storage
+
+🎯 USE CASES:
+• Understanding how new information relates to existing knowledge
+• Finding decision pathways and problem-solving chains
+• Discovering knowledge gaps and connection opportunities
+• Real-time cognitive insight analysis
+
+💡 BENEFITS: Fast O(n log n) analysis, configurable depth, detailed performance metrics""",
+            
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "content": {
+                        "type": "string",
+                        "description": "New memory content to analyze for causal relationships",
+                        "minLength": 5
+                    },
+                    "importance": {
+                        "type": "number",
+                        "description": """Memory importance level:
+• 0.8-1.0: Critical - Deep analysis with extended time windows
+• 0.5-0.7: Normal - Balanced analysis (recommended)  
+• 0.0-0.4: Low - Quick analysis for efficiency""",
+                        "default": 0.5,
+                        "minimum": 0.0,
+                        "maximum": 1.0
+                    },
+                    "analysis_depth": {
+                        "type": "string",
+                        "description": "Analysis thoroughness level",
+                        "enum": ["quick", "balanced", "deep"],
+                        "default": "balanced"
+                    },
+                    "memory_count": {
+                        "type": "integer",
+                        "description": "Number of recent memories to analyze against (1-200)",
+                        "default": 100,
+                        "minimum": 1,
+                        "maximum": 200
+                    }
+                },
+                "required": ["content"]
+            }
+        }
+    
     @classmethod
     def get_all_enhanced_schemas(cls) -> List[Dict[str, Any]]:
         """Get enhanced tool schemas for MCP server integration (안전한 도구만)"""
@@ -395,7 +452,8 @@ USE FOR:
             cls.get_add_memory_schema(),
             cls.get_search_memory_schema(),
             cls.get_get_memory_stats_schema(),
-            cls.get_usage_analytics_schema()
+            cls.get_usage_analytics_schema(),
+            cls.get_analyze_causality_schema()
             # 제거됨: ltm_analyze, ltm_verify, ltm_export, stm_add, stm_promote, stm_cleanup
             # 안전성과 보안상의 이유로 위험한 6개 도구는 MCP에서 제거됨
         ]
@@ -408,6 +466,7 @@ USE FOR:
             "search_memory": cls.get_search_memory_schema,
             "get_memory_stats": cls.get_get_memory_stats_schema,
             "usage_analytics": cls.get_usage_analytics_schema,
+            "analyze_causality": cls.get_analyze_causality_schema,
             "ltm_analyze": cls.get_ltm_analyze_schema,
             "ltm_verify": cls.get_ltm_verify_schema,
             "ltm_export": cls.get_ltm_export_schema,

@@ -19,7 +19,7 @@ class BlockManager:
             db_manager: DatabaseManager (없으면 기본 SQLite 파일 생성)
         """
         self.db_manager = db_manager or DatabaseManager()
-        logger.info("BlockManager 초기화 완료")
+        logger.info("BlockManager initialization completed")
         
     def _compute_hash(self, block_data: Dict[str, Any]) -> str:
         """블록의 해시값 계산. 해시 계산에 포함되지 않아야 할 필드는 이 함수 호출 전에 정리되어야 함."""
@@ -35,7 +35,7 @@ class BlockManager:
         """
         새 블록 추가 (DatabaseManager 사용)
         """
-        logger.debug(f"add_block 호출: context='{context[:20]}...'")
+        logger.debug(f"add_block called: context='{context[:20]}...'")
         last_block_info = self.db_manager.get_last_block_info()
         
         new_block_index: int
@@ -66,6 +66,9 @@ class BlockManager:
         if metadata and 'links' in metadata:
             links = metadata['links']
         
+        # v2.4.0a2: 액탄트 분석 정보 자동 추가
+        enhanced_metadata = self._enhance_metadata_with_actants(context, metadata or {})
+        
         block_to_store_in_db = {
             "block_index": new_block_index,
             "timestamp": current_timestamp,
@@ -76,7 +79,7 @@ class BlockManager:
             "importance": importance,
             "hash": current_hash,
             "prev_hash": prev_h,
-            "metadata": metadata or {},
+            "metadata": enhanced_metadata,
             "embedding_model": embedding_model,
             "links": links  # M2: Store neighbor links cache
         }
@@ -86,20 +89,153 @@ class BlockManager:
             # add_block이 실제 추가된 블록의 index를 반환한다고 가정 (DB auto-increment 시 유용)
             # 현재 DatabaseManager.add_block은 전달된 block_data.get('block_index')를 사용하므로, added_idx는 new_block_index와 같음.
             added_block = self.db_manager.get_block(new_block_index)
-            logger.info(f"블록 추가 성공: index={new_block_index}, hash={current_hash[:10]}...")
+            logger.info(f"Block added successfully: index={new_block_index}, hash={current_hash[:10]}...")
             return added_block
         except Exception as e:
-            logger.error(f"BlockManager: DB에 블록 추가 오류 - {e}", exc_info=True)
+            logger.error(f"BlockManager: Error adding block to DB - {e}", exc_info=True)
             return None
     
     def get_blocks(self, start_idx: Optional[int] = None, end_idx: Optional[int] = None,
                      limit: int = 100, offset: int = 0, 
                      sort_by: str = 'block_index', order: str = 'asc') -> List[Dict[str, Any]]:
         """블록 범위 조회 (DatabaseManager 사용)"""
-        logger.debug(f"get_blocks 호출: start={start_idx}, end={end_idx}, limit={limit}, offset={offset}, sort_by={sort_by}, order={order}")
+        logger.debug(f"get_blocks called: start={start_idx}, end={end_idx}, limit={limit}, offset={offset}, sort_by={sort_by}, order={order}")
         blocks = self.db_manager.get_blocks(start_idx=start_idx, end_idx=end_idx, limit=limit, offset=offset, sort_by=sort_by, order=order)
-        logger.debug(f"get_blocks 결과: {len(blocks)}개 블록 반환")
+        logger.debug(f"get_blocks result: {len(blocks)} blocks returned")
         return blocks
+    
+    def _enhance_metadata_with_actants(self, context: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """v2.4.0a2: 메타데이터에 액탄트 분석 정보 추가 (그레마스 6개 액탄트 역할 분석)"""
+        
+        # 기존 메타데이터 보존
+        enhanced_metadata = metadata.copy()
+        
+        # 이미 액탄트 분석이 있으면 건너뛰기
+        if "actant_analysis" in enhanced_metadata:
+            return enhanced_metadata
+        
+        # 그레마스 6개 액탄트 역할 분석
+        actants = {}
+        
+        # Subject (주체) - 행동의 주체, 묵시적 화자 포함
+        subject_patterns = ["나는", "내가", "우리가", "팀이", "사용자가"]
+        subject_found = False
+        for pattern in subject_patterns:
+            if pattern in context:
+                actants["subject"] = {
+                    "entity": pattern.replace("는", "").replace("가", ""),
+                    "confidence": 0.8,
+                    "extraction_method": "explicit_pattern"
+                }
+                subject_found = True
+                break
+        
+        # 묵시적 주체 (1인칭 동사 활용형 감지)
+        if not subject_found and any(word in context for word in ["했고", "했다", "했어요", "시작했", "느껴요", "생각해"]):
+            actants["subject"] = {
+                "entity": "화자",
+                "confidence": 0.7,
+                "extraction_method": "implicit_first_person"
+            }
+        
+        # Object (객체) - 추구하거나 획득하려는 대상
+        object_patterns = ["프로젝트", "작업", "기능", "문제", "목표", "결과", "경험", "기회"]
+        for pattern in object_patterns:
+            if pattern in context:
+                # 수식어가 있는 경우 함께 추출 (예: "AI 프로젝트")
+                words = context.split()
+                for i, word in enumerate(words):
+                    if pattern in word:
+                        if i > 0 and words[i-1] not in ["는", "가", "을", "를", "의"]:
+                            combined = f"{words[i-1]} {pattern}"
+                        else:
+                            combined = pattern
+                        actants["object"] = {
+                            "entity": combined,
+                            "confidence": 0.8,
+                            "extraction_method": "contextual_extraction"
+                        }
+                        break
+                break
+        
+        # Sender (발신자) - 목표를 부여하거나 동기를 제공하는 존재
+        if any(word in context for word in ["해야", "요청", "지시", "부탁"]):
+            actants["sender"] = {
+                "entity": "외부 요청자",
+                "confidence": 0.6,
+                "extraction_method": "obligation_pattern"
+            }
+        elif actants.get("subject", {}).get("entity") in ["화자", "나"]:
+            actants["sender"] = {
+                "entity": "자기동기",
+                "confidence": 0.7,
+                "extraction_method": "self_motivation"
+            }
+        
+        # Receiver (수신자) - 목표 달성의 수혜자
+        if actants.get("subject"):
+            actants["receiver"] = {
+                "entity": actants["subject"]["entity"],
+                "confidence": 0.7,
+                "extraction_method": "subject_beneficiary"
+            }
+        
+        # Helper (조력자) - 목표 달성을 돕는 요소
+        helper_patterns = ["도구", "기술", "팀", "지원", "도움", "흥미", "동기", "열정"]
+        for pattern in helper_patterns:
+            if pattern in context or (pattern == "흥미" and "흥미로" in context):
+                actants["helper"] = {
+                    "entity": pattern if pattern in context else "흥미",
+                    "confidence": 0.6,
+                    "extraction_method": "supportive_element"
+                }
+                break
+        
+        # Opponent (적대자) - 목표 달성을 방해하는 요소
+        opponent_patterns = ["문제", "어려움", "장애물", "실패", "걱정", "우려"]
+        for pattern in opponent_patterns:
+            if pattern in context:
+                actants["opponent"] = {
+                    "entity": pattern,
+                    "confidence": 0.7,
+                    "extraction_method": "obstacle_detection"
+                }
+                break
+        
+        # 서사 패턴 추론 (더 정밀한 분류)
+        narrative_pattern = "other"
+        if any(word in context for word in ["시작했", "새로운", "처음"]):
+            narrative_pattern = "initiation"  # 개시/시작
+        elif any(word in context for word in ["시작", "계획", "목표"]) and not any(word in context for word in ["시작했"]):
+            narrative_pattern = "quest"  # 탐구/추구
+        elif any(word in context for word in ["문제", "어려움", "실패", "걱정"]):
+            narrative_pattern = "conflict"  # 갈등
+        elif any(word in context for word in ["완료", "성공", "달성", "해결"]):
+            narrative_pattern = "acquisition"  # 획득/완성
+        elif any(word in context for word in ["흥미로", "좋아", "만족", "기뻐"]):
+            narrative_pattern = "satisfaction"  # 만족/긍정
+        
+        # 액탄트 분석 정보 추가
+        enhanced_metadata["actant_analysis"] = {
+            "actants": actants,
+            "narrative_pattern": narrative_pattern,
+            "action_sequence": [],
+            "analysis_quality": {
+                "actant_count": len(actants),
+                "quality_level": "medium" if len(actants) > 0 else "low"
+            },
+            "analysis_timestamp": datetime.datetime.now().isoformat(),
+            "analysis_method": "pattern_matching_v240a2"
+        }
+        
+        # 처리 정보 추가
+        enhanced_metadata["actant_processing"] = {
+            "version": "2.4.0a2",
+            "processed_at": datetime.datetime.now().isoformat(),
+            "auto_generated": True
+        }
+        
+        return enhanced_metadata
     
     def get_block_by_index(self, index: int) -> Optional[Dict[str, Any]]:
         """인덱스로 블록 조회 (DatabaseManager 사용)"""
@@ -107,16 +243,16 @@ class BlockManager:
     
     def verify_blocks(self) -> bool:
         """블록체인 무결성 검증 (DatabaseManager 사용). prev_hash 연결 및 개별 해시 (단순화된 방식) 검증."""
-        logger.debug("verify_blocks 호출")
+        logger.debug("verify_blocks called")
         all_blocks = self.get_blocks(limit=100000, sort_by='block_index', order='asc')
         if not all_blocks:
-            logger.info("검증할 블록 없음, 무결성 True 반환")
+            logger.info("No blocks to verify, returning True for integrity")
             return True
 
         for i, block in enumerate(all_blocks):
             if i > 0:
                 if block.get('prev_hash') != all_blocks[i-1].get('hash'):
-                    logger.warning(f"BlockManager: prev_hash 불일치! index {i}, block_hash {block.get('hash')}, prev_expected {all_blocks[i-1].get('hash')}, prev_actual {block.get('prev_hash')}")
+                    logger.warning(f"BlockManager: prev_hash mismatch! index {i}, block_hash {block.get('hash')}, prev_expected {all_blocks[i-1].get('hash')}, prev_actual {block.get('prev_hash')}")
                     return False
             
             # 개별 블록 해시 검증
@@ -131,9 +267,9 @@ class BlockManager:
             }
             recalculated_hash = self._compute_hash(expected_data_for_hash)
             if recalculated_hash != block.get('hash'):
-                logger.warning(f"BlockManager: 해시 불일치! block_index {block.get('block_index')}. Recalculated: {recalculated_hash}, Stored: {block.get('hash')}")
+                logger.warning(f"BlockManager: Hash mismatch! block_index {block.get('block_index')}. Recalculated: {recalculated_hash}, Stored: {block.get('hash')}")
                 return False
-        logger.info("모든 블록 무결성 검증 통과")
+        logger.info("All blocks integrity verification passed")
         return True
     
     def search_by_keywords(self, keywords: List[str], limit: int = 10) -> List[Dict[str, Any]]:
