@@ -232,13 +232,14 @@ Please search existing memories first or provide more specific content."""
             
             db_manager = self.components['db_manager']
             
-            # 기본 통계 - API 호환성 수정
+            # 기본 통계 - database_manager 자체 연결 사용
             try:
-                # 전체 블록 수 조회 (SQL 직접 쿼리)
-                with db_manager.get_session() as session:
-                    result = session.execute("SELECT COUNT(*) FROM long_term_memory")
-                    total_blocks = result.fetchone()[0]
-            except Exception:
+                # database_manager의 self.conn 속성 직접 사용
+                cursor = db_manager.conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM blocks")
+                total_blocks = cursor.fetchone()[0]
+            except Exception as e:
+                logger.error(f"Block count query failed: {e}")
                 total_blocks = 0
                 
             # 최근 블록 조회 (API 호환성 수정)
