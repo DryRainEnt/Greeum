@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "greeum"
+version = "2.4.0.dev1"
+description = "Universal memory module for LLMs with enhanced MCP integration"
+authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.10"
+license = "MIT"
+keywords = ["memory", "LLM", "RAG"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10", 
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+    "rich>=13.4.0",
+    "click>=8.1.0",
+    "numpy>=1.24.0",
+    "sqlalchemy>=2.0.0",
+    "pydantic>=2.0.0",
+    "anyio>=4.5",
+]
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-cov"]
+dev = ["black", "isort", "flake8"]
+
+[tool.setuptools.packages.find]
+include = ["greeum*"]
+
+[tool.setuptools.package-data]
+"greeum" = ["py.typed"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+# Ignore some low-priority or legacy issues temporarily
+extend-ignore = [
+    "F401", # unused imports
+    "F841", # unused variables
+    "F541", # extraneous f-string
+    "E402", # module level import not at top
+    "E722", # bare except
+    "F811"  # redefinition of variable
+]
+
+[project.scripts]
+greeum = "greeum.cli:main"

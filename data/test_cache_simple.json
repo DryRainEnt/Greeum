@@ -1,0 +1,14 @@
+{
+  "current_context": "STM 시스템 동작",
+  "waypoints": [
+    {
+      "block_index": 1,
+      "relevance": 0.7999999999999999
+    },
+    {
+      "block_index": 4,
+      "relevance": 0.7
+    }
+  ],
+  "last_updated": "2025-08-02T19:25:39.682375"
+}

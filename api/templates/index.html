@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greeum - 관리 도구</title>
+    <style>
+        :root {
+            --primary-color: #3A7CA5;
+            --secondary-color: #F9A826;
+            --tertiary-color: #16A085;
+            --bg-color: #F5F7FA;
+            --text-color: #333;
+            --border-color: #ddd;
+        }
+        
+        body {
+            font-family: 'Noto Sans KR', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        h2 {
+            color: var(--primary-color);
+            margin-top: 30px;
+        }
+
+        h3 {
+            color: var(--tertiary-color);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 16px;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #1a56db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #1e429f;
+        }
+        .button-secondary {
+            background-color: #6c757d;
+        }
+        .button-secondary:hover {
+            background-color: #5a6268;
+        }
+        .button-danger {
+            background-color: #dc3545;
+        }
+        .button-danger:hover {
+            background-color: #c82333;
+        }
+        .result {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .memory-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+        .tab.active {
+            border-bottom: 3px solid #1a56db;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .memory-tag {
+            display: inline-block;
+            background-color: #e2e6ea;
+            border-radius: 4px;
+            padding: 2px 8px;
+            margin: 2px;
+            font-size: 14px;
+        }
+        .keyword-tag {
+            background-color: #cfe2ff;
+            color: #084298;
+        }
+        .emotion-tag {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+        .stars {
+            color: gold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>�� Greeum 관리 도구</h1>
+        <div class="header">
+            <div>
+                <button id="checkHealth">상태 확인</button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="add-memory">기억 추가</div>
+            <div class="tab" data-tab="view-memories">기억 조회</div>
+            <div class="tab" data-tab="short-term">단기 기억</div>
+            <div class="tab" data-tab="prompt">프롬프트 생성</div>
+            <div class="tab" data-tab="system">시스템 관리</div>
+        </div>
+
+        <!-- 기억 추가 탭 -->
+        <div class="tab-content active" id="add-memory">
+            <div class="card">
+                <h2>새로운 기억 추가</h2>
+                <div class="form-group">
+                    <label for="memory-text">기억할 내용</label>
+                    <textarea id="memory-text" placeholder="기억할 내용을 입력하세요..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="memory-keywords">키워드 (선택사항, 쉼표로 구분)</label>
+                    <input type="text" id="memory-keywords" placeholder="프로젝트, 실패, 경험">
+                </div>
+                <div class="form-group">
+                    <label for="memory-tags">태그 (선택사항, 쉼표로 구분)</label>
+                    <input type="text" id="memory-tags" placeholder="부정적, 학습, 경험">
+                </div>
+                <div class="form-group">
+                    <label for="memory-importance">중요도 (0~1)</label>
+                    <input type="range" id="memory-importance" min="0" max="1" step="0.1" value="0.5">
+                    <span id="importance-value">0.5</span>
+                </div>
+                <div class="form-group">
+                    <button id="add-memory-btn">기억 추가</button>
+                    <button id="analyze-text-btn" class="button-secondary">텍스트 분석</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>처리 결과</h3>
+                <div id="add-result" class="result">결과가 여기에 표시됩니다.</div>
+            </div>
+        </div>
+
+        <!-- 기억 조회 탭 -->
+        <div class="tab-content" id="view-memories">
+            <div class="card">
+                <h2>기억 검색</h2>
+                <div class="form-group">
+                    <label for="search-keywords">검색할 키워드 (쉼표로 구분)</label>
+                    <input type="text" id="search-keywords" placeholder="프로젝트, 실패">
+                </div>
+                <div class="form-group">
+                    <button id="search-btn">검색</button>
+                    <button id="get-recent-btn" class="button-secondary">최근 기억</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>기억 목록</h3>
+                <div id="memories-container"></div>
+            </div>
+        </div>
+
+        <!-- 단기 기억 탭 -->
+        <div class="tab-content" id="short-term">
+            <div class="card">
+                <h2>단기 기억 관리</h2>
+                <div class="form-group">
+                    <label for="stm-content">새 단기 기억 내용</label>
+                    <textarea id="stm-content" placeholder="단기 기억 내용을 입력하세요..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="stm-speaker">화자</label>
+                    <input type="text" id="stm-speaker" placeholder="user" value="user">
+                </div>
+                <div class="form-group">
+                    <button id="add-stm-btn">단기 기억 추가</button>
+                    <button id="get-stm-btn" class="button-secondary">단기 기억 조회</button>
+                    <button id="clear-stm-btn" class="button-danger">단기 기억 초기화</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>단기 기억 목록</h3>
+                <div id="stm-container"></div>
+            </div>
+        </div>
+
+        <!-- 프롬프트 생성 탭 -->
+        <div class="tab-content" id="prompt">
+            <div class="card">
+                <h2>프롬프트 생성</h2>
+                <div class="form-group">
+                    <label for="prompt-input">사용자 입력</label>
+                    <textarea id="prompt-input" placeholder="사용자 입력을 입력하세요..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="system-prompt">시스템 프롬프트 (선택사항)</label>
+                    <textarea id="system-prompt" placeholder="시스템 프롬프트를 입력하세요..."></textarea>
+                </div>
+                <div class="form-group">
+                    <button id="generate-prompt-btn">프롬프트 생성</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>생성된 프롬프트</h3>
+                <div id="prompt-result" class="result">결과가 여기에 표시됩니다.</div>
+            </div>
+        </div>
+
+        <!-- 시스템 관리 탭 -->
+        <div class="tab-content" id="system">
+            <div class="card">
+                <h2>시스템 관리</h2>
+                <div class="form-group">
+                    <button id="verify-blocks-btn">블록체인 무결성 검증</button>
+                    <button id="get-cache-btn" class="button-secondary">웨이포인트 캐시 조회</button>
+                </div>
+                <div class="form-group">
+                    <button id="clear-cache-btn" class="button-danger">웨이포인트 캐시 초기화</button>
+                    <button id="clear-blocks-btn" class="button-danger">모든 기억 초기화 (주의)</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>시스템 정보</h3>
+                <div id="system-result" class="result">결과가 여기에 표시됩니다.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 기본 API URL
+            const API_BASE_URL = '/api/v1';
+
+            // 탭 전환 기능
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // 활성 탭 상태 변경
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    // 탭 콘텐츠 표시/숨김
+                    const tabContents = document.querySelectorAll('.tab-content');
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    const targetTab = tab.getAttribute('data-tab');
+                    document.getElementById(targetTab).classList.add('active');
+                });
+            });
+
+            // 중요도 슬라이더 값 표시
+            const importanceSlider = document.getElementById('memory-importance');
+            const importanceValue = document.getElementById('importance-value');
+            importanceSlider.addEventListener('input', () => {
+                importanceValue.textContent = importanceSlider.value;
+            });
+
+            // API 요청 함수
+            async function apiRequest(endpoint, method = 'GET', data = null) {
+                try {
+                    const options = {
+                        method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    };
+
+                    if (data && (method === 'POST' || method === 'PUT')) {
+                        options.body = JSON.stringify(data);
+                    }
+
+                    const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                    const result = await response.json();
+                    return { success: true, data: result };
+                } catch (error) {
+                    console.error('API 요청 오류:', error);
+                    return { success: false, error: error.message };
+                }
+            }
+
+            // 상태 확인
+            document.getElementById('checkHealth').addEventListener('click', async () => {
+                const result = await apiRequest('/health');
+                if (result.success) {
+                    alert(`상태: ${result.data.status}\n버전: ${result.data.version}\n이름: ${result.data.name}`);
+                } else {
+                    alert('상태 확인 실패: ' + result.error);
+                }
+            });
+
+            // 텍스트 분석
+            document.getElementById('analyze-text-btn').addEventListener('click', async () => {
+                const text = document.getElementById('memory-text').value;
+                if (!text) {
+                    alert('분석할 텍스트를 입력하세요.');
+                    return;
+                }
+
+                const result = await apiRequest('/process', 'POST', { text });
+                if (result.success) {
+                    document.getElementById('add-result').textContent = 
+                        JSON.stringify(result.data, null, 2);
+                    
+                    // 자동으로 필드 채우기
+                    if (result.data.keywords) {
+                        document.getElementById('memory-keywords').value = 
+                            result.data.keywords.join(', ');
+                    }
+                    if (result.data.tags) {
+                        document.getElementById('memory-tags').value = 
+                            result.data.tags.join(', ');
+                    }
+                    if (result.data.importance) {
+                        document.getElementById('memory-importance').value = 
+                            result.data.importance;
+                        document.getElementById('importance-value').textContent = 
+                            result.data.importance.toFixed(1);
+                    }
+                } else {
+                    document.getElementById('add-result').textContent = 
+                        '분석 실패: ' + result.error;
+                }
+            });
+
+            // 기억 추가
+            document.getElementById('add-memory-btn').addEventListener('click', async () => {
+                const context = document.getElementById('memory-text').value;
+                if (!context) {
+                    alert('기억할 내용을 입력하세요.');
+                    return;
+                }
+
+                const keywordsText = document.getElementById('memory-keywords').value;
+                const tagsText = document.getElementById('memory-tags').value;
+                const importance = parseFloat(document.getElementById('memory-importance').value);
+
+                const data = { context };
+                
+                if (keywordsText) {
+                    data.keywords = keywordsText.split(',').map(k => k.trim());
+                }
+                if (tagsText) {
+                    data.tags = tagsText.split(',').map(t => t.trim());
+                }
+                data.importance = importance;
+
+                const result = await apiRequest('/blocks', 'POST', data);
+                if (result.success) {
+                    document.getElementById('add-result').textContent = 
+                        JSON.stringify(result.data, null, 2);
+                    alert('기억이 성공적으로 추가되었습니다!');
+                } else {
+                    document.getElementById('add-result').textContent = 
+                        '기억 추가 실패: ' + result.error;
+                }
+            });
+
+            // 기억 검색
+            document.getElementById('search-btn').addEventListener('click', async () => {
+                const keywords = document.getElementById('search-keywords').value;
+                if (!keywords) {
+                    alert('검색할 키워드를 입력하세요.');
+                    return;
+                }
+
+                const result = await apiRequest(`/search?keywords=${encodeURIComponent(keywords)}`);
+                if (result.success) {
+                    displayMemories(result.data.results);
+                } else {
+                    document.getElementById('memories-container').innerHTML = 
+                        '검색 실패: ' + result.error;
+                }
+            });
+
+            // 최근 기억 불러오기
+            document.getElementById('get-recent-btn').addEventListener('click', async () => {
+                const result = await apiRequest('/blocks');
+                if (result.success) {
+                    displayMemories(result.data.blocks);
+                } else {
+                    document.getElementById('memories-container').innerHTML = 
+                        '기억 불러오기 실패: ' + result.error;
+                }
+            });
+
+            // 메모리 표시 함수
+            function displayMemories(memories) {
+                const container = document.getElementById('memories-container');
+                if (!memories || memories.length === 0) {
+                    container.innerHTML = '<p>표시할 기억이 없습니다.</p>';
+                    return;
+                }
+
+                let html = '';
+                memories.forEach(memory => {
+                    let timestamp = memory.timestamp;
+                    try {
+                        timestamp = new Date(memory.timestamp).toLocaleString();
+                    } catch (e) {}
+
+                    let stars = '';
+                    const importance = memory.importance || 0;
+                    const starCount = Math.round(importance * 5);
+                    for (let i = 0; i < starCount; i++) {
+                        stars += '⭐';
+                    }
+
+                    html += `
+                        <div class="memory-item">
+                            <h4>블록 #${memory.block_index} <span class="stars">${stars}</span></h4>
+                            <p><strong>시간:</strong> ${timestamp}</p>
+                            <p><strong>키워드:</strong> ${memory.keywords.map(k => 
+                                `<span class="memory-tag keyword-tag">${k}</span>`).join(' ')}</p>
+                            <p><strong>태그:</strong> ${memory.tags.map(t => 
+                                `<span class="memory-tag emotion-tag">${t}</span>`).join(' ')}</p>
+                            <p><strong>중요도:</strong> ${memory.importance.toFixed(2)}</p>
+                            <p><strong>내용:</strong> ${memory.context}</p>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+
+            // 단기 기억 추가
+            document.getElementById('add-stm-btn').addEventListener('click', async () => {
+                const content = document.getElementById('stm-content').value;
+                if (!content) {
+                    alert('단기 기억 내용을 입력하세요.');
+                    return;
+                }
+
+                const speaker = document.getElementById('stm-speaker').value || 'user';
+                const result = await apiRequest('/stm', 'POST', { content, speaker });
+                
+                if (result.success) {
+                    alert('단기 기억이 추가되었습니다.');
+                    // 자동으로 목록 새로고침
+                    document.getElementById('get-stm-btn').click();
+                } else {
+                    alert('단기 기억 추가 실패: ' + result.error);
+                }
+            });
+
+            // 단기 기억 조회
+            document.getElementById('get-stm-btn').addEventListener('click', async () => {
+                const result = await apiRequest('/stm');
+                if (result.success) {
+                    displaySTM(result.data.memories);
+                } else {
+                    document.getElementById('stm-container').innerHTML = 
+                        '단기 기억 조회 실패: ' + result.error;
+                }
+            });
+
+            // 단기 기억 초기화
+            document.getElementById('clear-stm-btn').addEventListener('click', async () => {
+                if (!confirm('정말 모든 단기 기억을 초기화하시겠습니까?')) {
+                    return;
+                }
+
+                const result = await apiRequest('/stm', 'DELETE');
+                if (result.success) {
+                    alert('단기 기억이 초기화되었습니다.');
+                    document.getElementById('stm-container').innerHTML = '';
+                } else {
+                    alert('단기 기억 초기화 실패: ' + result.error);
+                }
+            });
+
+            // 단기 기억 표시 함수
+            function displaySTM(memories) {
+                const container = document.getElementById('stm-container');
+                if (!memories || memories.length === 0) {
+                    container.innerHTML = '<p>표시할 단기 기억이 없습니다.</p>';
+                    return;
+                }
+
+                let html = '';
+                memories.forEach(memory => {
+                    let timestamp = memory.timestamp;
+                    try {
+                        timestamp = new Date(memory.timestamp).toLocaleString();
+                    } catch (e) {}
+
+                    html += `
+                        <div class="memory-item">
+                            <p><strong>ID:</strong> ${memory.id}</p>
+                            <p><strong>시간:</strong> ${timestamp}</p>
+                            <p><strong>화자:</strong> ${memory.speaker}</p>
+                            <p><strong>내용:</strong> ${memory.content}</p>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+
+            // 프롬프트 생성
+            document.getElementById('generate-prompt-btn').addEventListener('click', async () => {
+                const input = document.getElementById('prompt-input').value;
+                if (!input) {
+                    alert('사용자 입력을 입력하세요.');
+                    return;
+                }
+
+                const systemPrompt = document.getElementById('system-prompt').value;
+                const data = { 
+                    input,
+                    system_prompt: systemPrompt
+                };
+
+                const result = await apiRequest('/prompt', 'POST', data);
+                if (result.success) {
+                    document.getElementById('prompt-result').textContent = result.data.prompt;
+                } else {
+                    document.getElementById('prompt-result').textContent = 
+                        '프롬프트 생성 실패: ' + result.error;
+                }
+            });
+
+            // 블록체인 무결성 검증
+            document.getElementById('verify-blocks-btn').addEventListener('click', async () => {
+                const result = await apiRequest('/verify');
+                if (result.success) {
+                    document.getElementById('system-result').textContent = 
+                        `무결성 검증 결과: ${result.data.valid ? '성공' : '실패'}\n` +
+                        `메시지: ${result.data.message}`;
+                } else {
+                    document.getElementById('system-result').textContent = 
+                        '무결성 검증 실패: ' + result.error;
+                }
+            });
+
+            // 웨이포인트 캐시 조회
+            document.getElementById('get-cache-btn').addEventListener('click', async () => {
+                const result = await apiRequest('/cache');
+                if (result.success) {
+                    document.getElementById('system-result').textContent = 
+                        JSON.stringify(result.data, null, 2);
+                } else {
+                    document.getElementById('system-result').textContent = 
+                        '캐시 조회 실패: ' + result.error;
+                }
+            });
+
+            // 웨이포인트 캐시 초기화
+            document.getElementById('clear-cache-btn').addEventListener('click', async () => {
+                if (!confirm('웨이포인트 캐시를 초기화하시겠습니까?')) {
+                    return;
+                }
+
+                const result = await apiRequest('/cache', 'DELETE');
+                if (result.success) {
+                    alert('웨이포인트 캐시가 초기화되었습니다.');
+                    document.getElementById('system-result').textContent = 
+                        JSON.stringify(result.data, null, 2);
+                } else {
+                    alert('캐시 초기화 실패: ' + result.error);
+                }
+            });
+
+            // 모든 기억 초기화 - 실제로는 미구현 (보안상 이유로)
+            document.getElementById('clear-blocks-btn').addEventListener('click', () => {
+                const confirmMsg = '주의: 이 작업은 되돌릴 수 없습니다.\n\n' +
+                                  '정말로 모든 장기 기억을 삭제하시겠습니까?';
+                
+                if (confirm(confirmMsg)) {
+                    alert('보안 이유로 웹 인터페이스에서는 이 기능이 제한됩니다.\n' + 
+                          'CLI 도구를 사용하여 초기화할 수 있습니다:\n' +
+                          'python cli/memory_cli.py clear blocks');
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

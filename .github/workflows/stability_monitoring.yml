@@ -1,0 +1,235 @@
+name: Greeum Stability Monitoring
+
+on:
+  schedule:
+    # 매일 오전 9시 (UTC 기준 0시)
+    - cron: '0 0 * * *'
+  workflow_dispatch:  # 수동 실행 가능
+
+jobs:
+  daily-benchmark:
+    runs-on: ubuntu-latest
+    name: Daily Performance Benchmark
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        pip install psutil
+        
+    - name: Create benchmark directories
+      run: |
+        mkdir -p benchmark_results
+        mkdir -p .github/workflows/reports
+        
+    - name: Run daily benchmark
+      run: |
+        python scripts/benchmark_daily.py
+        
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v4
+      with:
+        name: daily-benchmark-results
+        path: benchmark_results/
+        retention-days: 30
+        
+    - name: Generate benchmark report
+      run: |
+        python -c "
+        import json
+        from pathlib import Path
+        
+        # 최신 벤치마크 결과 읽기
+        latest_file = Path('benchmark_results/latest_benchmark.json')
+        if latest_file.exists():
+            with open(latest_file) as f:
+                results = json.load(f)
+            
+            # GitHub Actions Summary 생성
+            score = results.get('performance_score', 0)
+            emoji = '🟢' if score >= 90 else '🟡' if score >= 70 else '🔴'
+            
+            summary = f'''
+        # {emoji} Daily Benchmark Results
+        
+        **Performance Score:** {score}/100
+        **Platform:** {results.get('platform', 'Unknown')}
+        **Timestamp:** {results.get('timestamp', 'Unknown')}
+        
+        ## Key Metrics
+        '''
+            
+            for metric_name, metric_data in results.get('metrics', {}).items():
+                if isinstance(metric_data, dict):
+                    duration = metric_data.get('duration_ms', 0)
+                    memory = metric_data.get('peak_memory_mb', 0)
+                    summary += f'- **{metric_name}**: {duration}ms, {memory:.1f}MB peak\\n'
+            
+            summary += '\\n## Recommendations\\n'
+            for rec in results.get('recommendations', []):
+                summary += f'- {rec}\\n'
+            
+            # GitHub Actions Summary에 출력
+            with open('$GITHUB_STEP_SUMMARY', 'w') as f:
+                f.write(summary)
+        else:
+            print('No benchmark results found')
+        "
+        
+  weekly-stress-test:
+    runs-on: ubuntu-latest
+    name: Weekly Stress Test
+    # 매주 일요일 오전 2시 (UTC 기준)
+    if: github.event.schedule == '0 2 * * 0' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        pip install psutil
+        
+    - name: Create stress test directories
+      run: |
+        mkdir -p stress_test_results
+        
+    - name: Run weekly stress test
+      run: |
+        python scripts/stress_test_weekly.py
+        
+    - name: Upload stress test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: weekly-stress-test-results
+        path: stress_test_results/
+        retention-days: 90
+        
+    - name: Generate stress test report
+      run: |
+        python -c "
+        import json
+        from pathlib import Path
+        
+        # 최신 스트레스 테스트 결과 읽기
+        latest_file = Path('stress_test_results/latest_stress_test.json')
+        if latest_file.exists():
+            with open(latest_file) as f:
+                results = json.load(f)
+            
+            analysis = results.get('analysis', {})
+            score = analysis.get('overall_score', 0)
+            grade = analysis.get('stability_grade', 'Unknown')
+            
+            emoji = '🟢' if score >= 90 else '🟡' if score >= 70 else '🔴'
+            
+            summary = f'''
+        # {emoji} Weekly Stress Test Results
+        
+        **Stability Score:** {score}/100
+        **Stability Grade:** {grade}
+        **Platform:** {results.get('platform', 'Unknown')}
+        **Timestamp:** {results.get('timestamp', 'Unknown')}
+        
+        ## Test Results
+        '''
+            
+            for test_name, test_result in results.get('stress_tests', {}).items():
+                duration = test_result.get('duration_seconds', 0)
+                peak_memory = test_result.get('peak_memory_mb', 0)
+                memory_leak = test_result.get('memory_leak_mb', 0)
+                
+                summary += f'''
+        ### {test_name}
+        - Duration: {duration}s
+        - Peak Memory: {peak_memory:.1f}MB
+        - Memory Leak: {memory_leak:.1f}MB
+        '''
+            
+            # 심각한 문제들
+            critical_issues = analysis.get('critical_issues', [])
+            if critical_issues:
+                summary += '\\n## ❌ Critical Issues\\n'
+                for issue in critical_issues:
+                    summary += f'- {issue}\\n'
+            
+            # 경고사항
+            warnings = analysis.get('warnings', [])
+            if warnings:
+                summary += '\\n## ⚠️ Warnings\\n'
+                for warning in warnings:
+                    summary += f'- {warning}\\n'
+            
+            # 권장사항
+            recommendations = analysis.get('recommendations', [])
+            if recommendations:
+                summary += '\\n## 💡 Recommendations\\n'
+                for rec in recommendations:
+                    summary += f'- {rec}\\n'
+            
+            # GitHub Actions Summary에 출력
+            with open('$GITHUB_STEP_SUMMARY', 'w') as f:
+                f.write(summary)
+                
+            # 심각한 문제가 있으면 실패 처리
+            if critical_issues:
+                print('Critical issues found!')
+                exit(1)
+        else:
+            print('No stress test results found')
+            exit(1)
+        "
+
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scan
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with: 
+        python-version: '3.11'
+        
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety
+        pip install -e .
+        
+    - name: Run Bandit security scan
+      run: |
+        bandit -r greeum/ -f json -o bandit-report.json
+        bandit -r greeum/ -f txt
+        
+    - name: Run Safety dependency check
+      run: |
+        safety check --json --output safety-report.json
+        safety check
+        
+    - name: Upload security reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+        retention-days: 30

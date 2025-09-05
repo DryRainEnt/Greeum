@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 가상 환경
+venv/
+ENV/
+env/
+
+# 데이터베이스
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# 로그
+logs/
+*.log
+
+# 개인 설정 파일
+.env
+config_local.py
+
+# IDE 설정
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 시스템 파일
+.DS_Store
+Thumbs.db
+
+# 레거시 문서 (아카이브용)
+Design/Legacy/
+
+# 가상환경 (추가)
+deployment_env/
+test_install/
+venv-build/
+test_v204_env/
+
+# 과도한 테스트 결과 (선택적)
+results/visualizations/
+tests/performance_suite/results/ 

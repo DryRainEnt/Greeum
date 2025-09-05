@@ -1,0 +1,53 @@
+{
+  "test_samples": 20,
+  "memory_db_path": "data/test_memory.db",
+  "results_path": "results/performance",
+  "llm_type": "openai",
+  "llm_model": "gpt-4",
+  "evaluation_model": "gpt-4",
+  "api_key": "",
+  "temperature": 0.7,
+  "test_scenarios": [
+    "generic_qa",
+    "context_recall",
+    "long_term_memory",
+    "complex_reasoning"
+  ],
+  "metrics": {
+    "T-GEN-001": {
+      "enabled": true,
+      "description": "응답의 구체성 증가율",
+      "samples": 5
+    },
+    "T-GEN-002": {
+      "enabled": true,
+      "description": "대화 일관성 점수",
+      "samples": 5
+    },
+    "T-MEM-001": {
+      "enabled": true,
+      "description": "회상 적중률",
+      "samples": 10
+    },
+    "T-MEM-002": {
+      "enabled": true,
+      "description": "메모리 검색 latency",
+      "samples": 50
+    },
+    "T-API-001": {
+      "enabled": false,
+      "description": "API 호출 수 감소율",
+      "samples": 5
+    },
+    "T-SCORE-001": {
+      "enabled": false,
+      "description": "GPT Evaluation 점수 변화",
+      "samples": 5
+    },
+    "T-USER-001": {
+      "enabled": false,
+      "description": "사용자 만족도 / 재진입율",
+      "samples": 0
+    }
+  }
+} 
