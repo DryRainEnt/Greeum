@@ -175,11 +175,11 @@ class JSONRPCProcessor:
                     "properties": {
                         "content": {
                             "type": "string",
-                            "description": "메모리에 저장할 내용"
+                            "description": "Content to store in memory"
                         },
                         "importance": {
                             "type": "number",
-                            "description": "중요도 (0.0-1.0)",
+                            "description": "Importance score (0.0-1.0)",
                             "minimum": 0.0,
                             "maximum": 1.0,
                             "default": 0.5
@@ -196,11 +196,11 @@ class JSONRPCProcessor:
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "검색 쿼리"
+                            "description": "Search query"
                         },
                         "limit": {
                             "type": "integer",
-                            "description": "최대 결과 수",
+                            "description": "Maximum number of results",
                             "minimum": 1,
                             "maximum": 50,
                             "default": 5
@@ -225,14 +225,14 @@ class JSONRPCProcessor:
                     "properties": {
                         "days": {
                             "type": "integer",
-                            "description": "분석 기간 (일)",
+                            "description": "Analysis period in days",
                             "minimum": 1,
                             "maximum": 90,
                             "default": 7
                         },
                         "report_type": {
                             "type": "string",
-                            "description": "리포트 타입",
+                            "description": "Report type",
                             "enum": ["usage", "quality", "performance", "all"],
                             "default": "usage"
                         }

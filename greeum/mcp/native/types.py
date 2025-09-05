@@ -189,13 +189,13 @@ class SessionMessage(BaseModel):
 
 class AddMemoryArgs(BaseModel):
     """add_memory 도구 인자"""
-    content: str = Field(description="메모리에 저장할 내용")
-    importance: Optional[float] = Field(default=0.5, description="중요도 (0.0-1.0)")
+    content: str = Field(description="Content to store in memory")
+    importance: Optional[float] = Field(default=0.5, description="Importance score (0.0-1.0)")
 
 class SearchMemoryArgs(BaseModel):
     """search_memory 도구 인자"""
-    query: str = Field(description="검색 쿼리")
-    limit: Optional[int] = Field(default=5, description="최대 결과 수")
+    query: str = Field(description="Search query")
+    limit: Optional[int] = Field(default=5, description="Maximum number of results")
 
 class GetMemoryStatsArgs(BaseModel):
     """get_memory_stats 도구 인자"""
@@ -203,8 +203,8 @@ class GetMemoryStatsArgs(BaseModel):
 
 class UsageAnalyticsArgs(BaseModel):
     """usage_analytics 도구 인자"""
-    days: Optional[int] = Field(default=7, description="분석 기간 (일)")
-    report_type: Optional[str] = Field(default="usage", description="리포트 타입")
+    days: Optional[int] = Field(default=7, description="Analysis period in days")
+    report_type: Optional[str] = Field(default="usage", description="Report type")
 
 # =============================================================================
 # Error Codes (JSON-RPC 2.0 + MCP 확장)
