@@ -1,0 +1,61 @@
+{
+  "test_info": {
+    "version": "v2.4.0a1",
+    "timestamp": "2025-09-05T02:46:08.262144",
+    "total_test_time": 0.057650089263916016,
+    "memory_counts_tested": [
+      25,
+      100,
+      250,
+      500,
+      1000
+    ]
+  },
+  "results": {
+    "25": {
+      "memory_generation_time": 0.009569883346557617,
+      "causality_analysis_time": 0.002756834030151367,
+      "direct_links_found": 1,
+      "bridge_connections_found": 0,
+      "candidates_checked": 5,
+      "analysis_type": "balanced",
+      "memories_per_second": 9068.373259534723
+    },
+    "100": {
+      "memory_generation_time": 0.0007619857788085938,
+      "causality_analysis_time": 0.004733085632324219,
+      "direct_links_found": 0,
+      "bridge_connections_found": 0,
+      "candidates_checked": 10,
+      "analysis_type": "balanced",
+      "memories_per_second": 21127.866209953656
+    },
+    "250": {
+      "memory_generation_time": 0.001967191696166992,
+      "causality_analysis_time": 0.005635976791381836,
+      "direct_links_found": 1,
+      "bridge_connections_found": 0,
+      "candidates_checked": 10,
+      "analysis_type": "balanced",
+      "memories_per_second": 44357.883159186094
+    },
+    "500": {
+      "memory_generation_time": 0.003844022750854492,
+      "causality_analysis_time": 0.007272005081176758,
+      "direct_links_found": 1,
+      "bridge_connections_found": 0,
+      "candidates_checked": 10,
+      "analysis_type": "balanced",
+      "memories_per_second": 68756.82764499524
+    },
+    "1000": {
+      "memory_generation_time": 0.008058786392211914,
+      "causality_analysis_time": 0.011937141418457031,
+      "direct_links_found": 2,
+      "bridge_connections_found": 0,
+      "candidates_checked": 10,
+      "analysis_type": "balanced",
+      "memories_per_second": 83772.1498761684
+    }
+  }
+}

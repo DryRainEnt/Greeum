@@ -1,0 +1,83 @@
+{
+  "test_start": "2025-09-05T00:33:44.873362",
+  "memory_generation": {
+    "total_count": 1000,
+    "generation_time": 0.6281201839447021,
+    "memories_per_second": 1592.0520078177221
+  },
+  "causality_analysis": {
+    "10": {
+      "analysis_time": 0.002317667007446289,
+      "memory_usage_mb": 0.078125,
+      "memories_per_second": 4314.683674519082,
+      "direct_links": 1,
+      "bridge_connections": 0
+    },
+    "50": {
+      "analysis_time": 0.07289528846740723,
+      "memory_usage_mb": 0.015625,
+      "memories_per_second": 685.9153870055111,
+      "direct_links": 7,
+      "bridge_connections": 10
+    },
+    "100": {
+      "analysis_time": 0.3301098346710205,
+      "memory_usage_mb": 0.0,
+      "memories_per_second": 302.92947830426675,
+      "direct_links": 15,
+      "bridge_connections": 61
+    },
+    "200": {
+      "analysis_time": 1.3349292278289795,
+      "memory_usage_mb": 0.078125,
+      "memories_per_second": 149.82067650527344,
+      "direct_links": 30,
+      "bridge_connections": 246
+    }
+  },
+  "system_resources": {
+    "process_cpu_percent": 0.0,
+    "process_memory_mb": 47.671875,
+    "memory_increase_mb": 11.65625,
+    "database_size_mb": 1.3359375,
+    "system_memory_percent": 63.8,
+    "system_cpu_percent": 25.8
+  },
+  "scalability_test": {
+    "100": {
+      "total_time": 1.6018939018249512,
+      "successful_analyses": 5,
+      "total_links_found": 69,
+      "memory_delta_mb": 0.0625,
+      "avg_time_per_analysis": 0.32037878036499023
+    },
+    "300": {
+      "total_time": 5.797111988067627,
+      "successful_analyses": 5,
+      "total_links_found": 141,
+      "memory_delta_mb": 0.171875,
+      "avg_time_per_analysis": 1.1594223976135254
+    },
+    "500": {
+      "total_time": 6.588461637496948,
+      "successful_analyses": 5,
+      "total_links_found": 150,
+      "memory_delta_mb": 0.015625,
+      "avg_time_per_analysis": 1.3176923274993897
+    },
+    "700": {
+      "total_time": 6.4830641746521,
+      "successful_analyses": 5,
+      "total_links_found": 150,
+      "memory_delta_mb": 0.0,
+      "avg_time_per_analysis": 1.29661283493042
+    },
+    "1000": {
+      "total_time": 6.375486850738525,
+      "successful_analyses": 5,
+      "total_links_found": 150,
+      "memory_delta_mb": 0.015625,
+      "avg_time_per_analysis": 1.275097370147705
+    }
+  }
+}
