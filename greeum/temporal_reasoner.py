@@ -84,16 +84,16 @@ class TemporalReasoner:
             "재작년": lambda: timedelta(days=730),
             
             # 정규식 패턴
-            "(\d+)초 전": lambda m: timedelta(seconds=int(m.group(1))),
-            "(\d+)분 전": lambda m: timedelta(minutes=int(m.group(1))),
-            "(\d+)시간 전": lambda m: timedelta(hours=int(m.group(1))),
-            "(\d+)일 전": lambda m: timedelta(days=int(m.group(1))),
-            "(\d+)주 전": lambda m: timedelta(weeks=int(m.group(1))),
-            "(\d+)개월 전": lambda m: timedelta(days=int(m.group(1)) * 30),
-            "(\d+)달 전": lambda m: timedelta(days=int(m.group(1)) * 30),
-            "(\d+)년 전": lambda m: timedelta(days=int(m.group(1)) * 365),
-            "약 (\d+)시간 전": lambda m: timedelta(hours=int(m.group(1))),
-            "약 (\d+)일 전": lambda m: timedelta(days=int(m.group(1))),
+            r"(\d+)초 전": lambda m: timedelta(seconds=int(m.group(1))),
+            r"(\d+)분 전": lambda m: timedelta(minutes=int(m.group(1))),
+            r"(\d+)시간 전": lambda m: timedelta(hours=int(m.group(1))),
+            r"(\d+)일 전": lambda m: timedelta(days=int(m.group(1))),
+            r"(\d+)주 전": lambda m: timedelta(weeks=int(m.group(1))),
+            r"(\d+)개월 전": lambda m: timedelta(days=int(m.group(1)) * 30),
+            r"(\d+)달 전": lambda m: timedelta(days=int(m.group(1)) * 30),
+            r"(\d+)년 전": lambda m: timedelta(days=int(m.group(1)) * 365),
+            r"약 (\d+)시간 전": lambda m: timedelta(hours=int(m.group(1))),
+            r"약 (\d+)일 전": lambda m: timedelta(days=int(m.group(1))),
             
             # 모호한 기간
             "얼마 전": lambda: timedelta(hours=6),
@@ -114,10 +114,10 @@ class TemporalReasoner:
             "다음 해": lambda: timedelta(days=365),
             "내년": lambda: timedelta(days=365),
             
-            "(\d+)일 후": lambda m: timedelta(days=int(m.group(1))),
-            "(\d+)주 후": lambda m: timedelta(weeks=int(m.group(1))),
-            "(\d+)개월 후": lambda m: timedelta(days=int(m.group(1)) * 30),
-            "(\d+)년 후": lambda m: timedelta(days=int(m.group(1)) * 365),
+            r"(\d+)일 후": lambda m: timedelta(days=int(m.group(1))),
+            r"(\d+)주 후": lambda m: timedelta(weeks=int(m.group(1))),
+            r"(\d+)개월 후": lambda m: timedelta(days=int(m.group(1)) * 30),
+            r"(\d+)년 후": lambda m: timedelta(days=int(m.group(1)) * 365),
         }
         
         # 영어 시간 표현
@@ -137,15 +137,15 @@ class TemporalReasoner:
             "two years ago": lambda: timedelta(days=730),
             
             # 정규식 패턴
-            "(\d+) seconds ago": lambda m: timedelta(seconds=int(m.group(1))),
-            "(\d+) minutes ago": lambda m: timedelta(minutes=int(m.group(1))),
-            "(\d+) hours ago": lambda m: timedelta(hours=int(m.group(1))),
-            "(\d+) days ago": lambda m: timedelta(days=int(m.group(1))),
-            "(\d+) weeks ago": lambda m: timedelta(weeks=int(m.group(1))),
-            "(\d+) months ago": lambda m: timedelta(days=int(m.group(1)) * 30),
-            "(\d+) years ago": lambda m: timedelta(days=int(m.group(1)) * 365),
-            "about (\d+) hours ago": lambda m: timedelta(hours=int(m.group(1))),
-            "about (\d+) days ago": lambda m: timedelta(days=int(m.group(1))),
+            r"(\d+) seconds ago": lambda m: timedelta(seconds=int(m.group(1))),
+            r"(\d+) minutes ago": lambda m: timedelta(minutes=int(m.group(1))),
+            r"(\d+) hours ago": lambda m: timedelta(hours=int(m.group(1))),
+            r"(\d+) days ago": lambda m: timedelta(days=int(m.group(1))),
+            r"(\d+) weeks ago": lambda m: timedelta(weeks=int(m.group(1))),
+            r"(\d+) months ago": lambda m: timedelta(days=int(m.group(1)) * 30),
+            r"(\d+) years ago": lambda m: timedelta(days=int(m.group(1)) * 365),
+            r"about (\d+) hours ago": lambda m: timedelta(hours=int(m.group(1))),
+            r"about (\d+) days ago": lambda m: timedelta(days=int(m.group(1))),
             
             # 모호한 기간
             "a while ago": lambda: timedelta(hours=6),
@@ -165,10 +165,10 @@ class TemporalReasoner:
             "next month": lambda: timedelta(days=30),
             "next year": lambda: timedelta(days=365),
             
-            "in (\d+) days": lambda m: timedelta(days=int(m.group(1))),
-            "in (\d+) weeks": lambda m: timedelta(weeks=int(m.group(1))),
-            "in (\d+) months": lambda m: timedelta(days=int(m.group(1)) * 30),
-            "in (\d+) years": lambda m: timedelta(days=int(m.group(1)) * 365),
+            r"in (\d+) days": lambda m: timedelta(days=int(m.group(1))),
+            r"in (\d+) weeks": lambda m: timedelta(weeks=int(m.group(1))),
+            r"in (\d+) months": lambda m: timedelta(days=int(m.group(1)) * 30),
+            r"in (\d+) years": lambda m: timedelta(days=int(m.group(1)) * 365),
         }
         
         # 언어별 패턴 사전

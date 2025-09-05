@@ -59,4 +59,29 @@ test_v204_env/
 
 # 과도한 테스트 결과 (선택적)
 results/visualizations/
-tests/performance_suite/results/ 
+tests/performance_suite/results/ venv*/
+test-env/
+*.log
+*_performance_results_*.json
+
+# 개발/테스트 임시 파일들
+test_v*.py
+alpha_*.py
+actant_*.py
+debug_*.py
+final_*.py
+big_o_*.py
+*_test_results_*.json
+
+# 임시 가상환경들
+venv*/
+test-env/
+*-env/
+
+# 아카이브된 테스트들
+archive/
+
+# IDE 임시 파일들
+.DS_Store
+__pycache__/
+*.pyc
