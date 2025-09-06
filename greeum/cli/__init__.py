@@ -174,28 +174,51 @@ def search(query: str, count: int, threshold: float, slot: str, radius: int, no_
 @mcp.command()
 @click.option('--transport', '-t', default='stdio', help='Transport type (stdio/ws)')
 @click.option('--port', '-p', default=3000, help='WebSocket port (if transport=ws)')
-def serve(transport: str, port: int):
+@click.option('--verbose', '-v', is_flag=True, help='Enable verbose logging (INFO level)')
+@click.option('--debug', '-d', is_flag=True, help='Enable debug logging (DEBUG level)')
+@click.option('--quiet', '-q', is_flag=True, help='[DEPRECATED] Use default behavior instead')
+def serve(transport: str, port: int, verbose: bool, debug: bool, quiet: bool):
     """Start MCP server for Claude Code integration"""  
-    click.echo(f"Starting Greeum MCP server ({transport})...")
+    # 로깅 레벨 결정 (새로운 정책: 기본은 조용함)
+    if debug:
+        log_level = 'debug'
+        click.echo(f"🔍 Starting Greeum MCP server ({transport}) - DEBUG mode...")
+    elif verbose:
+        log_level = 'verbose'
+        click.echo(f"📝 Starting Greeum MCP server ({transport}) - VERBOSE mode...")
+    else:
+        log_level = 'quiet'
+        # 기본은 조용함 (출력 없음)
+    
+    # --quiet 플래그 호환성 경고
+    if quiet:
+        if verbose or debug:
+            click.echo("⚠️  Warning: --quiet is deprecated and conflicts with --verbose/--debug")
+        else:
+            click.echo("⚠️  Warning: --quiet is deprecated. Default behavior is now quiet.")
     
     if transport == 'stdio':
         try:
             # Native MCP Server 사용 (FastMCP 완전 배제, anyio 기반 안전한 실행)
             from ..mcp.native import run_server_sync
-            run_server_sync()
+            run_server_sync(log_level=log_level)
         except ImportError as e:
-            click.echo(f"Native MCP server import failed: {e}")
-            click.echo("Please ensure anyio>=4.5 is installed: pip install anyio>=4.5")
+            if verbose or debug:
+                click.echo(f"Native MCP server import failed: {e}")
+                click.echo("Please ensure anyio>=4.5 is installed: pip install anyio>=4.5")
             sys.exit(1)
         except KeyboardInterrupt:
-            click.echo("\nMCP server stopped")
+            if verbose or debug:
+                click.echo("\nMCP server stopped")
         except Exception as e:
             # anyio CancelledError도 여기서 캐치됨 - 조용히 처리
             error_msg = str(e)
             if "CancelledError" in error_msg or "cancelled" in error_msg.lower():
-                click.echo("\nMCP server stopped")
+                if verbose or debug:
+                    click.echo("\nMCP server stopped")
             else:
-                click.echo(f"MCP server error: {e}")
+                if verbose or debug:
+                    click.echo(f"MCP server error: {e}")
                 sys.exit(1)
     elif transport == 'websocket':
         try:
@@ -203,19 +226,24 @@ def serve(transport: str, port: int):
             from ..mcp.cli_entry import run_cli_server
             run_cli_server(transport='websocket', port=port)
         except ImportError as e:
-            click.echo(f"MCP server import failed: {e}")
-            click.echo("Please ensure all dependencies are installed")
+            if verbose or debug:
+                click.echo(f"MCP server import failed: {e}")
+                click.echo("Please ensure all dependencies are installed")
             sys.exit(1)
         except NotImplementedError:
-            click.echo(f"WebSocket transport not implemented yet")
+            if verbose or debug:
+                click.echo(f"WebSocket transport not implemented yet")
             sys.exit(1)
         except KeyboardInterrupt:
-            click.echo("\nMCP server stopped")
+            if verbose or debug:
+                click.echo("\nMCP server stopped")
         except Exception as e:
-            click.echo(f"MCP server error: {e}")
+            if verbose or debug:
+                click.echo(f"MCP server error: {e}")
             sys.exit(1)
     else:
-        click.echo(f"❌ Transport '{transport}' not supported")
+        if verbose or debug:
+            click.echo(f"❌ Transport '{transport}' not supported")
         sys.exit(1)
 
 # API 서브명령어들  

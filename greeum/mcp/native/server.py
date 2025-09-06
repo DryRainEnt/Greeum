@@ -8,10 +8,12 @@ FastMCP 없는 순수 네이티브 MCP 서버 구현
 - 완전한 Greeum 컴포넌트 초기화
 - STDIO 전송 계층과 JSON-RPC 프로토콜 통합
 - 기존 비즈니스 로직 100% 재사용
+- Claude Desktop 호환성을 위한 로그 출력 억제 지원
 """
 
 import logging
 import sys
+import os
 from typing import Optional, Dict, Any
 
 # anyio 의존성 확인
@@ -39,9 +41,14 @@ from .protocol import JSONRPCProcessor
 from .tools import GreeumMCPTools
 from .types import SessionMessage
 
+# GREEUM_QUIET 환경변수 확인
+QUIET_MODE = os.getenv('GREEUM_QUIET', '').lower() in ('true', '1', 'yes')
+
 # 로깅 설정 (stderr 전용 - STDOUT 오염 방지)
+# quiet 모드에서는 로깅 레벨을 WARNING 이상으로 설정하여 INFO 로그 억제
+log_level = logging.WARNING if QUIET_MODE else logging.INFO
 logging.basicConfig(
-    level=logging.INFO, 
+    level=log_level, 
     stream=sys.stderr, 
     format='%(levelname)s:%(name)s:%(message)s'
 )
@@ -203,21 +210,52 @@ async def run_native_mcp_server() -> None:
     finally:
         await server.shutdown()
 
-def run_server_sync() -> None:
+def run_server_sync(log_level: str = 'quiet') -> None:
     """
     동기 래퍼 함수 (CLI에서 직접 호출 가능)
     
+    Args:
+        log_level: 로깅 레벨 ('quiet', 'verbose', 'debug')
+                  - quiet: WARNING 이상만 출력 (기본값)
+                  - verbose: INFO 이상 출력
+                  - debug: DEBUG 이상 모든 로그 출력
+    
     anyio.run() 사용으로 안전한 실행
     """
+    # 로깅 레벨 설정
+    global QUIET_MODE
+    
+    if log_level == 'debug':
+        target_level = logging.DEBUG
+        is_quiet = False
+    elif log_level == 'verbose':
+        target_level = logging.INFO
+        is_quiet = False
+    else:  # 'quiet' 또는 기타
+        target_level = logging.WARNING
+        is_quiet = True
+    
+    # GREEUM_QUIET 환경변수가 있으면 무조건 quiet 모드
+    if QUIET_MODE:
+        target_level = logging.WARNING
+        is_quiet = True
+    
+    # 로깅 레벨 적용
+    logging.getLogger().setLevel(target_level)
+    logger.setLevel(target_level)
+    
     try:
         # anyio.run() 사용 - asyncio.run() 대신
         anyio.run(run_native_mcp_server)
     except KeyboardInterrupt:
-        logger.info("Server stopped by user")
+        if not is_quiet:
+            logger.info("Server stopped by user")
     except anyio.exceptions.CancelledError:
         # anyio TaskGroup이 KeyboardInterrupt를 CancelledError로 변환함
-        logger.info("Server stopped by user")
+        if not is_quiet:
+            logger.info("Server stopped by user")
     except Exception as e:
+        # 오류는 quiet 모드에서도 출력 (WARNING 레벨)
         logger.error(f"❌ Server startup error: {e}")
         sys.exit(1)
 
