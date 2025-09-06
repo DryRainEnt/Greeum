@@ -805,12 +805,12 @@ async def smart_search_memory(query: str, limit: int = 5, show_relevance: bool =
 MCP_TOOLS_WITH_ENCOURAGEMENT = [
     {
         "name": "add_memory_frequent",
-        "description": "Immediate memory storage with Greimas actant model: Record all interactions using [Subject-Action-Object] structure. Every work unit has permanent value. Target: 20-30 blocks per session.",
+        "description": "Store important permanent memories using [Subject-Action-Object] structure. Consider storing key decisions, discoveries, and problem-solving insights as they occur. Recording contextual information helps build better conversation continuity.",
         "function": add_memory_frequent
     },
     {
         "name": "add_structured_memory",
-        "description": "Advanced structured memory storage with AI-driven actant analysis: Store memories with explicit actant structure",
+        "description": "Advanced structured memory storage with detailed actant analysis. Use for complex interactions requiring precise relationship mapping between actors, actions, and outcomes.",
         "function": add_structured_memory
     },
     {
@@ -820,22 +820,22 @@ MCP_TOOLS_WITH_ENCOURAGEMENT = [
     },
     {
         "name": "search_memory_contextual", 
-        "description": "Contextual memory search: Find related memories to enrich conversations. Search by keywords, emotions, or situations. Frequent searches improve contextual accuracy.",
+        "description": "Search existing memories to provide richer context. Use when discussing topics that might have been covered before, or when users reference past conversations. Helps maintain conversational continuity.",
         "function": search_memory_contextual
     },
     {
         "name": "check_memory_freshness",
-        "description": "Memory freshness check: Review recent memory status and encourage frequent storage. Essential check at conversation start or when addressing important topics.",
+        "description": "Review current memory usage patterns and storage frequency. Particularly useful at conversation start to understand available context and identify opportunities for better memory utilization.",
         "function": check_memory_freshness
     },
     {
         "name": "suggest_memory_opportunities",
-        "description": "Memory opportunity detection: AI actively identifies storage opportunities that might be missed in current conversation. Use actively for complex information or important decisions.",
+        "description": "Identify moments in conversation that would benefit from memory storage. Use when handling complex topics, user preferences, or important decisions that should be remembered for future reference.",
         "function": suggest_memory_opportunities
     },
     {
         "name": "smart_search_memory",
-        "description": "Enhanced smart search with relevance scoring and suggestions (v2.5.0): Search memories with percentage scores and alternative query suggestions. Shows 'why' results are relevant and suggests better search terms.",
+        "description": "Enhanced search with relevance scoring and query suggestions (v2.5.0). Provides percentage-based relevance scores and suggests alternative search terms to help find the most appropriate memories.",
         "function": smart_search_memory
     }
 ]
