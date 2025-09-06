@@ -55,12 +55,47 @@ async def add_memory_frequent(content: str, importance: float = 0.5) -> str:
         return json.dumps({"error": "Enhanced memory tools not initialized"})
     
     try:
+        # Log analytics event (start time)
+        start_time = datetime.now()
+        
         # Store original content without micro-splitting (includes actant analysis)
         result = await enhanced_memory_tools.add_memory_micro(
             content=content, 
             importance=importance,
             force_micro_split=False  # No splitting as description guidance is the objective
         )
+        
+        # Log successful analytics event
+        try:
+            from greeum.core.usage_analytics import UsageAnalytics
+            from greeum.core.database_manager import DatabaseManager
+            
+            db_manager = DatabaseManager()
+            analytics = UsageAnalytics(db_manager=db_manager)
+            duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+            
+            analytics.log_event(
+                event_type="tool_usage",
+                tool_name="add_memory_frequent",
+                metadata={"content_length": len(content), "importance": importance},
+                duration_ms=duration_ms,
+                success=True
+            )
+            
+            # Log quality metrics if available
+            if result.get("quality_score"):
+                analytics.log_quality_metrics(
+                    content_length=len(content),
+                    quality_score=result.get("quality_score", 0.0) * 100,
+                    quality_level=result.get("quality_level", "unknown"),
+                    importance=importance,
+                    adjusted_importance=result.get("adjusted_importance", importance),
+                    is_duplicate=result.get("is_duplicate", False),
+                    duplicate_similarity=result.get("duplicate_similarity", 0.0)
+                )
+        except Exception as analytics_error:
+            # Analytics failure should not affect core functionality
+            pass
         
         return json.dumps({
             "status": "success",
@@ -805,7 +840,7 @@ async def smart_search_memory(query: str, limit: int = 5, show_relevance: bool =
 MCP_TOOLS_WITH_ENCOURAGEMENT = [
     {
         "name": "add_memory_frequent",
-        "description": "Store important permanent memories using [Subject-Action-Object] structure. Consider storing key decisions, discoveries, and problem-solving insights as they occur. Recording contextual information helps build better conversation continuity.",
+        "description": "Store important permanent memories using [Subject-Action-Object] structure. Store completed work immediately after finishing tasks like writing documents, coding, analysis, or problem-solving. Record key decisions, discoveries, and deliverables as they occur to build conversation continuity.",
         "function": add_memory_frequent
     },
     {
@@ -825,17 +860,258 @@ MCP_TOOLS_WITH_ENCOURAGEMENT = [
     },
     {
         "name": "check_memory_freshness",
-        "description": "Review current memory usage patterns and storage frequency. Particularly useful at conversation start to understand available context and identify opportunities for better memory utilization.",
+        "description": "Review current memory usage patterns and storage frequency. Check if recent work activities like document writing, coding, or analysis have been properly recorded. Particularly useful at conversation start and after completing significant tasks.",
         "function": check_memory_freshness
     },
     {
         "name": "suggest_memory_opportunities",
-        "description": "Identify moments in conversation that would benefit from memory storage. Use when handling complex topics, user preferences, or important decisions that should be remembered for future reference.",
+        "description": "Identify moments in conversation that would benefit from memory storage. Actively detect completion of work tasks, document creation, coding activities, and problem resolution that should be recorded. Use when handling complex topics or important decisions.",
         "function": suggest_memory_opportunities
     },
     {
         "name": "smart_search_memory",
         "description": "Enhanced search with relevance scoring and query suggestions (v2.5.0). Provides percentage-based relevance scores and suggests alternative search terms to help find the most appropriate memories.",
         "function": smart_search_memory
+    },
+    {
+        "name": "usage_analytics",
+        "description": "Get comprehensive usage analytics and insights for memory system optimization. Analyze usage patterns, quality trends, and performance metrics to understand system utilization.",
+        "function": usage_analytics
     }
 ]
+
+
+async def usage_analytics(days: int = 7, report_type: str = "usage") -> str:
+    """
+    Get comprehensive usage analytics and insights
+    
+    Provides detailed analytics on memory usage patterns, quality metrics,
+    and system performance. Useful for understanding how the memory system
+    is being utilized and identifying optimization opportunities.
+    """
+    try:
+        # Import UsageAnalytics here to avoid circular imports
+        from greeum.core.usage_analytics import UsageAnalytics
+        from greeum.core.database_manager import DatabaseManager
+        
+        # Initialize analytics with database manager
+        db_manager = DatabaseManager()
+        analytics = UsageAnalytics(db_manager=db_manager)
+        
+        # Log this analytics request
+        analytics.log_event(
+            event_type="tool_usage",
+            tool_name="usage_analytics", 
+            metadata={"days": days, "report_type": report_type},
+            success=True
+        )
+        
+        # Get usage report
+        report_data = analytics.get_usage_report(days=days, report_type=report_type)
+        
+        # Format comprehensive report
+        if report_type == "usage":
+            basic_stats = report_data.get("basic_stats", {})
+            return f"""**Usage Analytics Report** ({days} days)
+
+**Activity Summary**:
+• Total Operations: {basic_stats.get('total_events', 0)}
+• Memory Additions: {report_data.get('tool_usage', {}).get('add_memory', 0)}
+• Search Operations: {report_data.get('tool_usage', {}).get('search_memory', 0)}
+
+**Quality Metrics**:
+• Average Quality Score: {report_data.get('quality_stats', {}).get('avg_quality_score', 0.0):.1f}%
+• High Quality Rate: {(1 - report_data.get('quality_stats', {}).get('duplicate_rate', 0.0)) * 100:.1f}%
+
+**Performance**:
+• Average Response Time: {basic_stats.get('avg_duration_ms', 0.0):.1f}ms
+• Success Rate: {basic_stats.get('success_rate', 0.0) * 100:.1f}%
+
+**Report Type**: {report_type.title()}
+**Generated**: Native MCP Server v2.5.0rc1"""
+        
+        elif report_type == "quality":
+            quality_data = report_data
+            daily_trends = quality_data.get("daily_trends", [])
+            avg_quality = sum(d.get("avg_quality", 0) for d in daily_trends) / len(daily_trends) if daily_trends else 0.0
+            
+            return f"""**Quality Analytics Report** ({days} days)
+
+**Quality Trends**:
+• Average Quality Score: {avg_quality:.1f}%
+• Quality Checks: {sum(d.get('count', 0) for d in daily_trends)}
+• Content Length Avg: {sum(d.get('avg_length', 0) for d in daily_trends) / len(daily_trends) if daily_trends else 0.0:.0f} chars
+
+**Quality Distribution**:
+{json.dumps(quality_data.get('quality_distribution', {}), indent=2)}
+
+**Duplicate Analysis**:
+• Duplicate Rate: {sum(d.get('duplicate_rate', 0) for d in quality_data.get('duplicate_trends', [])) / len(quality_data.get('duplicate_trends', [])) * 100 if quality_data.get('duplicate_trends') else 0:.1f}%
+
+**Generated**: {quality_data.get('generated_at', 'N/A')}"""
+        
+        elif report_type == "performance":
+            perf_data = report_data
+            tool_performance = perf_data.get("performance_by_tool", [])
+            
+            performance_summary = "\n".join([
+                f"• {tool['tool_name']}: {tool['avg_duration_ms']:.1f}ms avg ({tool['operation_count']} ops)"
+                for tool in tool_performance[:5]
+            ]) if tool_performance else "• No performance data available"
+            
+            return f"""**Performance Analytics Report** ({days} days)
+
+**Tool Performance**:
+{performance_summary}
+
+**System Health**:
+• Error Count: {len(perf_data.get('error_patterns', []))}
+• Resource Metrics: {len(perf_data.get('resource_metrics', []))} tracked
+
+**Recommendations**:
+{chr(10).join(f"• {rec}" for rec in perf_data.get('recommendations', ['System performance looks healthy!']))}
+
+**Generated**: {perf_data.get('generated_at', 'N/A')}"""
+        
+        else:
+            # Comprehensive report
+            return f"""**Comprehensive Analytics Report** ({days} days)
+
+**Summary**: Multi-faceted analysis combining usage patterns, quality metrics, and performance insights.
+
+**Key Metrics**:
+• Total Operations: {report_data.get('usage_statistics', {}).get('basic_stats', {}).get('total_events', 0)}
+• Average Quality: {report_data.get('quality_trends', {}).get('daily_trends', [{}])[-1:][0].get('avg_quality', 0.0) if report_data.get('quality_trends', {}).get('daily_trends') else 0.0:.1f}%
+• System Performance: {'Healthy' if not report_data.get('performance_insights', {}).get('error_patterns') else 'Issues Detected'}
+
+**Generated**: {report_data.get('generated_at', 'N/A')}
+**Report Type**: Comprehensive Analysis"""
+        
+    except Exception as e:
+        # Fallback to basic empty report
+        return f"""**Usage Analytics Report** ({days} days)
+
+**Activity Summary**:
+• Total Operations: 0
+• Memory Additions: 0  
+• Search Operations: 0
+
+**Quality Metrics**:
+• Average Quality Score: 0.0%
+• High Quality Rate: 0.0%
+
+**Performance**:
+• Average Response Time: 0.0ms
+• Success Rate: 0.0%
+
+**Note**: Analytics system initializing or no data available yet.
+**Error**: {str(e)}
+**Report Type**: {report_type.title()}
+**Generated**: Native MCP Server v2.5.0rc1"""
+
+
+async def smart_search_memory(query: str, limit: int = 5, show_relevance: bool = True, suggest_alternatives: bool = True) -> str:
+    """
+    Enhanced smart search with relevance scoring and suggestions (v2.5.0)
+    
+    Provides percentage-based relevance scores and suggests alternative search terms 
+    to help find the most appropriate memories.
+    """
+    try:
+        # Log analytics event (start time)
+        start_time = datetime.now()
+        
+        # Import SmartSearchEngine
+        from greeum.core.smart_search_engine import SmartSearchEngine
+        from greeum.core.database_manager import DatabaseManager
+        
+        db_manager = DatabaseManager()
+        smart_search = SmartSearchEngine(db_manager=db_manager)
+        
+        # Perform smart search
+        results = smart_search.smart_search(
+            query=query,
+            top_k=limit,
+            show_relevance=show_relevance,
+            suggest_alternatives=suggest_alternatives
+        )
+        
+        # Log successful analytics event
+        try:
+            from greeum.core.usage_analytics import UsageAnalytics
+            
+            analytics = UsageAnalytics(db_manager=db_manager)
+            duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+            
+            analytics.log_event(
+                event_type="tool_usage",
+                tool_name="smart_search_memory",
+                metadata={
+                    "query_length": len(query),
+                    "limit": limit,
+                    "results_count": len(results.get("results", [])),
+                    "show_relevance": show_relevance,
+                    "suggest_alternatives": suggest_alternatives
+                },
+                duration_ms=duration_ms,
+                success=True
+            )
+        except Exception:
+            # Analytics failure should not affect core functionality
+            pass
+        
+        # Format results
+        search_results = results.get("results", [])
+        suggestions = results.get("suggestions", [])
+        
+        if not search_results:
+            return f"No memories found for query: '{query}'"
+        
+        # Build response
+        response_lines = [f"Found {len(search_results)} memories for '{query}':\n"]
+        
+        for i, result in enumerate(search_results, 1):
+            content = result.get("content", "")
+            relevance = result.get("relevance_score", 0.0)
+            timestamp = result.get("timestamp", "")
+            
+            if show_relevance:
+                response_lines.append(f"{i}. [{relevance:.0f}%] {timestamp}")
+            else:
+                response_lines.append(f"{i}. {timestamp}")
+            
+            # Truncate long content
+            if len(content) > 200:
+                content = content[:197] + "..."
+            response_lines.append(f"   {content}\n")
+        
+        # Add search suggestions if available
+        if suggest_alternatives and suggestions:
+            response_lines.append("\n💡 Try these alternative searches:")
+            for suggestion in suggestions[:3]:
+                response_lines.append(f"   • {suggestion}")
+        
+        return "\n".join(response_lines)
+        
+    except Exception as e:
+        # Log failed analytics event
+        try:
+            from greeum.core.usage_analytics import UsageAnalytics
+            from greeum.core.database_manager import DatabaseManager
+            
+            db_manager = DatabaseManager()
+            analytics = UsageAnalytics(db_manager=db_manager)
+            duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+            
+            analytics.log_event(
+                event_type="tool_usage",
+                tool_name="smart_search_memory",
+                metadata={"query_length": len(query), "error": str(e)},
+                duration_ms=duration_ms,
+                success=False,
+                error_message=str(e)
+            )
+        except Exception:
+            pass
+        
+        return f"Search failed: {str(e)}"
