@@ -5,7 +5,7 @@ This package contains independent modules to provide a human-like
 memory system for Large Language Models.
 """
 
-__version__ = "2.4.0rc2"
+__version__ = "2.5.0"
 
 # Core components imports
 try:
@@ -26,6 +26,8 @@ try:
         DatabaseManager, SearchEngine, BertReranker, 
         STMWorkingSet
     )
+    # v2.5.0 Smart Search Engine
+    from .core.smart_search_engine import SmartSearchEngine
     from .core.ltm_links_cache import LTMLinksCache, create_neighbor_link, calculate_link_weight
     from .anchors.auto_movement import AutoAnchorMovement
 except ImportError:
@@ -170,6 +172,7 @@ __all__ = [
 
     # Search engine
     "SearchEngine",
+    "SmartSearchEngine",  # v2.5.0
     "BertReranker",
     "extract_keywords_advanced"
 ] 

@@ -700,6 +700,107 @@ def initialize_micro_encouraged_tools(enhanced_tools_instance):
     return enhanced_memory_tools
 
 
+async def smart_search_memory(query: str, limit: int = 5, show_relevance: bool = True, 
+                             suggest_alternatives: bool = True) -> str:
+    """
+    Enhanced smart search with relevance scoring and suggestions (Greeum v2.5.0)
+    
+    This is an upgraded search that shows:
+    - Percentage relevance scores (85%, 72%, etc.)
+    - Human-readable relevance labels ("매우 관련성 높음")
+    - Alternative search suggestions ("이런 검색은 어떠세요?")
+    - Temporal variations ("최근 [query]", "지난주 [query]")
+    
+    Args:
+        query: Search query
+        limit: Number of results (default 5) 
+        show_relevance: Show percentage scores (default True)
+        suggest_alternatives: Generate search suggestions (default True)
+    
+    Returns:
+        Enhanced search results with scores and suggestions
+    """
+    try:
+        # Import SmartSearchEngine
+        from ..adapters.base_adapter import BaseAdapter
+        from ...core.smart_search_engine import SmartSearchEngine
+        
+        # Create adapter to get components
+        class LocalSearchAdapter(BaseAdapter):
+            async def run(self):
+                pass  # Not used
+        
+        adapter = LocalSearchAdapter()
+        components = adapter.initialize_greeum_components()
+        
+        if not components:
+            return json.dumps({
+                "error": "Failed to initialize Greeum components",
+                "suggestion": "Check if memory database exists in current directory"
+            })
+        
+        # Initialize SmartSearchEngine
+        block_manager = components.get('block_manager')
+        search_engine = SmartSearchEngine(
+            block_manager=block_manager,
+            reranker=None  # Optional BERT reranking
+        )
+        
+        # Perform smart search
+        results = search_engine.smart_search(
+            query=query,
+            top_k=limit,
+            show_relevance=show_relevance,
+            suggest_alternatives=suggest_alternatives
+        )
+        
+        # Format results for user
+        formatted_results = {
+            "query": query,
+            "search_type": "smart_search_v2.5.0",
+            "results_found": len(results["blocks"]),
+            "blocks": [],
+            "suggestions": results.get("suggestions", []),
+            "timing": results.get("timing", {}),
+            "metadata": results.get("metadata", {})
+        }
+        
+        # Format each result block
+        for i, block in enumerate(results["blocks"]):
+            block_info = {
+                "rank": i + 1,
+                "block_index": block.get("block_index"),
+                "timestamp": block.get("timestamp"),
+                "preview": block.get("context", "")[:200] + "..." if len(block.get("context", "")) > 200 else block.get("context", ""),
+                "full_content": block.get("context", "")
+            }
+            
+            # Add relevance information if available
+            if show_relevance and "relevance_percentage" in block:
+                block_info["relevance"] = {
+                    "percentage": block["relevance_percentage"],
+                    "label": block.get("relevance_label", ""),
+                    "raw_score": block.get("raw_relevance_score", 0.0)
+                }
+            
+            formatted_results["blocks"].append(block_info)
+        
+        return json.dumps(formatted_results, ensure_ascii=False, indent=2)
+        
+    except ImportError as e:
+        return json.dumps({
+            "error": "SmartSearchEngine not available",
+            "details": str(e),
+            "fallback": "Use search_memory_contextual instead"
+        })
+    except Exception as e:
+        return json.dumps({
+            "error": f"Smart search failed: {str(e)}",
+            "query": query,
+            "timestamp": datetime.now().isoformat()
+        })
+
+
 # MCP server tools list (description optimized version)
 MCP_TOOLS_WITH_ENCOURAGEMENT = [
     {
@@ -731,5 +832,10 @@ MCP_TOOLS_WITH_ENCOURAGEMENT = [
         "name": "suggest_memory_opportunities",
         "description": "Memory opportunity detection: AI actively identifies storage opportunities that might be missed in current conversation. Use actively for complex information or important decisions.",
         "function": suggest_memory_opportunities
+    },
+    {
+        "name": "smart_search_memory",
+        "description": "Enhanced smart search with relevance scoring and suggestions (v2.5.0): Search memories with percentage scores and alternative query suggestions. Shows 'why' results are relevant and suggests better search terms.",
+        "function": smart_search_memory
     }
 ]
