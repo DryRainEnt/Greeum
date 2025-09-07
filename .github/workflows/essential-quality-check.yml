@@ -57,11 +57,17 @@ jobs:
             db_path = os.path.join(tmpdir, 'test.db')
             
             # 데이터베이스 매니저 초기화
-            db_manager = DatabaseManager(db_path=db_path)
+            db_manager = DatabaseManager(db_path)
             block_manager = BlockManager(db_manager)
             
-            # 메모리 추가
-            result = block_manager.add_memory('테스트 메모리', importance=0.8)
+            # 메모리 추가 (add_block 메서드 사용)
+            result = block_manager.add_block(
+                context='테스트 메모리',
+                keywords=['테스트', '메모리'],
+                tags=['ci-test'],
+                embedding=[0.1] * 128,  # 임시 더미 임베딩
+                importance=0.8
+            )
             print(f'✅ Memory add result: {result}')
             
             # 기본 통계 확인 (메모리가 추가되었는지)
