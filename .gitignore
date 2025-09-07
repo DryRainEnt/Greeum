@@ -29,6 +29,9 @@ env/
 data/*.db
 data/*.sqlite
 data/*.sqlite3
+# Windows 호환성을 위한 콜론 포함 파일명 제외
+*:*
+sqlite:*
 
 # 로그
 logs/
