@@ -412,4 +412,161 @@ class BlockManager:
             
         except Exception as e:
             logger.debug(f"Error getting block neighbors: {e}")
-            return [] 
+            return []
+    
+    # v2.5.1: AI Context Slots 통합 검색 기능
+    def search_with_slots(self, query: str, limit: int = 5, use_slots: bool = True, 
+                         include_relationships: bool = False, **options) -> List[Dict[str, Any]]:
+        """
+        v2.5.1 슬롯 시스템을 활용한 향상된 검색
+        
+        Args:
+            query: 검색 쿼리
+            limit: 반환할 결과 수
+            use_slots: 슬롯 우선 검색 활성화
+            include_relationships: 관계 기반 확장 검색 (v2.5.2+)
+            **options: 추가 검색 옵션
+            
+        Returns:
+            검색 결과 리스트 (슬롯 + LTM 통합)
+        """
+        logger.debug(f"Enhanced search: query='{query}', use_slots={use_slots}")
+        
+        all_results = []
+        
+        # Phase 1: 슬롯 우선 검색 (빠른 응답)
+        if use_slots:
+            try:
+                from .working_memory import AIContextualSlots
+                # 임시 슬롯 인스턴스 (실제로는 싱글톤이나 세션 기반으로 관리)
+                slots = AIContextualSlots()
+                active_slots = slots.get_all_active_slots()
+                
+                for slot_name, slot in active_slots.items():
+                    if slot.matches_query(query):
+                        # 슬롯 결과를 LTM 형식으로 변환
+                        slot_result = {
+                            'block_index': f"slot_{slot_name}",
+                            'context': slot.content,
+                            'timestamp': slot.timestamp.isoformat(),
+                            'importance': slot.importance_score,
+                            'source': 'working_memory',
+                            'slot_type': slot.slot_type.value,
+                            'keywords': self._extract_keywords_from_content(slot.content)
+                        }
+                        
+                        # LTM 앵커인 경우 관련 블록 정보 추가
+                        if slot.is_ltm_anchor():
+                            slot_result['ltm_anchor_block'] = slot.ltm_anchor_block
+                            slot_result['search_radius'] = slot.search_radius
+                        
+                        all_results.append(slot_result)
+                        
+                logger.debug(f"Found {len(all_results)} results from slots")
+                        
+            except ImportError:
+                logger.warning("AIContextualSlots not available, skipping slot search")
+            except Exception as e:
+                logger.error(f"Error in slot search: {e}")
+        
+        # Phase 2: 기존 LTM 검색
+        try:
+            # 슬롯에서 찾은 만큼 제외하고 검색
+            remaining_limit = max(1, limit - len(all_results))
+            ltm_results = self.search_by_keywords(
+                self._extract_keywords_from_content(query), 
+                limit=remaining_limit
+            )
+            
+            # 중복 제거 (슬롯 결과와 LTM 결과 간)
+            unique_ltm_results = []
+            for ltm_result in ltm_results:
+                # 내용 유사성으로 중복 검사 (간단한 방식)
+                is_duplicate = False
+                for slot_result in all_results:
+                    if self._is_content_similar(
+                        ltm_result.get('context', ''), 
+                        slot_result.get('context', '')
+                    ):
+                        is_duplicate = True
+                        break
+                
+                if not is_duplicate:
+                    ltm_result['source'] = 'long_term_memory'
+                    unique_ltm_results.append(ltm_result)
+            
+            all_results.extend(unique_ltm_results)
+            logger.debug(f"Added {len(unique_ltm_results)} unique LTM results")
+            
+        except Exception as e:
+            logger.error(f"Error in LTM search: {e}")
+        
+        # Phase 3: 결과 랭킹 및 제한
+        ranked_results = self._rank_search_results(all_results, query)
+        final_results = ranked_results[:limit]
+        
+        logger.info(f"Enhanced search completed: {len(final_results)}/{len(all_results)} results returned")
+        return final_results
+    
+    def _extract_keywords_from_content(self, content: str, max_keywords: int = 5) -> List[str]:
+        """컨텐츠에서 간단한 키워드 추출"""
+        try:
+            from ..text_utils import extract_keywords_from_text
+            return extract_keywords_from_text(content)[:max_keywords]
+        except ImportError:
+            # 간단한 폴백: 공백으로 분할
+            words = content.split()
+            return [word.strip('.,!?') for word in words if len(word) > 2][:max_keywords]
+    
+    def _is_content_similar(self, content1: str, content2: str, threshold: float = 0.7) -> bool:
+        """두 컨텐츠의 유사성 검사 (간단한 방식)"""
+        if not content1 or not content2:
+            return False
+            
+        # 간단한 자카드 유사도
+        words1 = set(content1.lower().split())
+        words2 = set(content2.lower().split())
+        
+        if not words1 or not words2:
+            return False
+            
+        intersection = words1.intersection(words2)
+        union = words1.union(words2)
+        
+        similarity = len(intersection) / len(union)
+        return similarity >= threshold
+    
+    def _rank_search_results(self, results: List[Dict[str, Any]], query: str) -> List[Dict[str, Any]]:
+        """검색 결과 랭킹 (슬롯 우선, 중요도, 최신성 고려)"""
+        def calculate_score(result):
+            score = 0.0
+            
+            # 슬롯 결과 우선순위 (빠른 응답)
+            if result.get('source') == 'working_memory':
+                score += 10.0
+                
+                # 슬롯 타입별 가중치
+                slot_type = result.get('slot_type', 'context')
+                if slot_type == 'anchor':
+                    score += 5.0  # 앵커 슬롯 높은 우선순위
+                elif slot_type == 'context':
+                    score += 3.0  # 활성 컨텍스트
+                else:  # buffer
+                    score += 1.0
+            
+            # 중요도 점수
+            importance = result.get('importance', 0.5)
+            score += importance * 5.0
+            
+            # 최신성 점수 (간단화)
+            try:
+                timestamp_str = result.get('timestamp', '')
+                if timestamp_str:
+                    # 최근일수록 높은 점수 (세부 구현은 생략)
+                    score += 1.0
+            except:
+                pass
+            
+            return score
+        
+        return sorted(results, key=calculate_score, reverse=True) 

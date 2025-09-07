@@ -15,6 +15,7 @@ sys.path.append(parent_dir)
 from greeum import BlockManager, STMManager, CacheManager, PromptWrapper
 from greeum.text_utils import process_user_input, extract_keywords
 from greeum.embedding_models import get_embedding
+from greeum.core.working_memory import AIContextualSlots
 
 def print_colored(text, color="white"):
     """색상 있는 텍스트 출력"""
@@ -31,7 +32,7 @@ def print_colored(text, color="white"):
     print(f"{colors.get(color, colors['white'])}{text}{colors['reset']}")
 
 def add_memory(args):
-    """기억 추가하기"""
+    """기억 추가하기 - v2.5.1 AI 슬롯 분석 지원"""
     block_manager = BlockManager()
     
     if args.file:
@@ -48,6 +49,17 @@ def add_memory(args):
     if not context:
         print_colored("컨텍스트를 입력해주세요.", "red")
         return
+    
+    # v2.5.1: AI 슬롯 자동 분석
+    if getattr(args, 'auto_slot', False):
+        try:
+            from greeum.core.working_memory import AIContextualSlots
+            slots = AIContextualSlots()
+            slot_context = {'importance': args.importance or 0.5}
+            used_slot = slots.ai_decide_usage(context, slot_context)
+            print_colored(f"🤖 AI가 '{used_slot}' 슬롯에 임시 저장했습니다.", "green")
+        except Exception as e:
+            print_colored(f"AI 슬롯 분석 실패: {e}", "yellow")
     
     # 처리할 데이터 준비
     processed = process_user_input(context)
@@ -97,14 +109,31 @@ def add_stm(args):
     print_colored("단기 기억이 추가되었습니다!", "green")
 
 def search_memory(args):
-    """기억 검색하기"""
+    """기억 검색하기 - v2.5.1 향상된 검색 지원"""
     block_manager = BlockManager()
     
     if args.keywords:
         keywords = args.keywords.split(',')
-        results = block_manager.search_by_keywords(keywords)
         
-        print_colored(f"키워드 '{', '.join(keywords)}'로 검색한 결과:", "cyan")
+        # v2.5.1: 향상된 검색 옵션
+        if getattr(args, 'enhanced', False):
+            # 슬롯 통합 검색 사용
+            try:
+                results = block_manager.search_with_slots(
+                    query=' '.join(keywords),
+                    limit=args.limit if hasattr(args, 'limit') else 5,
+                    use_slots=True
+                )
+                print_colored(f"🚀 향상된 검색 결과 (키워드: '{', '.join(keywords)}'):", "cyan")
+            except Exception as e:
+                print_colored(f"향상된 검색 실패, 기본 검색 사용: {e}", "yellow")
+                results = block_manager.search_by_keywords(keywords)
+                print_colored(f"키워드 '{', '.join(keywords)}'로 검색한 결과:", "cyan")
+        else:
+            # 기존 검색
+            results = block_manager.search_by_keywords(keywords)
+            print_colored(f"키워드 '{', '.join(keywords)}'로 검색한 결과:", "cyan")
+        
         if not results:
             print_colored("검색 결과가 없습니다.", "yellow")
             return
@@ -426,6 +455,93 @@ def optimize_memory(args):
         print_colored(f"최적화 실행 중 오류: {e}", "red")
         logger.error(f"Memory optimization error: {e}", exc_info=True)
 
+def slots_command(args):
+    """AI Context Slots 관리 명령어"""
+    
+    # 전역 슬롯 인스턴스 (실제 구현에서는 영속화 필요)
+    global_slots = AIContextualSlots()
+    
+    if args.slots_action == "status":
+        status = global_slots.get_status()
+        print_colored("=== AI Context Slots 상태 ===", "cyan")
+        
+        for slot_name, slot_info in status.items():
+            print_colored(f"\n[{slot_name.upper()} SLOT]", "purple")
+            if slot_info:
+                print_colored(f"  타입: {slot_info['type']}", "blue")
+                print_colored(f"  내용: {slot_info['content_preview']}", "white")
+                print_colored(f"  시간: {slot_info['timestamp']}", "yellow")
+                print_colored(f"  중요도: {slot_info['importance']:.2f}", "green")
+                if slot_info['is_anchor']:
+                    print_colored(f"  🔗 LTM 앵커: #{slot_info['anchor_block']}", "purple")
+            else:
+                print_colored(f"  비어있음", "yellow")
+                
+    elif args.slots_action == "set":
+        if not args.content:
+            print_colored("--content 옵션으로 내용을 지정해주세요.", "red")
+            return
+            
+        context = {
+            'metadata': {'cli_command': True},
+            'ltm_block_id': args.anchor_block,
+            'search_radius': args.search_radius or 5
+        }
+        
+        used_slot = global_slots.ai_decide_usage(args.content, context)
+        print_colored(f"'{used_slot}' 슬롯에 내용이 저장되었습니다.", "green")
+        print_colored(f"내용: {args.content[:100]}{'...' if len(args.content) > 100 else ''}", "white")
+        
+    elif args.slots_action == "get":
+        if not args.slot_name or args.slot_name not in ['active', 'anchor', 'buffer']:
+            print_colored("--slot-name으로 슬롯을 지정해주세요 (active/anchor/buffer)", "red")
+            return
+            
+        slot = global_slots.get_slot(args.slot_name)
+        if slot:
+            print_colored(f"=== {args.slot_name.upper()} SLOT ===", "cyan")
+            print_colored(f"타입: {slot.slot_type.value}", "blue")
+            print_colored(f"내용: {slot.content}", "white")
+            print_colored(f"시간: {slot.timestamp.isoformat()}", "yellow")
+            print_colored(f"중요도: {slot.importance_score:.2f}", "green")
+            if slot.is_ltm_anchor():
+                print_colored(f"🔗 LTM 앵커: #{slot.ltm_anchor_block} (반경: {slot.search_radius})", "purple")
+        else:
+            print_colored(f"{args.slot_name} 슬롯이 비어있거나 만료되었습니다.", "yellow")
+            
+    elif args.slots_action == "clear":
+        if args.slot_name == "all":
+            for slot in ['active', 'anchor', 'buffer']:
+                global_slots.clear_slot(slot)
+            print_colored("모든 슬롯이 비워졌습니다.", "green")
+        elif args.slot_name in ['active', 'anchor', 'buffer']:
+            global_slots.clear_slot(args.slot_name)
+            print_colored(f"{args.slot_name} 슬롯이 비워졌습니다.", "green")
+        else:
+            print_colored("--slot-name으로 슬롯을 지정하거나 'all'을 사용하세요", "red")
+            
+    elif args.slots_action == "search":
+        if not args.query:
+            print_colored("--query 옵션으로 검색어를 지정해주세요.", "red")
+            return
+            
+        print_colored(f"'{args.query}' 검색 중...", "cyan")
+        
+        # 슬롯에서 먼저 검색
+        slot_results = []
+        for slot_name, slot in global_slots.get_all_active_slots().items():
+            if slot.matches_query(args.query):
+                slot_results.append((slot_name, slot))
+        
+        if slot_results:
+            print_colored("\n=== 슬롯 검색 결과 ===", "purple")
+            for slot_name, slot in slot_results:
+                print_colored(f"[{slot_name.upper()}] {slot.content[:150]}{'...' if len(slot.content) > 150 else ''}", "white")
+                if slot.is_ltm_anchor():
+                    print_colored(f"  🔗 연결된 LTM 앵커: #{slot.ltm_anchor_block}", "blue")
+        else:
+            print_colored("슬롯에서 검색 결과가 없습니다.", "yellow")
+
 def main():
     parser = argparse.ArgumentParser(description="Memory Block Engine CLI")
     subparsers = parser.add_subparsers(dest="command", help="실행할 명령")
@@ -437,6 +553,7 @@ def main():
     add_parser.add_argument("-k", "--keywords", help="키워드 (쉼표로 구분)")
     add_parser.add_argument("-t", "--tags", help="태그 (쉼표로 구분)")
     add_parser.add_argument("-i", "--importance", type=float, help="중요도 (0~1)")
+    add_parser.add_argument("--auto-slot", action="store_true", help="v2.5.1 AI 자동 슬롯 분석 활성화")
     
     # 단기기억 추가 커맨드
     stm_parser = subparsers.add_parser("stm", help="단기 기억 추가")
@@ -446,6 +563,8 @@ def main():
     # 기억 검색 커맨드
     search_parser = subparsers.add_parser("search", help="기억 검색")
     search_parser.add_argument("-k", "--keywords", help="검색할 키워드 (쉼표로 구분)")
+    search_parser.add_argument("--enhanced", action="store_true", help="v2.5.1 향상된 슬롯 통합 검색 사용")
+    search_parser.add_argument("--limit", type=int, default=5, help="검색 결과 수 제한")
     
     # 단기기억 조회 커맨드
     get_stm_parser = subparsers.add_parser("get-stm", help="단기 기억 조회")
@@ -480,6 +599,17 @@ def main():
     optimize_parser = subparsers.add_parser("optimize", help="메모리 최적화 실행")
     optimize_parser.add_argument("--auto-optimize", action="store_true", help="자동 최적화 실행")
     
+    # AI Context Slots 커맨드
+    slots_parser = subparsers.add_parser("slots", help="AI Context Slots 관리")
+    slots_parser.add_argument("slots_action", choices=["status", "set", "get", "clear", "search"],
+                             help="slots 액션: status(상태확인), set(설정), get(조회), clear(비우기), search(검색)")
+    slots_parser.add_argument("-c", "--content", help="슬롯에 저장할 내용")
+    slots_parser.add_argument("-s", "--slot-name", choices=["active", "anchor", "buffer", "all"], 
+                             help="슬롯 이름")
+    slots_parser.add_argument("-q", "--query", help="검색어")
+    slots_parser.add_argument("--anchor-block", type=int, help="LTM 앵커 블록 번호")
+    slots_parser.add_argument("--search-radius", type=int, help="검색 반경 (기본값: 5)")
+    
     args = parser.parse_args()
     
     # 명령어 실행
@@ -503,6 +633,8 @@ def main():
         analytics_report(args)
     elif args.command == "optimize":
         optimize_memory(args)
+    elif args.command == "slots":
+        slots_command(args)
     else:
         parser.print_help()
 

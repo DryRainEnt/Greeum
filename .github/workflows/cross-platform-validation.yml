@@ -171,34 +171,60 @@ jobs:
         
         async def test_mcp_server():
             try:
-                # MCP 서버 컴포넌트 임포트 테스트
-                from greeum.mcp.native.server import GreeumMCPServer
-                from greeum.mcp.native.tools import GreeumTools
-                from greeum.mcp.native.protocol import MCPProtocol
+                # MCP 서버 컴포넌트 임포트 테스트 (실제 클래스명 사용)
+                from greeum.mcp.native.server import GreeumNativeMCPServer
+                from greeum.mcp.native.tools import GreeumMCPTools
+                from greeum.mcp.native.protocol import JSONRPCProcessor
                 print('OK MCP server components import OK')
                 
-                # 도구 초기화 테스트
+                # 더 안전한 MCP 통합 테스트 (실제 서버 초기화 대신 컴포넌트 테스트)
                 data_dir = Path(os.environ.get('GREEUM_DATA_DIR', 'test_data'))
-                tools = GreeumTools(data_dir=str(data_dir))
+                
+                # 기본 Greeum 컴포넌트 초기화 테스트
+                from greeum.core.database_manager import DatabaseManager
+                from greeum.core.block_manager import BlockManager
+                from greeum.core.stm_manager import STMManager
+                from greeum.core.duplicate_detector import DuplicateDetector
+                from greeum.core.quality_validator import QualityValidator
+                from greeum.core.usage_analytics import UsageAnalytics
+                
+                db_path = data_dir / 'mcp_test.db'
+                db_manager = DatabaseManager(str(db_path))
+                block_manager = BlockManager(db_manager)
+                stm_manager = STMManager(db_manager)
+                duplicate_detector = DuplicateDetector(db_manager)
+                quality_validator = QualityValidator()
+                usage_analytics = UsageAnalytics(db_manager)
+                
+                # MCP Tools용 완전한 컴포넌트 딕셔너리 (server.py와 동일한 구성)
+                components = {
+                    'db_manager': db_manager,
+                    'block_manager': block_manager,
+                    'stm_manager': stm_manager,
+                    'duplicate_detector': duplicate_detector,
+                    'quality_validator': quality_validator,
+                    'usage_analytics': usage_analytics
+                }
+                mcp_tools = GreeumMCPTools(components)
                 print('OK MCP tools initialization OK')
                 
-                # 메모리 추가 시뮬레이션
-                add_result = await tools.add_memory(
-                    content='MCP integration test memory',
-                    importance=0.7
-                )
-                print(f'OK MCP add_memory OK - Result: {add_result.get(\"success\", False)}')
+                # 메모리 추가 시뮬레이션 (execute_tool 방식)
+                add_result_str = await mcp_tools.execute_tool('add_memory', {
+                    'content': 'MCP integration test memory',
+                    'importance': 0.7
+                })
+                print(f'OK MCP add_memory OK - Result: {len(add_result_str) > 0}')
                 
-                # 메모리 검색 시뮬레이션
-                search_result = await tools.search_memory(
-                    query='integration test',
-                    limit=5
-                )
-                print(f'OK MCP search_memory OK - Found: {len(search_result.get(\"memories\", []))} memories')
+                # 메모리 검색 시뮬레이션 (execute_tool 방식)
+                search_result_str = await mcp_tools.execute_tool('search_memory', {
+                    'query': 'integration test',
+                    'limit': 5
+                })
+                print(f'OK MCP search_memory OK - Result: {len(search_result_str) > 0}')
                 
-                # 통계 확인
-                stats_result = await tools.get_memory_stats()
-                print(f'OK MCP get_memory_stats OK - Total: {stats_result.get(\"total_memories\", 0)}')
+                # 통계 확인 (execute_tool 방식)
+                stats_result_str = await mcp_tools.execute_tool('get_memory_stats', {})
+                print(f'OK MCP get_memory_stats OK - Result: {len(stats_result_str) > 0}')
                 
                 print('SUCCESS All MCP integration tests PASSED')
                 

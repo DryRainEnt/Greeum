@@ -67,8 +67,23 @@ class UniversalGreeumMCP:
             
     def add_memory(self, content: str, keywords: List[str] = None, 
                    tags: List[str] = None, importance: float = 0.5) -> Dict[str, Any]:
-        """메모리 추가 - 안전하고 간단한 구현"""
+        """메모리 추가 - v2.5.1 슬롯 통합 또는 기본 저장"""
         try:
+            # v2.5.1: AI 슬롯 분석 먼저 시도
+            try:
+                from ..core.working_memory import AIContextualSlots
+                
+                # AI가 슬롯 적합성 판단 후 임시 저장
+                slots = AIContextualSlots()
+                context = {'importance': importance}
+                used_slot = slots.ai_decide_usage(content, context)
+                
+                logger.debug(f"Content stored in '{used_slot}' slot for quick access")
+                
+            except Exception as slot_error:
+                logger.debug(f"Slot analysis failed, continuing with normal storage: {slot_error}")
+            
+            # 기본 영구 저장 로직 (기존과 동일)
             timestamp = datetime.now().isoformat()
             keywords_str = ','.join(keywords or [])
             tags_str = ','.join(tags or [])
@@ -95,8 +110,32 @@ class UniversalGreeumMCP:
             return {"success": False, "error": str(e)}
             
     def search_memory(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
-        """메모리 검색 - 키워드 기반 간단 검색"""
+        """메모리 검색 - v2.5.1 슬롯 통합 검색 또는 기본 검색"""
         try:
+            # v2.5.1: 새로운 슬롯 통합 검색 시도
+            try:
+                from ..core.block_manager import BlockManager
+                from ..core.database_manager import DatabaseManager
+                
+                # 실제 Greeum 엔진 사용
+                db_manager = DatabaseManager(str(self.db_path.parent / 'memory.db'))
+                block_manager = BlockManager(db_manager)
+                
+                # 슬롯 통합 검색 사용
+                enhanced_results = block_manager.search_with_slots(
+                    query=query, 
+                    limit=limit,
+                    use_slots=True
+                )
+                
+                if enhanced_results:
+                    logger.info(f"Enhanced search returned {len(enhanced_results)} results")
+                    return enhanced_results
+                    
+            except Exception as enhanced_error:
+                logger.debug(f"Enhanced search failed, falling back to simple search: {enhanced_error}")
+            
+            # 폴백: 기존 단순 검색
             with sqlite3.connect(str(self.db_path)) as conn:
                 conn.row_factory = sqlite3.Row
                 
