@@ -20,9 +20,50 @@ from typing import Optional
 
 @click.group()
 @click.version_option()
-def main():
-    """Greeum Universal Memory System v2.0"""
-    pass
+@click.option('--verbose', '-v', is_flag=True, help='Enable verbose logging')
+@click.option('--debug', is_flag=True, help='Enable debug logging (most verbose)')
+@click.option('--quiet', '-q', is_flag=True, help='Suppress all non-essential output')
+@click.pass_context
+def main(ctx: click.Context, verbose: bool, debug: bool, quiet: bool):
+    """Greeum Universal Memory System v2.6.2"""
+    
+    # Context에 로그 설정 저장
+    ctx.ensure_object(dict)
+    ctx.obj['verbose'] = verbose
+    ctx.obj['debug'] = debug
+    ctx.obj['quiet'] = quiet
+    
+    # 로그 레벨 설정
+    import logging
+    
+    if debug:
+        log_level = logging.DEBUG
+    elif verbose:
+        log_level = logging.INFO
+    elif quiet:
+        log_level = logging.ERROR
+    else:
+        log_level = logging.WARNING  # 기본값: 경고 이상만 표시
+    
+    # 로그 포맷 설정
+    if debug:
+        log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    elif verbose:
+        log_format = '%(levelname)s: %(message)s'
+    else:
+        log_format = '%(message)s'
+    
+    logging.basicConfig(
+        level=log_level,
+        format=log_format,
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    # 특정 로거들의 레벨 조정 (너무 시끄러운 외부 라이브러리들)
+    if not debug:
+        logging.getLogger('urllib3').setLevel(logging.WARNING)
+        logging.getLogger('requests').setLevel(logging.WARNING)
+        logging.getLogger('sqlalchemy').setLevel(logging.WARNING)
 
 @main.group()
 def memory():
@@ -67,6 +108,11 @@ def backup():
 @main.group() 
 def restore():
     """Memory restore commands (v2.6.1)"""
+    pass
+
+@main.group()
+def dashboard():
+    """Memory dashboard and analytics (v2.6.2)"""
     pass
 
 # Memory 서브명령어들
@@ -1144,6 +1190,238 @@ def export(output: str, include_metadata: bool):
     except Exception as e:
         click.echo(f"💥 백업 중 오류: {e}")
 
+
+@backup.command()
+@click.option('--schedule', type=click.Choice(['hourly', 'daily', 'weekly', 'monthly']), 
+              required=True, help='백업 주기 설정')
+@click.option('--output-dir', '-d', help='백업 저장 디렉토리 (기본: ~/greeum-backups)')
+@click.option('--max-backups', type=int, default=10, help='보존할 최대 백업 수 (기본: 10개)')
+@click.option('--enable/--disable', default=True, help='자동 백업 활성화/비활성화')
+def auto(schedule: str, output_dir: str, max_backups: int, enable: bool):
+    """자동 백업 스케줄 설정 및 관리
+    
+    Examples:
+        greeum backup auto --schedule daily --output-dir ~/backups
+        greeum backup auto --schedule weekly --max-backups 5
+        greeum backup auto --schedule daily --disable
+    """
+    try:
+        from pathlib import Path
+        import json
+        import os
+        
+        if not output_dir:
+            output_dir = str(Path.home() / "greeum-backups")
+        
+        # 백업 디렉토리 생성
+        backup_path = Path(output_dir)
+        backup_path.mkdir(parents=True, exist_ok=True)
+        
+        # 자동 백업 설정 파일 경로
+        config_file = backup_path / "auto_backup_config.json"
+        
+        if enable:
+            # 자동 백업 활성화
+            from datetime import datetime
+            
+            config = {
+                "enabled": True,
+                "schedule": schedule,
+                "output_dir": str(backup_path),
+                "max_backups": max_backups,
+                "last_backup": None,
+                "created_at": datetime.now().isoformat()
+            }
+            
+            with open(config_file, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+            
+            click.echo(f"✅ 자동 백업 활성화됨")
+            click.echo(f"   📅 주기: {schedule}")
+            click.echo(f"   📁 디렉토리: {output_dir}")
+            click.echo(f"   🔢 최대 백업 수: {max_backups}개")
+            click.echo()
+            click.echo("💡 자동 백업 실행 방법:")
+            
+            if schedule == 'hourly':
+                cron_expr = "0 * * * *"
+            elif schedule == 'daily':
+                cron_expr = "0 2 * * *"  # 새벽 2시
+            elif schedule == 'weekly':
+                cron_expr = "0 2 * * 0"  # 일요일 새벽 2시
+            else:  # monthly
+                cron_expr = "0 2 1 * *"  # 매월 1일 새벽 2시
+            
+            click.echo(f"   crontab에 추가: {cron_expr} greeum backup run-auto")
+            click.echo("   또는 시스템 스케줄러를 사용하여 'greeum backup run-auto' 실행")
+            
+        else:
+            # 자동 백업 비활성화
+            if config_file.exists():
+                config_file.unlink()
+                click.echo("✅ 자동 백업이 비활성화되었습니다")
+            else:
+                click.echo("ℹ️  자동 백업이 이미 비활성화 상태입니다")
+                
+    except Exception as e:
+        click.echo(f"💥 자동 백업 설정 실패: {e}")
+
+
+@backup.command()
+def run_auto():
+    """자동 백업 실행 (스케줄러에서 호출)
+    
+    이 명령어는 cron이나 시스템 스케줄러에서 호출됩니다.
+    """
+    try:
+        from pathlib import Path
+        from datetime import datetime, timedelta
+        import json
+        import glob
+        
+        # 기본 백업 디렉토리
+        backup_dir = Path.home() / "greeum-backups"
+        config_file = backup_dir / "auto_backup_config.json"
+        
+        if not config_file.exists():
+            click.echo("⚠️  자동 백업이 설정되지 않았습니다. 'greeum backup auto' 명령어를 먼저 실행하세요")
+            return
+        
+        # 설정 로드
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        
+        if not config.get('enabled', False):
+            click.echo("ℹ️  자동 백업이 비활성화되어 있습니다")
+            return
+        
+        schedule = config['schedule']
+        max_backups = config.get('max_backups', 10)
+        last_backup = config.get('last_backup')
+        
+        # 마지막 백업 이후 충분한 시간이 지났는지 확인
+        now = datetime.now()
+        should_backup = True
+        
+        if last_backup:
+            last_backup_time = datetime.fromisoformat(last_backup)
+            
+            if schedule == 'hourly' and now - last_backup_time < timedelta(hours=1):
+                should_backup = False
+            elif schedule == 'daily' and now - last_backup_time < timedelta(days=1):
+                should_backup = False
+            elif schedule == 'weekly' and now - last_backup_time < timedelta(weeks=1):
+                should_backup = False
+            elif schedule == 'monthly' and now - last_backup_time < timedelta(days=30):
+                should_backup = False
+        
+        if not should_backup:
+            click.echo("ℹ️  아직 백업 시간이 아닙니다")
+            return
+        
+        # 백업 실행
+        timestamp = now.strftime("%Y%m%d_%H%M%S")
+        backup_filename = f"auto_backup_{timestamp}.json"
+        backup_path = backup_dir / backup_filename
+        
+        click.echo(f"🔄 자동 백업 실행: {backup_filename}")
+        
+        # 백업 엔진 초기화 및 백업 실행
+        from ..core.backup_restore import MemoryBackupEngine
+        from ..core.hierarchical_memory import HierarchicalMemorySystem
+        from ..core.database_manager import DatabaseManager
+        
+        db_manager = DatabaseManager()
+        system = HierarchicalMemorySystem(db_manager)
+        system.initialize()
+        
+        backup_engine = MemoryBackupEngine(system)
+        success = backup_engine.create_backup(str(backup_path), include_metadata=True)
+        
+        if success:
+            # 백업 설정 업데이트
+            config['last_backup'] = now.isoformat()
+            with open(config_file, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+            
+            # 오래된 백업 파일 정리
+            backup_pattern = str(backup_dir / "auto_backup_*.json")
+            backup_files = sorted(glob.glob(backup_pattern), reverse=True)  # 최신부터
+            
+            if len(backup_files) > max_backups:
+                old_backups = backup_files[max_backups:]
+                for old_backup in old_backups:
+                    Path(old_backup).unlink()
+                    click.echo(f"🗑️  오래된 백업 삭제: {Path(old_backup).name}")
+            
+            file_size = backup_path.stat().st_size / (1024 * 1024)
+            click.echo(f"✅ 자동 백업 완료: {backup_filename} ({file_size:.2f} MB)")
+            click.echo(f"📊 보존된 백업 수: {min(len(backup_files), max_backups)}개")
+            
+        else:
+            click.echo("❌ 자동 백업 실패")
+            
+    except Exception as e:
+        click.echo(f"💥 자동 백업 실행 실패: {e}")
+
+
+@backup.command()
+def status():
+    """자동 백업 상태 확인"""
+    try:
+        from pathlib import Path
+        from datetime import datetime
+        import json
+        import glob
+        
+        backup_dir = Path.home() / "greeum-backups"
+        config_file = backup_dir / "auto_backup_config.json"
+        
+        if not config_file.exists():
+            click.echo("⚪ 자동 백업: 미설정")
+            click.echo("💡 'greeum backup auto --schedule daily' 로 설정하세요")
+            return
+        
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        
+        status_emoji = "🟢" if config.get('enabled', False) else "🔴"
+        status_text = "활성화" if config.get('enabled', False) else "비활성화"
+        
+        click.echo(f"{status_emoji} 자동 백업: {status_text}")
+        
+        if config.get('enabled', False):
+            click.echo(f"   📅 주기: {config.get('schedule', 'unknown')}")
+            click.echo(f"   📁 디렉토리: {config.get('output_dir', 'unknown')}")
+            click.echo(f"   🔢 최대 보존: {config.get('max_backups', 10)}개")
+            
+            last_backup = config.get('last_backup')
+            if last_backup:
+                click.echo(f"   🕒 마지막 백업: {last_backup}")
+            else:
+                click.echo(f"   🕒 마지막 백업: 없음")
+        
+        # 백업 파일 목록
+        backup_pattern = str(backup_dir / "auto_backup_*.json")
+        backup_files = sorted(glob.glob(backup_pattern), reverse=True)
+        
+        if backup_files:
+            click.echo(f"\n📋 백업 파일 ({len(backup_files)}개):")
+            for backup_file in backup_files[:5]:  # 최대 5개만 표시
+                backup_path = Path(backup_file)
+                size_mb = backup_path.stat().st_size / (1024 * 1024)
+                mtime = datetime.fromtimestamp(backup_path.stat().st_mtime)
+                click.echo(f"   • {backup_path.name} ({size_mb:.2f} MB, {mtime.strftime('%Y-%m-%d %H:%M')})")
+            
+            if len(backup_files) > 5:
+                click.echo(f"   ... 및 {len(backup_files) - 5}개 더")
+        else:
+            click.echo("\n📋 백업 파일: 없음")
+            
+    except Exception as e:
+        click.echo(f"💥 자동 백업 상태 확인 실패: {e}")
+
+
 # v2.6.1 Restore 서브명령어들
 @restore.command()
 @click.argument('backup_file', type=click.Path(exists=True))
@@ -1270,6 +1548,178 @@ def from_file(
                     
     except Exception as e:
         click.echo(f"💥 복원 중 오류: {e}")
+
+
+# v2.6.2 Dashboard 서브명령어들
+@dashboard.command()
+@click.option('--output', '-o', help='결과를 파일로 저장할 경로')
+@click.option('--json-format', is_flag=True, help='JSON 형태로 출력')
+def overview(output: str, json_format: bool):
+    """메모리 시스템 전체 개요 표시"""
+    try:
+        from ..core.dashboard import get_dashboard_system
+        import json
+        
+        dashboard_system = get_dashboard_system()
+        overview_data = dashboard_system.get_overview()
+        
+        if json_format or output:
+            # JSON 형태로 출력
+            json_output = json.dumps(overview_data, indent=2, ensure_ascii=False)
+            
+            if output:
+                with open(output, 'w', encoding='utf-8') as f:
+                    f.write(json_output)
+                click.echo(f"✅ 대시보드 리포트 저장됨: {output}")
+            else:
+                click.echo(json_output)
+        else:
+            # 사용자 친화적 형태로 출력
+            _display_dashboard_overview(overview_data)
+            
+    except Exception as e:
+        click.echo(f"💥 대시보드 개요 생성 실패: {e}")
+
+
+@dashboard.command()
+@click.option('--format', 'output_format', type=click.Choice(['simple', 'detailed', 'json']), 
+              default='simple', help='출력 형태')
+def health(output_format: str):
+    """시스템 건강도 확인"""
+    try:
+        from ..core.dashboard import get_dashboard_system
+        import json
+        
+        dashboard_system = get_dashboard_system()
+        health_data = dashboard_system.get_system_health()
+        
+        if output_format == 'json':
+            click.echo(json.dumps(health_data.__dict__, indent=2, ensure_ascii=False, default=str))
+        elif output_format == 'detailed':
+            _display_health_detailed(health_data)
+        else:
+            _display_health_simple(health_data)
+            
+    except Exception as e:
+        click.echo(f"💥 시스템 건강도 확인 실패: {e}")
+
+
+@dashboard.command()
+@click.option('--output', '-o', required=True, help='리포트 파일 저장 경로')
+@click.option('--include-details/--no-details', default=True, 
+              help='상세 계층 분석 포함 여부')
+def export(output: str, include_details: bool):
+    """완전한 대시보드 리포트 내보내기"""
+    try:
+        from ..core.dashboard import get_dashboard_system
+        from pathlib import Path
+        
+        dashboard_system = get_dashboard_system()
+        
+        success = dashboard_system.export_dashboard_report(
+            output_path=output,
+            include_details=include_details
+        )
+        
+        if success:
+            file_size = Path(output).stat().st_size / 1024  # KB
+            click.echo(f"✅ 대시보드 리포트 생성 완료: {output} ({file_size:.1f} KB)")
+            
+            if include_details:
+                click.echo("📊 상세 계층 분석 포함")
+            else:
+                click.echo("📋 기본 개요만 포함")
+        else:
+            click.echo("❌ 리포트 생성에 실패했습니다")
+            
+    except Exception as e:
+        click.echo(f"💥 리포트 내보내기 실패: {e}")
+
+
+# 대시보드 출력 헬퍼 함수들
+def _display_dashboard_overview(data: dict):
+    """사용자 친화적 대시보드 개요 출력"""
+    stats = data['memory_stats']
+    health = data['system_health']
+    
+    click.echo("🧠 Greeum Memory Dashboard")
+    click.echo("=" * 50)
+    
+    # 기본 통계
+    click.echo(f"📊 전체 메모리: {stats['total_memories']}개")
+    click.echo(f"   🧠 Working Memory: {stats['working_memory_count']}개")
+    click.echo(f"   ⚡ STM: {stats['stm_count']}개")
+    click.echo(f"   🏛️  LTM: {stats['ltm_count']}개")
+    
+    click.echo()
+    
+    # 시스템 건강도
+    health_percent = health['overall_health'] * 100
+    health_emoji = "🟢" if health_percent >= 80 else "🟡" if health_percent >= 60 else "🔴"
+    click.echo(f"{health_emoji} 시스템 건강도: {health_percent:.1f}%")
+    
+    # 용량 정보
+    click.echo(f"💾 총 용량: {stats['total_size_mb']:.1f} MB")
+    click.echo(f"⚡ 평균 검색 시간: {health['avg_search_time_ms']:.1f}ms")
+    
+    # 경고사항
+    if health['warnings']:
+        click.echo("\n⚠️  주의사항:")
+        for warning in health['warnings']:
+            click.echo(f"   • {warning}")
+    
+    # 권장사항
+    if health['recommendations']:
+        click.echo("\n💡 권장사항:")
+        for rec in health['recommendations']:
+            click.echo(f"   • {rec}")
+    
+    # 인기 키워드
+    if 'popular_keywords' in stats:
+        click.echo("\n🔥 인기 키워드:")
+        for keyword, count in stats['popular_keywords'][:5]:
+            click.echo(f"   #{keyword} ({count}회)")
+
+
+def _display_health_simple(health):
+    """간단한 건강도 출력"""
+    health_percent = health.overall_health * 100
+    health_emoji = "🟢" if health_percent >= 80 else "🟡" if health_percent >= 60 else "🔴"
+    
+    click.echo(f"{health_emoji} 시스템 건강도: {health_percent:.1f}%")
+    
+    if health_percent >= 80:
+        click.echo("✅ 시스템이 정상적으로 작동하고 있습니다")
+    elif health_percent >= 60:
+        click.echo("⚠️  시스템에 약간의 주의가 필요합니다")
+    else:
+        click.echo("🔴 시스템 점검이 필요합니다")
+
+
+def _display_health_detailed(health):
+    """상세한 건강도 출력"""
+    _display_health_simple(health)
+    
+    click.echo(f"\n📈 성능 지표:")
+    click.echo(f"   검색 속도: {health.avg_search_time_ms:.1f}ms")
+    click.echo(f"   메모리 사용량: {health.memory_usage_mb:.1f}MB")
+    click.echo(f"   데이터베이스 크기: {health.database_size_mb:.1f}MB")
+    
+    click.echo(f"\n🎯 품질 지표:")
+    click.echo(f"   평균 품질 점수: {health.avg_quality_score:.2f}")
+    click.echo(f"   중복률: {health.duplicate_rate * 100:.1f}%")
+    click.echo(f"   승급 성공률: {health.promotion_success_rate * 100:.1f}%")
+    
+    if health.warnings:
+        click.echo(f"\n⚠️  경고:")
+        for warning in health.warnings:
+            click.echo(f"   • {warning}")
+    
+    if health.recommendations:
+        click.echo(f"\n💡 권장사항:")
+        for rec in health.recommendations:
+            click.echo(f"   • {rec}")
+
 
 if __name__ == '__main__':
     main()

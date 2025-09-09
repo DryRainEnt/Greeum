@@ -1,0 +1,44 @@
+{
+  "timestamp": "2025-09-09T19:00:32.882078",
+  "ltm_direct": {
+    "total_time": 0.13180017471313477,
+    "avg_add_time": 0.0006964408531390801,
+    "avg_search_time": 1.5497207641601562e-05,
+    "memory_count": 189,
+    "system_health": 0.843,
+    "working_count": 0,
+    "stm_count": 0,
+    "ltm_count": 189,
+    "performance_details": {
+      "add_times_std": 0.0001375668548879598,
+      "search_times_std": 1.1975903378085831e-05,
+      "min_add_time": 0.0005481243133544922,
+      "max_add_time": 0.0014989376068115234
+    }
+  },
+  "stm_priority": {
+    "total_time": 0.24590086936950684,
+    "avg_add_time": 0.0012998795383190982,
+    "avg_search_time": 1.3589859008789062e-05,
+    "memory_count": 189,
+    "promotion_count": 189,
+    "promotion_rate": 1.0,
+    "system_health": 0.843,
+    "working_count": 0,
+    "stm_count": 0,
+    "ltm_count": 189,
+    "performance_details": {
+      "add_times_std": 0.00015965105147880572,
+      "search_times_std": 6.968278953801147e-06,
+      "min_add_time": 0.0011119842529296875,
+      "max_add_time": 0.0025877952575683594
+    }
+  },
+  "analysis": {
+    "speed_difference_percent": -86.64607804957568,
+    "search_difference_percent": 12.307692307692308,
+    "health_difference_percent": 0.0,
+    "stm_utilization_ltm_direct": 0.0,
+    "stm_utilization_stm_priority": 0.0
+  }
+}

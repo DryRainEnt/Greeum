@@ -1,0 +1,85 @@
+{
+  "metadata": {
+    "export_version": "2.6.1",
+    "timestamp": "2025-09-09T18:58:41.911354",
+    "total_memories": 0,
+    "greeum_version": "2.6.1",
+    "layers_info": {
+      "working": 0,
+      "stm": 0,
+      "ltm": 0
+    },
+    "source_system": "greeum"
+  },
+  "hierarchical_data": {
+    "working_memory": [],
+    "stm": [],
+    "ltm": []
+  },
+  "system_metadata": {
+    "anchors": {},
+    "statistics": {
+      "layers": {
+        "working": {
+          "layer_type": "Working Memory",
+          "total_count": 0,
+          "max_capacity": 10,
+          "ttl_seconds": 1800,
+          "slot_type_distribution": {},
+          "average_importance": 0
+        },
+        "stm": {
+          "layer_type": "STM",
+          "total_count": 0,
+          "max_capacity": 1000,
+          "current_session_id": "c7f08ec6-bcc6-4155-9186-a684aa239c8c",
+          "session_count": 0,
+          "default_ttl": 3600,
+          "stats": {
+            "total_added": 0,
+            "total_expired": 0,
+            "total_transferred": 0,
+            "cache_hits": 0,
+            "cache_misses": 0
+          },
+          "priority_distribution": {}
+        },
+        "ltm": {
+          "layer_type": "LTM",
+          "total_blocks": 189,
+          "last_block_index": 188,
+          "chain_hash": "d7f066f85cdb34703cfc14d9af67a34bd0f366b7eea822b2c9de6f2ec86d120d",
+          "blocks_with_actant": 0,
+          "total_relationships": 0,
+          "index_sizes": {
+            "content_words": 2133,
+            "keywords": 0,
+            "tags": 0,
+            "actant_subjects": 0,
+            "actant_actions": 0,
+            "actant_objects": 0
+          },
+          "stats": {
+            "total_blocks": 189,
+            "blocks_with_actant": 0,
+            "total_relationships": 0,
+            "chain_integrity_checks": 0,
+            "search_queries": 0
+          }
+        }
+      },
+      "total_memories": 0,
+      "transfer_history_count": 0,
+      "promotion_stats": {
+        "total_promotions": 0,
+        "working_to_stm": 0,
+        "stm_to_ltm": 0,
+        "search_queries": 0,
+        "cross_layer_searches": 0
+      },
+      "auto_promotion_enabled": true,
+      "promotion_rules_count": 2,
+      "last_promotion_check": "2025-09-09T18:58:41.906626"
+    }
+  }
+}
