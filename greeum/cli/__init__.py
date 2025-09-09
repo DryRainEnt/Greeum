@@ -25,7 +25,7 @@ from typing import Optional
 @click.option('--quiet', '-q', is_flag=True, help='Suppress all non-essential output')
 @click.pass_context
 def main(ctx: click.Context, verbose: bool, debug: bool, quiet: bool):
-    """Greeum Universal Memory System v2.6.2"""
+    """Greeum Universal Memory System v2.6.4"""
     
     # Context에 로그 설정 저장
     ctx.ensure_object(dict)
