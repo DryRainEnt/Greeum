@@ -430,9 +430,22 @@ class BlockManager:
         Returns:
             검색 결과 리스트 (슬롯 + LTM 통합)
         """
+        from datetime import datetime
+        search_start_time = datetime.utcnow()
+        
         logger.debug(f"Enhanced search: query='{query}', use_slots={use_slots}")
         
         all_results = []
+        slots_results_count = 0
+        ltm_results_count = 0
+        
+        # Analytics 추적을 위한 변수
+        analytics = None
+        try:
+            from .usage_analytics import UsageAnalytics
+            analytics = UsageAnalytics()
+        except ImportError:
+            pass
         
         # Phase 1: 슬롯 우선 검색 (빠른 응답)
         if use_slots:
@@ -461,8 +474,9 @@ class BlockManager:
                             slot_result['search_radius'] = slot.search_radius
                         
                         all_results.append(slot_result)
+                        slots_results_count += 1
                         
-                logger.debug(f"Found {len(all_results)} results from slots")
+                logger.debug(f"Found {slots_results_count} results from slots")
                         
             except ImportError:
                 logger.warning("AIContextualSlots not available, skipping slot search")
@@ -496,14 +510,43 @@ class BlockManager:
                     unique_ltm_results.append(ltm_result)
             
             all_results.extend(unique_ltm_results)
-            logger.debug(f"Added {len(unique_ltm_results)} unique LTM results")
+            ltm_results_count = len(unique_ltm_results)
+            logger.debug(f"Added {ltm_results_count} unique LTM results")
             
         except Exception as e:
             logger.error(f"Error in LTM search: {e}")
         
         # Phase 3: 결과 랭킹 및 제한
+        ranking_start_time = datetime.utcnow()
         ranked_results = self._rank_search_results(all_results, query)
         final_results = ranked_results[:limit]
+        
+        # Analytics 추적: 검색 성능 비교
+        if analytics:
+            search_end_time = datetime.utcnow()
+            total_search_time = (search_end_time - search_start_time).total_seconds() * 1000
+            ranking_time = (search_end_time - ranking_start_time).total_seconds() * 1000
+            
+            # 기존 검색과 비교를 위해 기존 방식도 실행 (성능 측정용)
+            baseline_start_time = datetime.utcnow()
+            try:
+                keywords = self._extract_keywords_from_content(query)
+                baseline_results = self.search_by_keywords(keywords, limit=limit)
+                baseline_end_time = datetime.utcnow()
+                baseline_time = (baseline_end_time - baseline_start_time).total_seconds() * 1000
+            except Exception:
+                baseline_time = 0
+                baseline_results = []
+            
+            analytics.track_search_comparison(
+                query_text=query[:100],  # 프라이버시를 위해 첫 100자만
+                slots_enabled=use_slots,
+                response_time_ms=total_search_time,
+                results_count=len(final_results),
+                slot_hits=slots_results_count,
+                ltm_hits=ltm_results_count,
+                top_result_source=final_results[0].get('source', 'unknown') if final_results else None
+            )
         
         logger.info(f"Enhanced search completed: {len(final_results)}/{len(all_results)} results returned")
         return final_results

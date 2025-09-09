@@ -37,13 +37,17 @@ class UsageAnalytics:
         # Analytics DB 초기화
         self._init_analytics_db()
         
-        # 메트릭 카테고리 정의
+        # 메트릭 카테고리 정의 (v2.5.1 확장)
         self.metric_categories = {
             'memory_operations': ['add_memory', 'search_memory', 'delete_memory'],
             'stm_operations': ['stm_add', 'stm_promote', 'stm_cleanup'],
             'system_operations': ['get_memory_stats', 'ltm_analyze', 'ltm_verify', 'ltm_export'],
             'quality_metrics': ['quality_validation', 'duplicate_detection'],
-            'user_behavior': ['session_start', 'session_end', 'tool_usage']
+            'user_behavior': ['session_start', 'session_end', 'tool_usage'],
+            # v2.5.1 AI Context Slots 전용 메트릭
+            'slots_operations': ['slots_set', 'slots_clear', 'slots_status', 'slots_search'],
+            'ai_decisions': ['intent_analysis', 'slot_allocation', 'context_switching'],
+            'performance_comparison': ['search_speed_comparison', 'hit_rate_tracking']
         }
     
     def _init_analytics_db(self):
@@ -97,6 +101,59 @@ class UsageAnalytics:
                     )
                 """)
                 
+                # v2.5.1 AI Context Slots 메트릭 테이블
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS slots_metrics (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        operation TEXT NOT NULL,
+                        slot_type TEXT,
+                        content_length INTEGER,
+                        ai_intent TEXT,
+                        ai_confidence REAL,
+                        slot_allocation TEXT,
+                        ltm_anchor_block INTEGER,
+                        search_radius INTEGER,
+                        response_time_ms REAL,
+                        success BOOLEAN,
+                        error_message TEXT
+                    )
+                """)
+                
+                # v2.5.1 검색 성능 비교 테이블
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS search_comparison (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        query_text TEXT NOT NULL,
+                        query_length INTEGER,
+                        slots_enabled BOOLEAN,
+                        response_time_ms REAL,
+                        results_count INTEGER,
+                        slot_hits INTEGER,
+                        ltm_hits INTEGER,
+                        top_result_source TEXT,
+                        user_clicked_rank INTEGER,
+                        session_id TEXT
+                    )
+                """)
+                
+                # AI 의도 분석 정확도 테이블
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS ai_intent_tracking (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        input_content TEXT NOT NULL,
+                        predicted_intent TEXT,
+                        predicted_slot TEXT,
+                        actual_slot_used TEXT,
+                        user_feedback INTEGER,  -- -1: 틀림, 0: 모름, 1: 맞음
+                        keywords_detected TEXT,
+                        importance_score REAL,
+                        context_metadata TEXT
+                    )
+                """)
+
                 # 사용자 세션 테이블
                 conn.execute("""
                     CREATE TABLE IF NOT EXISTS user_sessions (
@@ -741,6 +798,187 @@ class UsageAnalytics:
                 "avg_response_time": 0,
                 "success_rate": 0,
                 "error": str(e)
+            }
+    
+    # ===== v2.5.1 AI Context Slots 전용 메트릭 메서드들 =====
+    
+    def track_slots_operation(self, operation: str, slot_type: Optional[str] = None, 
+                             content: Optional[str] = None, ai_intent: Optional[str] = None,
+                             ai_confidence: Optional[float] = None, slot_allocation: Optional[str] = None,
+                             ltm_anchor_block: Optional[int] = None, search_radius: Optional[int] = None,
+                             response_time_ms: Optional[float] = None, success: bool = True, 
+                             error_message: Optional[str] = None):
+        """
+        v2.5.1 AI Context Slots 작업 추적
+        
+        Args:
+            operation: 작업 유형 ('set', 'clear', 'status', 'search')
+            slot_type: 할당된 슬롯 타입 ('active', 'anchor', 'buffer')
+            content: 입력 내용
+            ai_intent: AI가 분석한 의도
+            ai_confidence: AI 분석 신뢰도 (0.0-1.0)
+            slot_allocation: 최종 할당된 슬롯
+            ltm_anchor_block: LTM 앵커 블록 ID
+            search_radius: 검색 반경
+            response_time_ms: 응답 시간 (밀리초)
+            success: 성공 여부
+            error_message: 에러 메시지
+        """
+        try:
+            with sqlite3.connect(self.analytics_db_path) as conn:
+                conn.execute("""
+                    INSERT INTO slots_metrics 
+                    (operation, slot_type, content_length, ai_intent, ai_confidence, 
+                     slot_allocation, ltm_anchor_block, search_radius, response_time_ms, 
+                     success, error_message)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    operation, slot_type, len(content) if content else 0, ai_intent, ai_confidence,
+                    slot_allocation, ltm_anchor_block, search_radius, response_time_ms,
+                    success, error_message
+                ))
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to track slots operation: {e}")
+    
+    def track_search_comparison(self, query_text: str, slots_enabled: bool, 
+                              response_time_ms: float, results_count: int,
+                              slot_hits: int = 0, ltm_hits: int = 0, 
+                              top_result_source: Optional[str] = None,
+                              user_clicked_rank: Optional[int] = None,
+                              session_id: Optional[str] = None):
+        """
+        v2.5.1 검색 성능 비교 추적 (슬롯 vs 기존 검색)
+        
+        Args:
+            query_text: 검색 쿼리
+            slots_enabled: 슬롯 통합 검색 활성화 여부
+            response_time_ms: 응답 시간
+            results_count: 결과 수
+            slot_hits: 슬롯에서 찾은 결과 수
+            ltm_hits: LTM에서 찾은 결과 수
+            top_result_source: 최상위 결과 출처 ('working_memory' or 'long_term_memory')
+            user_clicked_rank: 사용자가 클릭한 결과 순위 (피드백용)
+            session_id: 세션 ID
+        """
+        try:
+            with sqlite3.connect(self.analytics_db_path) as conn:
+                conn.execute("""
+                    INSERT INTO search_comparison 
+                    (query_text, query_length, slots_enabled, response_time_ms, 
+                     results_count, slot_hits, ltm_hits, top_result_source, 
+                     user_clicked_rank, session_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    query_text, len(query_text), slots_enabled, response_time_ms,
+                    results_count, slot_hits, ltm_hits, top_result_source,
+                    user_clicked_rank, session_id
+                ))
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to track search comparison: {e}")
+    
+    def track_ai_intent(self, input_content: str, predicted_intent: str, 
+                       predicted_slot: str, actual_slot_used: str,
+                       user_feedback: Optional[int] = 0, keywords_detected: Optional[str] = None,
+                       importance_score: Optional[float] = None, context_metadata: Optional[dict] = None):
+        """
+        AI 의도 분석 정확도 추적
+        
+        Args:
+            input_content: 사용자 입력
+            predicted_intent: AI가 예측한 의도
+            predicted_slot: AI가 예측한 슬롯
+            actual_slot_used: 실제 사용된 슬롯
+            user_feedback: 사용자 피드백 (-1: 틀림, 0: 모름, 1: 맞음)
+            keywords_detected: 감지된 키워드들
+            importance_score: 중요도 점수
+            context_metadata: 추가 컨텍스트 메타데이터
+        """
+        try:
+            with sqlite3.connect(self.analytics_db_path) as conn:
+                conn.execute("""
+                    INSERT INTO ai_intent_tracking 
+                    (input_content, predicted_intent, predicted_slot, actual_slot_used,
+                     user_feedback, keywords_detected, importance_score, context_metadata)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    input_content, predicted_intent, predicted_slot, actual_slot_used,
+                    user_feedback, keywords_detected, importance_score, 
+                    json.dumps(context_metadata) if context_metadata else None
+                ))
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to track AI intent: {e}")
+    
+    def get_slots_performance_report(self, days: int = 7) -> Dict[str, Any]:
+        """
+        v2.5.1 AI Context Slots 성능 리포트 생성
+        
+        Returns:
+            실제 측정된 KPI들을 포함한 리포트
+        """
+        try:
+            cutoff_date = datetime.now() - timedelta(days=days)
+            
+            with sqlite3.connect(self.analytics_db_path) as conn:
+                # 슬롯 사용 통계
+                slots_stats = conn.execute("""
+                    SELECT 
+                        operation,
+                        slot_allocation,
+                        COUNT(*) as count,
+                        AVG(response_time_ms) as avg_response_time,
+                        AVG(CASE WHEN success THEN 1.0 ELSE 0.0 END) as success_rate,
+                        AVG(content_length) as avg_content_length
+                    FROM slots_metrics 
+                    WHERE timestamp > ?
+                    GROUP BY operation, slot_allocation
+                """, (cutoff_date,)).fetchall()
+                
+                # 검색 성능 비교
+                search_comparison = conn.execute("""
+                    SELECT 
+                        slots_enabled,
+                        COUNT(*) as search_count,
+                        AVG(response_time_ms) as avg_response_time,
+                        AVG(results_count) as avg_results_count,
+                        AVG(slot_hits) as avg_slot_hits,
+                        AVG(ltm_hits) as avg_ltm_hits,
+                        AVG(CASE WHEN slot_hits > 0 THEN 1.0 ELSE 0.0 END) as slot_hit_rate
+                    FROM search_comparison 
+                    WHERE timestamp > ?
+                    GROUP BY slots_enabled
+                """, (cutoff_date,)).fetchall()
+                
+                # AI 의도 분석 정확도
+                ai_accuracy = conn.execute("""
+                    SELECT 
+                        predicted_intent,
+                        COUNT(*) as total_predictions,
+                        AVG(CASE WHEN predicted_slot = actual_slot_used THEN 1.0 ELSE 0.0 END) as accuracy,
+                        AVG(CASE WHEN user_feedback = 1 THEN 1.0 
+                                 WHEN user_feedback = -1 THEN 0.0 
+                                 ELSE NULL END) as user_satisfaction
+                    FROM ai_intent_tracking 
+                    WHERE timestamp > ?
+                    GROUP BY predicted_intent
+                """, (cutoff_date,)).fetchall()
+                
+                return {
+                    "period_days": days,
+                    "slots_usage_stats": [dict(zip([col[0] for col in slots_stats], row)) for row in slots_stats] if slots_stats else [],
+                    "search_performance_comparison": [dict(zip([col[0] for col in search_comparison], row)) for row in search_comparison] if search_comparison else [],
+                    "ai_intent_accuracy": [dict(zip([col[0] for col in ai_accuracy], row)) for row in ai_accuracy] if ai_accuracy else [],
+                    "generated_at": datetime.now().isoformat()
+                }
+                
+        except Exception as e:
+            logger.error(f"Failed to generate slots performance report: {e}")
+            return {
+                "error": str(e),
+                "period_days": days,
+                "generated_at": datetime.now().isoformat()
             }
 
 if __name__ == "__main__":

@@ -209,8 +209,7 @@ The system provides both REST API and Python client interfaces:
 ### Setting up GreeumMCP with Claude Code
 
 **Prerequisites:**
-- Greeum v2.2.5+ installed (includes anchored memory system)
-- GreeumMCP v1.0.0+ installed
+- Greeum v2.5.0+ installed (includes anchored memory system)
 - Claude Desktop application
 
 #### Step 1: Install Dependencies

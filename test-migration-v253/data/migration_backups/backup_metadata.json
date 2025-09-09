@@ -1,0 +1,20 @@
+{
+  "migration_backup_20250909_140751": {
+    "backup_id": "migration_backup_20250909_140751",
+    "source_path": "data/memory.db",
+    "backup_path": "data/migration_backups/migration_backup_20250909_140751_memory.db.gz",
+    "created_at": "2025-09-09T14:07:51.226863",
+    "source_size": 49152,
+    "source_hash": "f97eccf548098e4e50da12983753e78903b15cf8222d865c0f6df5548a273255",
+    "backup_verified": true
+  },
+  "transaction_safety_20250909_140751": {
+    "backup_id": "transaction_safety_20250909_140751",
+    "source_path": "data/memory.db",
+    "backup_path": "data/migration_backups/transaction_safety_20250909_140751_memory.db.gz",
+    "created_at": "2025-09-09T14:07:51.228893",
+    "source_size": 49152,
+    "source_hash": "f97eccf548098e4e50da12983753e78903b15cf8222d865c0f6df5548a273255",
+    "backup_verified": true
+  }
+}

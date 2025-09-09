@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "greeum"
-version = "2.5.2"
-description = "Universal memory module for LLMs with enhanced MCP integration"
+version = "2.6.1"
+description = "Universal memory module for LLMs with hierarchical memory architecture (Working Memory → STM → LTM)"
 authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.10"
