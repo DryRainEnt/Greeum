@@ -238,8 +238,8 @@ class BlockManager:
                 logger.debug(f"Failed to record write metric: {e}")
             
             logger.info(f"Block added successfully: index={new_block_index}, hash={current_hash[:10]}...")
-            # Return just the block_index instead of the full block dict
-            return new_block_index
+            # Return the full block dict for API compatibility
+            return block_to_store_in_db
         except Exception as e:
             logger.error(f"BlockManager: Error adding block to DB - {e}", exc_info=True)
             return None
