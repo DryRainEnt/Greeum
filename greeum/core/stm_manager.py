@@ -3,9 +3,12 @@ import numpy as np
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 from .database_manager import DatabaseManager
+import logging
+
+logger = logging.getLogger(__name__)
 
 class STMManager:
-    """단기 기억(Short-Term Memory)을 관리하는 클래스 (DatabaseManager 사용)"""
+    """단기 기억(Short-Term Memory)을 관리하는 클래스 - Branch/DFS 헤드 포인터 역할"""
     
     def __init__(self, db_manager: DatabaseManager, ttl: int = 3600):
         """
@@ -22,6 +25,23 @@ class STMManager:
         self.promotion_threshold = 0.75  # 유사도 임계값
         self.access_count_threshold = 3  # 접근 횟수 임계값
         self.memory_access_count = {}  # 메모리 ID별 접근 횟수
+        
+        # Branch/DFS: STM slots as branch head pointers
+        self.branch_heads = {
+            "A": None,  # Slot A head block ID
+            "B": None,  # Slot B head block ID  
+            "C": None   # Slot C head block ID
+        }
+        
+        # Hysteresis tracking for slot stability
+        self.slot_hysteresis = {
+            "A": {"last_seen_at": 0, "access_count": 0},
+            "B": {"last_seen_at": 0, "access_count": 0},
+            "C": {"last_seen_at": 0, "access_count": 0}
+        }
+        
+        # Initialize slots from most recent blocks
+        self._initialize_branch_heads()
         
     def clean_expired(self) -> int:
         """만료된 기억 제거 (DatabaseManager 사용)"""
@@ -184,3 +204,146 @@ class STMManager:
                 'total_slots': 'TTL-based',
                 'ttl_seconds': self.ttl
             }
+    
+    def _initialize_branch_heads(self):
+        """Initialize branch heads from database or recent blocks"""
+        try:
+            cursor = self.db_manager.conn.cursor()
+            
+            # First try to restore from branch_meta
+            cursor.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='branch_meta'
+            """)
+            
+            if cursor.fetchone():
+                # Try to load saved heads
+                cursor.execute("""
+                    SELECT heads FROM branch_meta 
+                    ORDER BY last_modified DESC 
+                    LIMIT 1
+                """)
+                result = cursor.fetchone()
+                
+                if result and result[0]:
+                    import json
+                    try:
+                        saved_heads = json.loads(result[0])
+                        if isinstance(saved_heads, dict) and saved_heads:
+                            self.branch_heads.update(saved_heads)
+                            for slot in self.branch_heads:
+                                self.slot_hysteresis[slot]["last_seen_at"] = time.time()
+                            logger.info(f"Restored branch heads from database: {list(saved_heads.keys())}")
+                            return
+                    except json.JSONDecodeError:
+                        pass
+            
+            # Fallback: Initialize from recent blocks
+            # Check if root column exists
+            cursor.execute("PRAGMA table_info(blocks)")
+            columns = {row[1] for row in cursor.fetchall()}
+            
+            if 'root' in columns:
+                cursor.execute("""
+                    SELECT block_index, hash, root, timestamp 
+                    FROM blocks 
+                    ORDER BY timestamp DESC 
+                    LIMIT 3
+                """)
+            else:
+                # Fallback without root column
+                cursor.execute("""
+                    SELECT block_index, hash, NULL as root, timestamp 
+                    FROM blocks 
+                    ORDER BY timestamp DESC 
+                    LIMIT 3
+                """)
+            
+            recent_blocks = cursor.fetchall()
+            
+            slots = ["A", "B", "C"]
+            for i, block in enumerate(recent_blocks):
+                if i < len(slots):
+                    self.branch_heads[slots[i]] = block[1]  # Use hash as block ID
+                    self.slot_hysteresis[slots[i]]["last_seen_at"] = time.time()
+                    logger.debug(f"Initialized slot {slots[i]} with block {block[0]}")
+                    
+        except Exception as e:
+            logger.warning(f"Failed to initialize branch heads: {e}")
+    
+    def get_active_head(self, slot: str = None) -> Optional[str]:
+        """Get active branch head for given slot or most recent"""
+        if slot and slot in self.branch_heads:
+            return self.branch_heads[slot]
+        
+        # Return most recently used head
+        most_recent_slot = max(
+            self.slot_hysteresis.keys(),
+            key=lambda k: self.slot_hysteresis[k]["last_seen_at"]
+        )
+        return self.branch_heads[most_recent_slot]
+    
+    def update_head(self, slot: str, new_head_id: str):
+        """Update branch head for given slot with persistence"""
+        if slot not in self.branch_heads:
+            logger.warning(f"Invalid slot: {slot}")
+            return
+        
+        old_head = self.branch_heads[slot]
+        self.branch_heads[slot] = new_head_id
+        self.slot_hysteresis[slot]["last_seen_at"] = time.time()
+        self.slot_hysteresis[slot]["access_count"] += 1
+        
+        # Persist to database (branch_meta table)
+        try:
+            cursor = self.db_manager.conn.cursor()
+            
+            # Get root from the new head block
+            cursor.execute("SELECT root FROM blocks WHERE hash = ?", (new_head_id,))
+            result = cursor.fetchone()
+            root_id = result[0] if result and result[0] else new_head_id
+            
+            # Update or insert branch_meta
+            import json
+            heads_json = json.dumps(self.branch_heads)
+            
+            cursor.execute("""
+                INSERT OR REPLACE INTO branch_meta (root, heads, last_modified)
+                VALUES (?, ?, ?)
+            """, (root_id, heads_json, time.time()))
+            
+            self.db_manager.conn.commit()
+            
+        except Exception as e:
+            logger.warning(f"Failed to persist head update: {e}")
+        
+        logger.info(f"Updated slot {slot} head: {old_head} -> {new_head_id}")
+    
+    def get_branch_heads_info(self) -> Dict[str, Any]:
+        """Get information about all branch heads"""
+        info = {}
+        for slot, head_id in self.branch_heads.items():
+            if head_id:
+                try:
+                    cursor = self.db_manager.conn.cursor()
+                    cursor.execute("""
+                        SELECT block_index, root, timestamp, context
+                        FROM blocks 
+                        WHERE hash = ?
+                    """, (head_id,))
+                    block_info = cursor.fetchone()
+                    
+                    if block_info:
+                        info[slot] = {
+                            "head_id": head_id,
+                            "block_index": block_info[0],
+                            "root": block_info[1],
+                            "timestamp": block_info[2],
+                            "context_preview": block_info[3][:50] if block_info[3] else "",
+                            "last_seen_at": self.slot_hysteresis[slot]["last_seen_at"],
+                            "access_count": self.slot_hysteresis[slot]["access_count"]
+                        }
+                except Exception as e:
+                    logger.warning(f"Failed to get info for slot {slot}: {e}")
+                    
+        return info

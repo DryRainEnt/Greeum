@@ -324,7 +324,8 @@ class BranchManager:
         def dfs(node_id: str, depth: int):
             nonlocal hop_count
             
-            if depth > max_depth or node_id in visited:  # > 로 변경 (깊이 1 레벨 추가)
+            # 깊이 제한을 엄격히 적용 (>= 사용)
+            if depth >= max_depth or node_id in visited:
                 return
                 
             visited.add(node_id)

@@ -20,6 +20,7 @@ class BlockManager:
             db_manager: DatabaseManager (없으면 기본 SQLite 파일 생성)
         """
         self.db_manager = db_manager or DatabaseManager()
+        self.merge_checkpoints = []  # Store merge checkpoints
         
         # v2.7.0: Initialize causal reasoning system (disabled for v3.0 stability)
         self.causal_manager = None
@@ -49,6 +50,16 @@ class BlockManager:
             logger.warning(f"AssociationNetwork not available: {e}")
             self.association_network = None
             self.spreading_activation = None
+        
+        # v3.0.0: MergeEngine 통합 - 자동 머지 엔진
+        try:
+            from .merge_engine import MergeEngine
+            self.merge_engine = MergeEngine(db_manager=self.db_manager)
+            logger.info("MergeEngine integrated successfully")
+        except ImportError as e:
+            logger.warning(f"MergeEngine not available: {e}")
+            self.merge_engine = None
+            self.spreading_activation = None
         except Exception as e:
             logger.error(f"AssociationNetwork initialization failed: {e}")
             self.association_network = None
@@ -77,14 +88,62 @@ class BlockManager:
     def add_block(self, context: str, keywords: List[str], tags: List[str], 
                  embedding: List[float], importance: float, 
                  metadata: Optional[Dict[str, Any]] = None,
-                 embedding_model: Optional[str] = 'default') -> Optional[Dict[str, Any]]:
+                 embedding_model: Optional[str] = 'default',
+                 slot: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
-        새 블록 추가 (DatabaseManager 사용)
+        새 블록 추가 - Branch/DFS 구조로 저장
+        
+        Args:
+            context: 메모리 내용
+            keywords: 키워드 리스트
+            tags: 태그 리스트
+            embedding: 임베딩 벡터
+            importance: 중요도
+            metadata: 추가 메타데이터
+            embedding_model: 임베딩 모델 이름
+            slot: STM 슬롯 (A/B/C) - 지정하지 않으면 가장 최근 슬롯 사용
         """
         import time
+        import uuid
         write_start_time = time.time()
         
-        logger.debug(f"add_block called: context='{context[:20]}...'")
+        logger.debug(f"add_block called: context='{context[:20]}...', slot={slot}")
+        
+        # Get STM manager for branch head management
+        from .stm_manager import STMManager
+        stm = STMManager(self.db_manager)
+        
+        # Auto-merge evaluation (before adding new block)
+        if self.merge_engine and slot:
+            self._evaluate_auto_merge(stm, slot)
+        
+        # Get active head from STM slot
+        head_id = stm.get_active_head(slot)
+        head_block = None
+        root_id = None
+        before_id = None
+        
+        if head_id:
+            # Get head block info
+            cursor = self.db_manager.conn.cursor()
+            cursor.execute("""
+                SELECT block_index, root, hash FROM blocks WHERE hash = ?
+            """, (head_id,))
+            head_info = cursor.fetchone()
+            
+            if head_info:
+                head_block = {
+                    'block_index': head_info[0],
+                    'root': head_info[1] or head_id,  # Use head as root if no root
+                    'hash': head_info[2]
+                }
+                root_id = head_block['root']
+                before_id = head_block['hash']
+        
+        # Generate new block ID
+        new_block_id = str(uuid.uuid4())
+        
+        # Get next block index
         last_block_info = self.db_manager.get_last_block_info()
         
         new_block_index: int
@@ -118,6 +177,17 @@ class BlockManager:
         # v2.4.0a2: 액탄트 분석 정보 자동 추가
         enhanced_metadata = self._enhance_metadata_with_actants(context, metadata or {})
         
+        # Branch/DFS fields
+        branch_fields = {
+            "root": root_id or new_block_id,  # If no root, this block becomes root
+            "before": before_id,
+            "after": [],  # Will be populated with children later
+            "xref": [],  # Cross-references
+            "branch_depth": 0 if not head_block else 1,  # Simple depth for now
+            "visit_count": 0,
+            "last_seen_at": time.time()
+        }
+        
         block_to_store_in_db = {
             "block_index": new_block_index,
             "timestamp": current_timestamp,
@@ -130,7 +200,8 @@ class BlockManager:
             "prev_hash": prev_h,
             "metadata": enhanced_metadata,
             "embedding_model": embedding_model,
-            "links": links  # M2: Store neighbor links cache
+            "links": links,  # M2: Store neighbor links cache
+            **branch_fields  # Add branch fields
         }
         
         try:
@@ -138,6 +209,36 @@ class BlockManager:
             # add_block이 실제 추가된 블록의 index를 반환한다고 가정 (DB auto-increment 시 유용)
             # 현재 DatabaseManager.add_block은 전달된 block_data.get('block_index')를 사용하므로, added_idx는 new_block_index와 같음.
             added_block = self.db_manager.get_block(new_block_index)
+            
+            # Update parent's after field if we have a parent
+            if before_id:
+                try:
+                    cursor = self.db_manager.conn.cursor()
+                    # Get current after array
+                    cursor.execute("SELECT after FROM blocks WHERE hash = ?", (before_id,))
+                    result = cursor.fetchone()
+                    if result:
+                        after_list = json.loads(result[0] or '[]')
+                        after_list.append(current_hash)
+                        cursor.execute(
+                            "UPDATE blocks SET after = ? WHERE hash = ?",
+                            (json.dumps(after_list), before_id)
+                        )
+                        self.db_manager.conn.commit()
+                        logger.debug(f"Updated parent {before_id} after field with child {current_hash}")
+                except Exception as e:
+                    logger.warning(f"Failed to update parent after field: {e}")
+            
+            # Update STM head to new block
+            if slot:
+                stm.update_head(slot, current_hash)
+            else:
+                # Update most recent slot
+                most_recent_slot = max(
+                    stm.slot_hysteresis.keys(),
+                    key=lambda k: stm.slot_hysteresis[k]["last_seen_at"]
+                )
+                stm.update_head(most_recent_slot, current_hash)
             
             # v2.7.0: Analyze causal relationships after successful block addition
             if self.causal_manager and added_block:
@@ -497,6 +598,85 @@ class BlockManager:
         # return result 
         return self.db_manager.filter_blocks_by_importance(threshold=threshold, limit=limit, order='desc')
     
+    def _evaluate_auto_merge(self, stm, current_slot: str):
+        """Evaluate auto-merge between STM slots"""
+        if not self.merge_engine:
+            return
+            
+        slots = ['A', 'B', 'C']
+        other_slots = [s for s in slots if s != current_slot]
+        
+        for other_slot in other_slots:
+            # Get heads for comparison
+            head_current = stm.get_active_head(current_slot)
+            head_other = stm.get_active_head(other_slot)
+            
+            if not head_current or not head_other:
+                continue
+                
+            # Get block data for merge evaluation
+            block_current = self._get_block_by_hash(head_current)
+            block_other = self._get_block_by_hash(head_other)
+            
+            if not block_current or not block_other:
+                continue
+                
+            # Skip if different roots
+            if block_current.get('root') != block_other.get('root'):
+                continue
+                
+            # Calculate merge score
+            try:
+                merge_score = self.merge_engine.calculate_merge_score(block_current, block_other)
+                
+                # Record similarity for EMA tracking
+                self.merge_engine.record_similarity(current_slot, other_slot, merge_score.total)
+                
+                # Evaluate if merge should happen
+                result = self.merge_engine.evaluate_merge(current_slot, other_slot, dry_run=False)
+                
+                if result.should_merge:
+                    logger.info(f"Auto-merge triggered between slots {current_slot} and {other_slot}: {result.reason}")
+                    checkpoint = self.merge_engine.apply_merge(current_slot, other_slot)
+                    self.merge_checkpoints.append(checkpoint)
+                    
+            except Exception as e:
+                logger.error(f"Auto-merge evaluation failed: {e}")
+    
+    def _get_block_by_hash(self, block_hash: str) -> Optional[Dict]:
+        """Get block data by hash"""
+        try:
+            cursor = self.db_manager.conn.cursor()
+            cursor.execute("""
+                SELECT block_index, hash, root, before, content, tags, 
+                       embedding, created_at, stats
+                FROM blocks WHERE hash = ?
+            """, (block_hash,))
+            
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'block_index': row[0],
+                    'id': row[1],
+                    'hash': row[1],
+                    'root': row[2],
+                    'before': row[3],
+                    'content': json.loads(row[4]) if row[4] else {},
+                    'tags': json.loads(row[5]) if row[5] else {},
+                    'embedding': json.loads(row[6]) if row[6] else None,
+                    'created_at': row[7],
+                    'stats': json.loads(row[8]) if row[8] else {}
+                }
+        except Exception as e:
+            logger.error(f"Failed to get block by hash: {e}")
+        return None
+    
+    def undo_merge(self, checkpoint_id: str) -> bool:
+        """Undo a merge checkpoint"""
+        if not self.merge_engine:
+            return False
+        return self.merge_engine.undo_checkpoint(checkpoint_id)
+    
     def verify_integrity(self) -> bool:
         """
         블록체인 무결성 검증
@@ -631,23 +811,26 @@ class BlockManager:
     def search_with_slots(self, query: str, limit: int = 5, use_slots: bool = True, 
                          include_relationships: bool = False, **options) -> List[Dict[str, Any]]:
         """
-        v2.5.1 슬롯 시스템을 활용한 향상된 검색
+        v3.0.0+ Branch/DFS 우선 검색 시스템
         
         Args:
             query: 검색 쿼리
             limit: 반환할 결과 수
             use_slots: 슬롯 우선 검색 활성화
-            include_relationships: 관계 기반 확장 검색 (v2.5.2+)
+            include_relationships: 관계 기반 확장 검색
             **options: 추가 검색 옵션
-                - slot: 특정 슬롯 지정 (예: 'A', 'B')
-                - radius: 앵커 기반 검색 반경 (기본값: 2)
+                - slot: 특정 슬롯 지정 (예: 'A', 'B', 'C')
+                - depth: DFS 최대 깊이 (기본값: 3)
                 - fallback: 국소 검색 실패 시 전역 검색 (기본값: True)
+                - include_meta: 검색 메타데이터 포함 (기본값: True)
             
         Returns:
-            검색 결과 리스트 (슬롯 + LTM 통합)
+            검색 결과 리스트 (메타데이터 포함)
         """
         from datetime import datetime
         import time
+        from .dfs_search import DFSSearchEngine
+        
         search_start_time = datetime.utcnow()
         metrics_start_time = time.time()
         
@@ -661,27 +844,84 @@ class BlockManager:
         
         # 옵션 파싱
         target_slot = options.get('slot', None)
-        search_radius = options.get('radius', 2)
+        search_depth = options.get('depth', 3)
         use_fallback = options.get('fallback', True)
+        include_meta = options.get('include_meta', True)
         
-        logger.debug(f"Enhanced search: query='{query}', use_slots={use_slots}, slot={target_slot}, radius={search_radius}")
+        # Get query embedding if available
+        query_embedding = None
+        try:
+            from ..embedding_models import EmbeddingRegistry
+            registry = EmbeddingRegistry()
+            model = registry.get_model('default')
+            if model:
+                query_embedding = model.encode(query)
+        except:
+            pass
         
+        # Phase 1: DFS Local-First Search
+        dfs_engine = DFSSearchEngine(self.db_manager)
+        results, search_meta = dfs_engine.search_with_dfs(
+            query=query,
+            query_embedding=query_embedding,
+            slot=target_slot,
+            depth=search_depth,
+            limit=limit,
+            fallback=use_fallback
+        )
+        
+        # Update metrics from DFS search
+        nodes_visited = search_meta.get("hops", 0)
+        fallback_triggered = search_meta.get("fallback_used", False)
+        search_type = search_meta.get("search_type", "local")
+        
+        # Update internal metrics
+        self.metrics['total_searches'] += 1
+        self.metrics['total_hops'] += nodes_visited
+        self.metrics['search_count'] += 1
+        
+        if nodes_visited > 0:
+            self.metrics['avg_hops'] = self.metrics['total_hops'] / self.metrics['search_count']
+        
+        if not fallback_triggered:
+            self.metrics['local_hit_rate'] = self.metrics.get('local_hit_rate', 0) * 0.9 + 0.1  # EMA
+        else:
+            self.metrics['local_hit_rate'] = self.metrics.get('local_hit_rate', 0) * 0.9  # Decay
+        
+        # Add metadata to results if requested
+        if include_meta:
+            for result in results:
+                if '_meta' not in result:
+                    result['_meta'] = search_meta
+        
+        # Log search performance
+        elapsed_ms = (time.time() - metrics_start_time) * 1000
+        logger.info(f"DFS search completed in {elapsed_ms:.1f}ms: "
+                   f"type={search_type}, hops={nodes_visited}, "
+                   f"results={len(results)}, fallback={fallback_triggered}")
+        
+        # Analytics tracking
+        try:
+            from .usage_analytics import UsageAnalytics
+            analytics = UsageAnalytics()
+            analytics.record_search(
+                query=query,
+                results_count=len(results),
+                search_type=search_type,
+                latency_ms=elapsed_ms,
+                metadata=search_meta
+            )
+        except:
+            pass
+        
+        return results
+        
+        # Legacy code below (kept for compatibility but not executed)
         all_results = []
         slots_results_count = 0
         ltm_results_count = 0
         graph_search_used = False
         fallback_used = False
-        
-        # Analytics 추적을 위한 변수
-        analytics = None
-        try:
-            from .usage_analytics import UsageAnalytics
-            analytics = UsageAnalytics()
-        except ImportError:
-            pass
-        
-        # 메트릭 업데이트
-        self.metrics['total_searches'] += 1
         
         # Phase 0: 앵커 기반 국소 그래프 탐색 (NEW)
         if use_slots and target_slot:

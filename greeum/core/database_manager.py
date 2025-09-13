@@ -5,6 +5,7 @@ import numpy as np
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 import logging
+from .branch_schema import BranchSchemaSQL, BranchBlock, BranchMeta, SearchMeta
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,7 @@ class DatabaseManager:
         # Create v3.0.0 tables if needed
         self._create_v3_tables(cursor)
         
-        # 블록 테이블
+        # 블록 테이블 생성 (먼저 기본 테이블 생성)
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS blocks (
             block_index INTEGER PRIMARY KEY,
@@ -110,6 +111,11 @@ class DatabaseManager:
             prev_hash TEXT NOT NULL
         )
         ''')
+        
+        # Check and apply branch schema migration if needed (테이블 생성 후 마이그레이션)
+        if BranchSchemaSQL.check_migration_needed(cursor):
+            logger.info("Applying branch schema migration...")
+            self._apply_branch_migration(cursor)
         
         # 키워드 테이블 (M:N 관계)
         cursor.execute('''
@@ -348,18 +354,46 @@ class DatabaseManager:
         cursor = self.conn.cursor()
         # logger.debug(f"새 블록 추가 시도: index={block_data.get('block_index')}")  # Debug logging
         
-        # 1. 블록 기본 정보 삽입
-        cursor.execute('''
-        INSERT INTO blocks (block_index, timestamp, context, importance, hash, prev_hash)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ''', (
-            block_data.get('block_index'),
-            block_data.get('timestamp'),
-            block_data.get('context'),
-            block_data.get('importance', 0.0),
-            block_data.get('hash'),
-            block_data.get('prev_hash', '')
-        ))
+        # 1. 블록 기본 정보 삽입 (브랜치 필드 포함)
+        # Check if branch columns exist
+        cursor.execute("PRAGMA table_info(blocks)")
+        columns = {row[1] for row in cursor.fetchall()}
+        has_branch_columns = {'root', 'before', 'after'}.issubset(columns)
+        
+        if has_branch_columns:
+            # Insert with branch fields
+            cursor.execute('''
+            INSERT INTO blocks (block_index, timestamp, context, importance, hash, prev_hash,
+                              root, before, after, xref, branch_depth, visit_count, last_seen_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                block_data.get('block_index'),
+                block_data.get('timestamp'),
+                block_data.get('context'),
+                block_data.get('importance', 0.0),
+                block_data.get('hash'),
+                block_data.get('prev_hash', ''),
+                block_data.get('root'),
+                block_data.get('before'),
+                json.dumps(block_data.get('after', [])),
+                json.dumps(block_data.get('xref', [])),
+                block_data.get('branch_depth', 0),
+                block_data.get('visit_count', 0),
+                block_data.get('last_seen_at', 0)
+            ))
+        else:
+            # Legacy insert without branch fields
+            cursor.execute('''
+            INSERT INTO blocks (block_index, timestamp, context, importance, hash, prev_hash)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                block_data.get('block_index'),
+                block_data.get('timestamp'),
+                block_data.get('context'),
+                block_data.get('importance', 0.0),
+                block_data.get('hash'),
+                block_data.get('prev_hash', '')
+            ))
         
         block_index = block_data.get('block_index')
         
@@ -438,6 +472,22 @@ class DatabaseManager:
             block = dict(row)
         else:
             block = row
+        
+        # Parse branch fields if they exist
+        cursor.execute("PRAGMA table_info(blocks)")
+        columns = {row[1] for row in cursor.fetchall()}
+        
+        if 'after' in columns and 'after' in block:
+            try:
+                block['after'] = json.loads(block.get('after', '[]'))
+            except:
+                block['after'] = []
+        
+        if 'xref' in columns and 'xref' in block:
+            try:
+                block['xref'] = json.loads(block.get('xref', '[]'))
+            except:
+                block['xref'] = []
         
         # 2. 키워드 조회
         cursor.execute('''
@@ -806,6 +856,30 @@ class DatabaseManager:
         self.conn.commit()
         
         return deleted_count
+    
+    def _apply_branch_migration(self, cursor):
+        """Apply branch schema migration to existing database"""
+        try:
+            # Get migration SQL statements
+            migration_sqls = BranchSchemaSQL.get_migration_sql()
+            
+            for sql in migration_sqls:
+                try:
+                    cursor.execute(sql)
+                    logger.debug(f"Executed migration SQL: {sql[:50]}...")
+                except sqlite3.OperationalError as e:
+                    # Skip if column/table already exists
+                    if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
+                        logger.debug(f"Skipping migration (already applied): {sql[:50]}...")
+                    else:
+                        logger.warning(f"Migration SQL failed: {e}")
+            
+            self.conn.commit()
+            logger.info("Branch schema migration completed successfully")
+            
+        except Exception as e:
+            logger.error(f"Branch schema migration failed: {e}")
+            raise
     
     def migrate_from_jsonl(self, block_file_path: str) -> int:
         """
