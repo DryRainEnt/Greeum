@@ -1,0 +1,472 @@
+"""
+Branch Manager Test Suite
+브랜치 기반 메모리 시스템 테스트
+"""
+
+import unittest
+import time
+import uuid
+from typing import List, Dict, Any
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from greeum.core.branch_manager import BranchManager, BranchBlock, BranchMeta, SearchResult
+from greeum.core.branch_migration import BranchMigration
+from greeum.core.branch_global_index import GlobalIndex
+
+
+class TestBranchManager(unittest.TestCase):
+    """BranchManager 테스트"""
+    
+    def setUp(self):
+        """테스트 환경 설정"""
+        self.manager = BranchManager()
+        
+    def test_add_block_creates_new_branch(self):
+        """새 브랜치 생성 테스트"""
+        # 첫 블록 추가
+        block = self.manager.add_block(
+            content="프로젝트 시작",
+            root="project-1",
+            tags={"actants": {"subject": "user", "action": "start", "object": "project"}}
+        )
+        
+        self.assertIsNotNone(block)
+        self.assertEqual(block.root, "project-1")
+        self.assertIsNone(block.before)  # 첫 블록이므로 부모 없음
+        self.assertEqual(len(block.after), 0)  # 아직 자식 없음
+        
+        # 브랜치 메타 확인
+        self.assertIn("project-1", self.manager.branches)
+        branch_meta = self.manager.branches["project-1"]
+        self.assertEqual(branch_meta.size, 1)
+        self.assertEqual(branch_meta.heads["A"], block.id)  # 기본 슬롯 A
+        
+    def test_add_block_continues_branch(self):
+        """브랜치 연속 추가 테스트"""
+        # 첫 블록
+        block1 = self.manager.add_block(
+            content="작업 시작",
+            root="project-1"
+        )
+        
+        # 두번째 블록 (이어서 추가)
+        block2 = self.manager.add_block(
+            content="작업 진행중",
+            slot="A"  # 같은 슬롯
+        )
+        
+        self.assertEqual(block2.root, block1.root)  # 같은 루트
+        self.assertEqual(block2.before, block1.id)  # block1이 부모
+        self.assertIn(block2.id, self.manager.blocks[block1.id].after)  # block1의 자식
+        
+        # 브랜치 메타 업데이트 확인
+        branch_meta = self.manager.branches["project-1"]
+        self.assertEqual(branch_meta.size, 2)
+        self.assertEqual(branch_meta.heads["A"], block2.id)  # 헤드 이동
+        
+    def test_dfs_local_search_hits(self):
+        """DFS 로컬 검색 히트 테스트"""
+        # 브랜치 구성
+        blocks = []
+        for i in range(5):
+            block = self.manager.add_block(
+                content=f"작업 {i}: 에러 수정" if i % 2 == 0 else f"작업 {i}: 기능 추가",
+                root="project-1"
+            )
+            blocks.append(block)
+            
+        # "에러" 검색
+        result = self.manager.search(
+            query="에러",
+            slot="A",
+            depth=3,
+            k=5
+        )
+        
+        self.assertIsInstance(result, SearchResult)
+        self.assertGreater(len(result.items), 0)
+        self.assertEqual(result.meta['search_type'], 'dfs_local')
+        self.assertLessEqual(result.meta['depth_used'], 3)
+        
+        # 검색된 블록들이 "에러"를 포함하는지 확인
+        for block in result.items:
+            self.assertIn("에러", block.content['text'])
+            
+    def test_dfs_depth_limit(self):
+        """DFS 깊이 제한 테스트"""
+        # 깊은 브랜치 생성
+        for i in range(10):
+            self.manager.add_block(
+                content=f"깊이 {i}",
+                root="deep-branch"
+            )
+            
+        # 얕은 깊이로 검색
+        result = self.manager.search(
+            query="깊이 9",  # 마지막 블록
+            slot="A",
+            depth=2,  # 깊이 제한
+            k=5
+        )
+        
+        # 깊이 9는 찾을 수 없어야 함
+        found_depth_9 = any("깊이 9" in b.content['text'] for b in result.items)
+        self.assertFalse(found_depth_9)
+        
+        # 메타데이터 확인
+        self.assertLessEqual(result.meta['hops'], 3)  # depth 2 + 1
+        
+    def test_stm_slot_management(self):
+        """STM 슬롯 관리 테스트"""
+        # 슬롯 A에 블록 추가
+        block_a = self.manager.add_block(content="슬롯 A 작업", slot="A", root="root-a")
+        
+        # 슬롯 B에 블록 추가
+        block_b = self.manager.add_block(content="슬롯 B 작업", slot="B", root="root-b")
+        
+        # 슬롯 C에 블록 추가
+        block_c = self.manager.add_block(content="슬롯 C 작업", slot="C", root="root-c")
+        
+        # 각 슬롯 헤드 확인
+        self.assertEqual(self.manager.stm_slots["A"], block_a.id)
+        self.assertEqual(self.manager.stm_slots["B"], block_b.id)
+        self.assertEqual(self.manager.stm_slots["C"], block_c.id)
+        
+        # 서로 다른 브랜치 확인
+        self.assertNotEqual(block_a.root, block_b.root)
+        self.assertNotEqual(block_b.root, block_c.root)
+        
+    def test_score_calculation(self):
+        """스코어 계산 테스트"""
+        # 테스트용 블록 생성
+        recent_block = BranchBlock(
+            id="recent",
+            root="test",
+            before=None,
+            content={'text': "최근 에러 수정 작업"},
+            stats={'visit': 0}
+        )
+        
+        old_block = BranchBlock(
+            id="old",
+            root="test",
+            before=None,
+            content={'text': "오래된 에러 수정 작업"},
+            stats={'visit': 10},
+            created_at=time.time() - 30 * 24 * 3600  # 30일 전
+        )
+        
+        # 스코어 계산
+        recent_score = self.manager._calculate_score("에러 수정", recent_block, local=True)
+        old_score = self.manager._calculate_score("에러 수정", old_block, local=True)
+        
+        # 최근 블록이 더 높은 스코어를 가져야 함
+        self.assertGreater(recent_score, old_score)
+        
+    def test_metrics_tracking(self):
+        """메트릭 추적 테스트"""
+        # 여러 검색 수행
+        for i in range(5):
+            self.manager.add_block(content=f"테스트 {i}", root="test-root")
+            
+        for _ in range(3):
+            self.manager.search("테스트", k=2)
+            
+        metrics = self.manager.get_metrics()
+        
+        self.assertEqual(metrics['total_searches'], 3)
+        self.assertGreaterEqual(metrics['avg_hops'], 0)
+        self.assertIn('local_hit_rate', metrics)
+        
+
+class TestBranchMigration(unittest.TestCase):
+    """BranchMigration 테스트"""
+    
+    def setUp(self):
+        """테스트 환경 설정"""
+        self.migration = BranchMigration()
+        
+    def test_simple_migration(self):
+        """간단한 마이그레이션 테스트"""
+        # 그래프 데이터 (시간순)
+        graph_data = [
+            {
+                'id': 'node1',
+                'block_index': 1,
+                'context': '첫번째 노드',
+                'timestamp': time.time() - 3600,
+                'hash': 'hash1',
+                'prev_hash': ''
+            },
+            {
+                'id': 'node2',
+                'block_index': 2,
+                'context': '두번째 노드',
+                'timestamp': time.time() - 1800,
+                'hash': 'hash2',
+                'prev_hash': 'hash1'
+            },
+            {
+                'id': 'node3',
+                'block_index': 3,
+                'context': '세번째 노드',
+                'timestamp': time.time() - 900,
+                'hash': 'hash3',
+                'prev_hash': 'hash2'
+            }
+        ]
+        
+        result = self.migration.migrate_graph_to_branch(graph_data)
+        
+        # 마이그레이션 결과 확인
+        self.assertIn('branches', result)
+        self.assertIn('stm_slots', result)
+        self.assertIn('stats', result)
+        
+        # 통계 확인
+        stats = result['stats']
+        self.assertEqual(stats['total_nodes'], 3)
+        self.assertEqual(stats['migrated_nodes'], 3)
+        self.assertEqual(stats['orphan_nodes'], 0)
+        
+        # STM 슬롯 확인 (최근 3개)
+        stm = result['stm_slots']
+        self.assertEqual(stm['A'], 'node3')  # 가장 최근
+        self.assertEqual(stm['B'], 'node2')
+        self.assertEqual(stm['C'], 'node1')
+        
+    def test_cycle_removal(self):
+        """사이클 제거 테스트"""
+        # 사이클이 있는 그래프
+        graph_data = [
+            {
+                'id': 'node1',
+                'context': '노드 1',
+                'timestamp': time.time() - 3000,
+                'related_nodes': {'node3': 0.8}  # node3와 연결 (사이클)
+            },
+            {
+                'id': 'node2',
+                'context': '노드 2',
+                'timestamp': time.time() - 2000,
+                'related_nodes': {'node1': 0.9}
+            },
+            {
+                'id': 'node3',
+                'context': '노드 3',
+                'timestamp': time.time() - 1000,
+                'related_nodes': {'node2': 0.7}
+            }
+        ]
+        
+        result = self.migration.migrate_graph_to_branch(graph_data)
+        
+        # xref로 사이클이 처리되었는지 확인
+        self.assertIn('xrefs', result)
+        if result['xrefs']:
+            self.assertGreater(len(result['xrefs']), 0)
+            
+        # 모든 노드가 마이그레이션되었는지 확인
+        stats = result['stats']
+        self.assertEqual(stats['total_nodes'], 3)
+        
+    def test_orphan_handling(self):
+        """고아 노드 처리 테스트"""
+        # 연결되지 않은 노드들
+        graph_data = [
+            {'id': 'node1', 'context': '독립 노드 1', 'timestamp': time.time() - 3000},
+            {'id': 'node2', 'context': '독립 노드 2', 'timestamp': time.time() - 2000},
+            {'id': 'node3', 'context': '독립 노드 3', 'timestamp': time.time() - 1000},
+        ]
+        
+        result = self.migration.migrate_graph_to_branch(graph_data)
+        
+        # 기본 루트에 추가되었는지 확인
+        branches = result['branches']
+        self.assertIn('root_default', branches)
+        
+        # 통계 확인
+        stats = result['stats']
+        self.assertGreater(stats['orphan_nodes'], 0)
+        
+
+class TestGlobalIndex(unittest.TestCase):
+    """GlobalIndex 테스트"""
+    
+    def setUp(self):
+        """테스트 환경 설정"""
+        self.index = GlobalIndex()
+        
+    def test_keyword_indexing(self):
+        """키워드 인덱싱 테스트"""
+        # 노드 추가
+        self.index.add_node(
+            node_id="node1",
+            content="Python 프로그래밍 에러 수정",
+            root="root1",
+            created_at=time.time()
+        )
+        
+        self.index.add_node(
+            node_id="node2",
+            content="JavaScript 코드 리뷰",
+            root="root1",
+            created_at=time.time()
+        )
+        
+        # 키워드 검색
+        results = self.index.search_keywords("프로그래밍", limit=5)
+        
+        self.assertGreater(len(results), 0)
+        self.assertEqual(results[0][0], "node1")  # node1이 매칭
+        
+    def test_vector_search(self):
+        """벡터 검색 테스트"""
+        # 노드 추가
+        self.index.add_node(
+            node_id="node1",
+            content="머신러닝 모델 학습",
+            root="root1",
+            created_at=time.time()
+        )
+        
+        self.index.add_node(
+            node_id="node2",
+            content="딥러닝 네트워크 구성",
+            root="root1",
+            created_at=time.time()
+        )
+        
+        # 벡터 검색
+        query_embedding = self.index._create_simple_embedding("머신러닝 학습")
+        results = self.index.search_vectors(query_embedding, limit=5)
+        
+        self.assertGreater(len(results), 0)
+        self.assertGreater(results[0][1], 0)  # 유사도 > 0
+        
+    def test_hybrid_search(self):
+        """하이브리드 검색 테스트"""
+        # 다양한 노드 추가
+        nodes = [
+            ("node1", "Python 에러 디버깅 작업", "project1"),
+            ("node2", "JavaScript 버그 수정", "project1"),
+            ("node3", "Python 성능 최적화", "project2"),
+            ("node4", "데이터베이스 쿼리 최적화", "project2"),
+        ]
+        
+        for node_id, content, root in nodes:
+            self.index.add_node(
+                node_id=node_id,
+                content=content,
+                root=root,
+                created_at=time.time()
+            )
+            
+        # 하이브리드 검색
+        results = self.index.hybrid_search("Python 최적화", limit=3)
+        
+        self.assertGreater(len(results), 0)
+        # Python과 최적화를 모두 포함하는 node3가 상위에 있어야 함
+        top_nodes = [r[0] for r in results[:2]]
+        self.assertIn("node3", top_nodes)
+        
+    def test_entry_points_diversity(self):
+        """엔트리 포인트 다양성 테스트"""
+        # 여러 루트의 노드 추가
+        for root_idx in range(3):
+            for node_idx in range(3):
+                self.index.add_node(
+                    node_id=f"node_{root_idx}_{node_idx}",
+                    content=f"작업 {root_idx} 내용 {node_idx}",
+                    root=f"root{root_idx}",
+                    created_at=time.time()
+                )
+                
+        # 엔트리 포인트 가져오기
+        entries = self.index.get_entry_points("작업", limit=3)
+        
+        # 서로 다른 루트에서 선택되었는지 확인
+        roots = set()
+        for entry in entries:
+            if entry in self.index.node_meta:
+                roots.add(self.index.node_meta[entry]['root'])
+                
+        self.assertGreaterEqual(len(roots), 2)  # 최소 2개 이상의 다른 루트
+        
+    def test_node_removal(self):
+        """노드 제거 테스트"""
+        # 노드 추가
+        self.index.add_node(
+            node_id="node1",
+            content="테스트 노드",
+            root="root1",
+            created_at=time.time()
+        )
+        
+        # 통계 확인
+        stats_before = self.index.get_stats()
+        self.assertEqual(stats_before['total_nodes'], 1)
+        
+        # 노드 제거
+        self.index.remove_node("node1")
+        
+        # 제거 후 확인
+        stats_after = self.index.get_stats()
+        self.assertEqual(stats_after['total_nodes'], 0)
+        
+        # 검색에서도 나타나지 않아야 함
+        results = self.index.search_keywords("테스트", limit=5)
+        self.assertEqual(len(results), 0)
+
+
+class TestIntegration(unittest.TestCase):
+    """통합 테스트"""
+    
+    def test_full_workflow(self):
+        """전체 워크플로우 테스트"""
+        # 1. 기존 그래프 데이터
+        graph_data = [
+            {'id': f'node{i}', 'context': f'작업 {i}', 'timestamp': time.time() - i*100}
+            for i in range(10)
+        ]
+        
+        # 2. 마이그레이션
+        migration = BranchMigration()
+        migration_result = migration.migrate_graph_to_branch(graph_data)
+        
+        # 3. BranchManager 초기화
+        manager = BranchManager()
+        
+        # 4. 마이그레이션된 데이터로 브랜치 생성
+        for root_id, nodes in migration_result['branches'].items():
+            for node in nodes:
+                if node['before'] is None:  # 루트 노드
+                    manager.add_block(
+                        content=node['content'],
+                        root=root_id
+                    )
+                    
+        # 5. 전역 인덱스 구성
+        global_index = GlobalIndex()
+        for root_id, nodes in migration_result['branches'].items():
+            for node in nodes:
+                global_index.add_node(
+                    node_id=node['id'],
+                    content=node['content'],
+                    root=root_id,
+                    created_at=node['created_at']
+                )
+                
+        # 6. 검색 테스트
+        result = manager.search("작업", k=5)
+        self.assertGreater(len(result.items), 0)
+        
+        # 7. 메트릭 확인
+        metrics = manager.get_metrics()
+        self.assertGreater(metrics['total_searches'], 0)
+
+
+if __name__ == '__main__':
+    unittest.main()

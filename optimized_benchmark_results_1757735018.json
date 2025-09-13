@@ -1,0 +1,4273 @@
+[
+  {
+    "timestamp": 1757735017.999552,
+    "workload_size": 100,
+    "query_count": 50,
+    "legacy_results": {
+      "system": "legacy_graph",
+      "workload_size": 100,
+      "avg_insert_time": 0.016541481018066406,
+      "p95_insert_time": 0.019788742065429688,
+      "avg_search_time": 0.052285194396972656,
+      "avg_hops": 23.0,
+      "hit_rate": 0.6,
+      "total_searches": 50,
+      "graph_stats": {
+        "total_nodes": 100,
+        "total_edges": 588,
+        "avg_degree": 5.88,
+        "recent_nodes_count": 100
+      },
+      "search_results": [
+        {
+          "query": "처리",
+          "results_count": 3,
+          "search_time": 0.07295608520507812,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개발 컴포넌트",
+          "results_count": 0,
+          "search_time": 0.05507469177246094,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "문제 변환",
+          "results_count": 4,
+          "search_time": 0.05507469177246094,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개발 토큰",
+          "results_count": 0,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 파이프라인",
+          "results_count": 10,
+          "search_time": 0.0591278076171875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "UI 라우팅",
+          "results_count": 0,
+          "search_time": 0.052928924560546875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "변환 저장",
+          "results_count": 8,
+          "search_time": 0.053882598876953125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "최적화 데이터",
+          "results_count": 9,
+          "search_time": 0.05507469177246094,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "성능 UI",
+          "results_count": 3,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "성능 처리",
+          "results_count": 5,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "보안 JWT",
+          "results_count": 0,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개발 상태관리",
+          "results_count": 0,
+          "search_time": 0.05078315734863281,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 UI",
+          "results_count": 4,
+          "search_time": 0.05817413330078125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "저장",
+          "results_count": 4,
+          "search_time": 0.04696846008300781,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "버그 파이프라인",
+          "results_count": 7,
+          "search_time": 0.052928924560546875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "최적화 변환",
+          "results_count": 6,
+          "search_time": 0.0629425048828125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 로그인",
+          "results_count": 7,
+          "search_time": 0.057220458984375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개선 ETL",
+          "results_count": 3,
+          "search_time": 0.053882598876953125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "버그 데이터",
+          "results_count": 6,
+          "search_time": 0.05412101745605469,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "성능 인증",
+          "results_count": 3,
+          "search_time": 0.052928924560546875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "문제 사용자",
+          "results_count": 0,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 상태관리",
+          "results_count": 7,
+          "search_time": 0.052928924560546875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "구현 ETL",
+          "results_count": 3,
+          "search_time": 0.052928924560546875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "상태관리 컴포넌트",
+          "results_count": 0,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "최적화 ETL",
+          "results_count": 6,
+          "search_time": 0.05173683166503906,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개선 저장",
+          "results_count": 4,
+          "search_time": 0.05125999450683594,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "구현 보안",
+          "results_count": 0,
+          "search_time": 0.053882598876953125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개선 라우팅",
+          "results_count": 0,
+          "search_time": 0.05125999450683594,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 데이터",
+          "results_count": 10,
+          "search_time": 0.055789947509765625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "스타일링 라우팅",
+          "results_count": 0,
+          "search_time": 0.05221366882324219,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "구현 JWT",
+          "results_count": 0,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "사용자 토큰",
+          "results_count": 0,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "버그 JWT",
+          "results_count": 0,
+          "search_time": 0.04982948303222656,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "버그 변환",
+          "results_count": 4,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "성능 JWT",
+          "results_count": 3,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "최적화 인증",
+          "results_count": 3,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "JWT",
+          "results_count": 0,
+          "search_time": 0.057220458984375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "최적화 상태관리",
+          "results_count": 3,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "문제 컴포넌트",
+          "results_count": 0,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "문제 토큰",
+          "results_count": 0,
+          "search_time": 0.05125999450683594,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "성능 JWT",
+          "results_count": 3,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "사용자 로그인",
+          "results_count": 0,
+          "search_time": 0.05173683166503906,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개선 사용자",
+          "results_count": 0,
+          "search_time": 0.050067901611328125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "데이터",
+          "results_count": 6,
+          "search_time": 0.048160552978515625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "인증 JWT",
+          "results_count": 0,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개선 데이터",
+          "results_count": 6,
+          "search_time": 0.05412101745605469,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 UI",
+          "results_count": 7,
+          "search_time": 0.054836273193359375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "처리 데이터",
+          "results_count": 9,
+          "search_time": 0.06222724914550781,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "문제 파이프라인",
+          "results_count": 7,
+          "search_time": 0.055789947509765625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "사용자 토큰",
+          "results_count": 0,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        }
+      ]
+    },
+    "original_branch_results": {
+      "system": "branch_based",
+      "workload_size": 100,
+      "avg_insert_time": 0.0355839729309082,
+      "p95_insert_time": 0.05123615264892578,
+      "avg_search_time": 0.42137622833251953,
+      "avg_hops": 1.0,
+      "local_hit_rate": 0.0,
+      "fallback_rate": 1.0,
+      "total_searches": 50,
+      "branch_stats": {
+        "total_branches": 3,
+        "slot_distribution": {
+          "frontend-app": "A",
+          "auth-service": "B",
+          "data-pipeline": "C"
+        }
+      },
+      "search_results": [
+        {
+          "query": "처리",
+          "results_count": 10,
+          "search_time": 0.5502700805664062,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "개발 컴포넌트",
+          "results_count": 10,
+          "search_time": 0.42891502380371094,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "문제 변환",
+          "results_count": 10,
+          "search_time": 0.4322528839111328,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "개발 토큰",
+          "results_count": 10,
+          "search_time": 0.41985511779785156,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "에러 파이프라인",
+          "results_count": 9,
+          "search_time": 0.4222393035888672,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "slot_used": "C"
+        },
+        {
+          "query": "UI 라우팅",
+          "results_count": 10,
+          "search_time": 0.42629241943359375,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "변환 저장",
+          "results_count": 10,
+          "search_time": 0.4210472106933594,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "최적화 데이터",
+          "results_count": 10,
+          "search_time": 0.41961669921875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "성능 UI",
+          "results_count": 9,
+          "search_time": 0.40435791015625,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "slot_used": "A"
+        },
+        {
+          "query": "성능 처리",
+          "results_count": 10,
+          "search_time": 0.4169940948486328,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "보안 JWT",
+          "results_count": 10,
+          "search_time": 0.4229545593261719,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "개발 상태관리",
+          "results_count": 10,
+          "search_time": 0.40984153747558594,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "추가 UI",
+          "results_count": 9,
+          "search_time": 0.42629241943359375,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "slot_used": "A"
+        },
+        {
+          "query": "저장",
+          "results_count": 10,
+          "search_time": 0.5178451538085938,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "버그 파이프라인",
+          "results_count": 10,
+          "search_time": 0.43201446533203125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "최적화 변환",
+          "results_count": 10,
+          "search_time": 0.41103363037109375,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 로그인",
+          "results_count": 10,
+          "search_time": 0.41484832763671875,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 ETL",
+          "results_count": 10,
+          "search_time": 0.4050731658935547,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "버그 데이터",
+          "results_count": 10,
+          "search_time": 0.4177093505859375,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "성능 인증",
+          "results_count": 10,
+          "search_time": 0.41604042053222656,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 사용자",
+          "results_count": 10,
+          "search_time": 0.3981590270996094,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "A"
+        },
+        {
+          "query": "에러 상태관리",
+          "results_count": 9,
+          "search_time": 0.40411949157714844,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "slot_used": "C"
+        },
+        {
+          "query": "구현 ETL",
+          "results_count": 10,
+          "search_time": 0.40912628173828125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "상태관리 컴포넌트",
+          "results_count": 10,
+          "search_time": 0.4048347473144531,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "최적화 ETL",
+          "results_count": 10,
+          "search_time": 0.4558563232421875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 저장",
+          "results_count": 10,
+          "search_time": 0.41794776916503906,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "구현 보안",
+          "results_count": 10,
+          "search_time": 0.41484832763671875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 라우팅",
+          "results_count": 10,
+          "search_time": 0.40721893310546875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 데이터",
+          "results_count": 10,
+          "search_time": 0.4267692565917969,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "스타일링 라우팅",
+          "results_count": 10,
+          "search_time": 0.40793418884277344,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "구현 JWT",
+          "results_count": 10,
+          "search_time": 0.41604042053222656,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "사용자 토큰",
+          "results_count": 10,
+          "search_time": 0.41222572326660156,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "버그 JWT",
+          "results_count": 10,
+          "search_time": 0.41675567626953125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "버그 변환",
+          "results_count": 10,
+          "search_time": 0.4181861877441406,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "B"
+        },
+        {
+          "query": "성능 JWT",
+          "results_count": 10,
+          "search_time": 0.41294097900390625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "최적화 인증",
+          "results_count": 10,
+          "search_time": 0.41794776916503906,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "JWT",
+          "results_count": 10,
+          "search_time": 0.392913818359375,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "최적화 상태관리",
+          "results_count": 10,
+          "search_time": 0.4119873046875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 컴포넌트",
+          "results_count": 10,
+          "search_time": 0.4019737243652344,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 토큰",
+          "results_count": 10,
+          "search_time": 0.5319118499755859,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "성능 JWT",
+          "results_count": 10,
+          "search_time": 0.40602684020996094,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "사용자 로그인",
+          "results_count": 10,
+          "search_time": 0.4019737243652344,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 사용자",
+          "results_count": 10,
+          "search_time": 0.4000663757324219,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "데이터",
+          "results_count": 10,
+          "search_time": 0.4119873046875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "인증 JWT",
+          "results_count": 10,
+          "search_time": 0.41294097900390625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 데이터",
+          "results_count": 10,
+          "search_time": 0.4138946533203125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "에러 UI",
+          "results_count": 8,
+          "search_time": 0.4031658172607422,
+          "search_type": "dfs_partial",
+          "hops": 8,
+          "slot_used": "C"
+        },
+        {
+          "query": "처리 데이터",
+          "results_count": 10,
+          "search_time": 0.4048347473144531,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "문제 파이프라인",
+          "results_count": 10,
+          "search_time": 0.4067420959472656,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "사용자 토큰",
+          "results_count": 10,
+          "search_time": 0.4119873046875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        }
+      ]
+    },
+    "optimized_branch_results": {
+      "system": "optimized_branch",
+      "workload_size": 100,
+      "avg_insert_time": 0.02510547637939453,
+      "p95_insert_time": 0.031948089599609375,
+      "avg_search_time": 0.34363703294233844,
+      "avg_hops": 1.0,
+      "local_hit_rate": 0.0,
+      "fallback_rate": 1.0,
+      "cache_hit_rate": 0.24242424242424243,
+      "total_searches": 66,
+      "search_type_distribution": {
+        "global_assisted": {
+          "count": 58,
+          "total_time": 20.421266555786133,
+          "total_hops": 634,
+          "avg_time": 0.3520908026859678,
+          "avg_hops": 10.931034482758621
+        },
+        "dfs_partial": {
+          "count": 8,
+          "total_time": 2.258777618408203,
+          "total_hops": 71,
+          "avg_time": 0.2823472023010254,
+          "avg_hops": 8.875
+        }
+      },
+      "branch_stats": {
+        "total_branches": 3,
+        "slot_distribution": {
+          "frontend-app": "A",
+          "auth-service": "B",
+          "data-pipeline": "C"
+        },
+        "cache_size": 50
+      },
+      "search_results": [
+        {
+          "query": "처리",
+          "results_count": 10,
+          "search_time": 0.4138946533203125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "개발 컴포넌트",
+          "results_count": 10,
+          "search_time": 0.40793418884277344,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "문제 변환",
+          "results_count": 10,
+          "search_time": 0.40984153747558594,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "개발 토큰",
+          "results_count": 10,
+          "search_time": 0.40912628173828125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "에러 파이프라인",
+          "results_count": 9,
+          "search_time": 0.4220008850097656,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "UI 라우팅",
+          "results_count": 10,
+          "search_time": 0.4279613494873047,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "변환 저장",
+          "results_count": 10,
+          "search_time": 0.42819976806640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "최적화 데이터",
+          "results_count": 10,
+          "search_time": 0.41985511779785156,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "성능 UI",
+          "results_count": 9,
+          "search_time": 0.5450248718261719,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "성능 처리",
+          "results_count": 10,
+          "search_time": 0.44798851013183594,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "보안 JWT",
+          "results_count": 10,
+          "search_time": 0.4379749298095703,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "개발 상태관리",
+          "results_count": 10,
+          "search_time": 0.3991127014160156,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "추가 UI",
+          "results_count": 9,
+          "search_time": 0.42891502380371094,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "저장",
+          "results_count": 10,
+          "search_time": 0.3933906555175781,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "버그 파이프라인",
+          "results_count": 10,
+          "search_time": 0.4208087921142578,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "최적화 변환",
+          "results_count": 10,
+          "search_time": 0.4100799560546875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 로그인",
+          "results_count": 10,
+          "search_time": 0.4150867462158203,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 ETL",
+          "results_count": 10,
+          "search_time": 0.41294097900390625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "버그 데이터",
+          "results_count": 10,
+          "search_time": 0.4239082336425781,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "성능 인증",
+          "results_count": 10,
+          "search_time": 0.4239082336425781,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 사용자",
+          "results_count": 10,
+          "search_time": 0.4241466522216797,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "에러 상태관리",
+          "results_count": 9,
+          "search_time": 0.4317760467529297,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "구현 ETL",
+          "results_count": 10,
+          "search_time": 0.4279613494873047,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "상태관리 컴포넌트",
+          "results_count": 10,
+          "search_time": 0.40602684020996094,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "최적화 ETL",
+          "results_count": 10,
+          "search_time": 0.4189014434814453,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 저장",
+          "results_count": 10,
+          "search_time": 0.41604042053222656,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "구현 보안",
+          "results_count": 10,
+          "search_time": 0.40602684020996094,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 라우팅",
+          "results_count": 10,
+          "search_time": 0.3991127014160156,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 데이터",
+          "results_count": 10,
+          "search_time": 0.4239082336425781,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "스타일링 라우팅",
+          "results_count": 10,
+          "search_time": 0.40602684020996094,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "구현 JWT",
+          "results_count": 10,
+          "search_time": 0.40602684020996094,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "사용자 토큰",
+          "results_count": 10,
+          "search_time": 0.40984153747558594,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "버그 JWT",
+          "results_count": 10,
+          "search_time": 0.44417381286621094,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "버그 변환",
+          "results_count": 10,
+          "search_time": 0.4177093505859375,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "성능 JWT",
+          "results_count": 10,
+          "search_time": 0.4131793975830078,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "최적화 인증",
+          "results_count": 10,
+          "search_time": 0.40984153747558594,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "JWT",
+          "results_count": 10,
+          "search_time": 0.392913818359375,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "최적화 상태관리",
+          "results_count": 10,
+          "search_time": 1.8999576568603516,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 컴포넌트",
+          "results_count": 10,
+          "search_time": 0.41484832763671875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 토큰",
+          "results_count": 10,
+          "search_time": 0.41413307189941406,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "성능 JWT",
+          "results_count": 10,
+          "search_time": 0.43892860412597656,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "사용자 로그인",
+          "results_count": 10,
+          "search_time": 0.5118846893310547,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 사용자",
+          "results_count": 10,
+          "search_time": 0.41985511779785156,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "데이터",
+          "results_count": 10,
+          "search_time": 0.41604042053222656,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "인증 JWT",
+          "results_count": 10,
+          "search_time": 0.4258155822753906,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 데이터",
+          "results_count": 10,
+          "search_time": 0.42819976806640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "에러 UI",
+          "results_count": 8,
+          "search_time": 0.42700767517089844,
+          "search_type": "dfs_partial",
+          "hops": 8,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "처리 데이터",
+          "results_count": 10,
+          "search_time": 0.4100799560546875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "문제 파이프라인",
+          "results_count": 10,
+          "search_time": 0.40793418884277344,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "사용자 토큰",
+          "results_count": 10,
+          "search_time": 0.4909038543701172,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "처리",
+          "results_count": 10,
+          "search_time": 0.005245208740234375,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "개발 컴포넌트",
+          "results_count": 10,
+          "search_time": 0.00286102294921875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "문제 변환",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "개발 토큰",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "에러 파이프라인",
+          "results_count": 9,
+          "search_time": 0.0019073486328125,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "UI 라우팅",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "변환 저장",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "최적화 데이터",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "성능 UI",
+          "results_count": 9,
+          "search_time": 0.00095367431640625,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "성능 처리",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "보안 JWT",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "개발 상태관리",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "추가 UI",
+          "results_count": 9,
+          "search_time": 0.0011920928955078125,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "저장",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "버그 파이프라인",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "최적화 변환",
+          "results_count": 10,
+          "search_time": 0.0007152557373046875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        }
+      ]
+    },
+    "improvements": {
+      "original_vs_legacy": {
+        "search_time_improvement": -705.9188326493388,
+        "hops_reduction": 95.65217391304348,
+        "insert_time_improvement": -115.11963101758431,
+        "hit_rate_comparison": {
+          "old": 0.6,
+          "new": 0.0,
+          "improvement": -0.6
+        }
+      },
+      "optimized_vs_legacy": {
+        "search_time_improvement": -557.2358330224267,
+        "hops_reduction": 95.65217391304348,
+        "insert_time_improvement": -51.77284520034592,
+        "hit_rate_comparison": {
+          "old": 0.6,
+          "new": 0.0,
+          "improvement": -0.6
+        }
+      },
+      "optimized_vs_original": {
+        "search_time_improvement": 18.44888016056638,
+        "hops_reduction": 0.0,
+        "insert_time_improvement": 29.447236180904525,
+        "hit_rate_comparison": {
+          "old": 0.0,
+          "new": 0.0,
+          "improvement": 0.0
+        }
+      }
+    }
+  },
+  {
+    "timestamp": 1757735018.158153,
+    "workload_size": 200,
+    "query_count": 100,
+    "legacy_results": {
+      "system": "legacy_graph",
+      "workload_size": 200,
+      "avg_insert_time": 0.014911890029907227,
+      "p95_insert_time": 0.01621246337890625,
+      "avg_search_time": 0.049185752868652344,
+      "avg_hops": 23.0,
+      "hit_rate": 0.66,
+      "total_searches": 100,
+      "graph_stats": {
+        "total_nodes": 200,
+        "total_edges": 1188,
+        "avg_degree": 5.94,
+        "recent_nodes_count": 100
+      },
+      "search_results": [
+        {
+          "query": "에러 저장",
+          "results_count": 0,
+          "search_time": 0.0591278076171875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 처리",
+          "results_count": 1,
+          "search_time": 0.052928924560546875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "로그인",
+          "results_count": 1,
+          "search_time": 0.04506111145019531,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "구현 처리",
+          "results_count": 0,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "보안 JWT",
+          "results_count": 1,
+          "search_time": 0.05078315734863281,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "저장 처리",
+          "results_count": 0,
+          "search_time": 0.04935264587402344,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "구현 JWT",
+          "results_count": 0,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "상태관리",
+          "results_count": 1,
+          "search_time": 0.04506111145019531,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 저장",
+          "results_count": 0,
+          "search_time": 0.04792213439941406,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "상태관리 스타일링",
+          "results_count": 9,
+          "search_time": 0.053882598876953125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "보안",
+          "results_count": 1,
+          "search_time": 0.046253204345703125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "최적화 UI",
+          "results_count": 3,
+          "search_time": 0.05078315734863281,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "버그 처리",
+          "results_count": 1,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 ETL",
+          "results_count": 0,
+          "search_time": 0.049114227294921875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개선 상태관리",
+          "results_count": 2,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 스타일링",
+          "results_count": 9,
+          "search_time": 0.05507469177246094,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "최적화 라우팅",
+          "results_count": 5,
+          "search_time": 0.053882598876953125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 인증",
+          "results_count": 2,
+          "search_time": 0.049114227294921875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "최적화 처리",
+          "results_count": 0,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개선 컴포넌트",
+          "results_count": 8,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "구현 스타일링",
+          "results_count": 8,
+          "search_time": 0.052928924560546875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "라우팅 스타일링",
+          "results_count": 10,
+          "search_time": 0.05412101745605469,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 로그인",
+          "results_count": 1,
+          "search_time": 0.049114227294921875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "라우팅 상태관리",
+          "results_count": 6,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "변환",
+          "results_count": 0,
+          "search_time": 0.04506111145019531,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "구현 상태관리",
+          "results_count": 1,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "로그인 인증",
+          "results_count": 2,
+          "search_time": 0.050067901611328125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "보안 로그인",
+          "results_count": 2,
+          "search_time": 0.04982948303222656,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "문제 ETL",
+          "results_count": 0,
+          "search_time": 0.049114227294921875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "성능 ETL",
+          "results_count": 0,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "저장",
+          "results_count": 0,
+          "search_time": 0.047206878662109375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "상태관리 UI",
+          "results_count": 4,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "문제 토큰",
+          "results_count": 0,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "UI",
+          "results_count": 3,
+          "search_time": 0.04410743713378906,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 변환",
+          "results_count": 0,
+          "search_time": 0.049114227294921875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "최적화 저장",
+          "results_count": 0,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "구현 파이프라인",
+          "results_count": 0,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "로그인 사용자",
+          "results_count": 1,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 스타일링",
+          "results_count": 9,
+          "search_time": 0.053882598876953125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "상태관리",
+          "results_count": 1,
+          "search_time": 0.04601478576660156,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 로그인",
+          "results_count": 1,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "변환",
+          "results_count": 0,
+          "search_time": 0.0457763671875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개발 상태관리",
+          "results_count": 5,
+          "search_time": 0.05316734313964844,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "변환 저장",
+          "results_count": 0,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "구현 컴포넌트",
+          "results_count": 6,
+          "search_time": 0.053882598876953125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개선 UI",
+          "results_count": 5,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "버그 컴포넌트",
+          "results_count": 7,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "로그인",
+          "results_count": 1,
+          "search_time": 0.04506111145019531,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 JWT",
+          "results_count": 0,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "성능 ETL",
+          "results_count": 0,
+          "search_time": 0.04935264587402344,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개선 스타일링",
+          "results_count": 9,
+          "search_time": 0.056743621826171875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 저장",
+          "results_count": 0,
+          "search_time": 0.048160552978515625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 JWT",
+          "results_count": 1,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개발 JWT",
+          "results_count": 4,
+          "search_time": 0.050067901611328125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 UI",
+          "results_count": 4,
+          "search_time": 0.050067901611328125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개발 상태관리",
+          "results_count": 5,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "라우팅 상태관리",
+          "results_count": 6,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "구현 파이프라인",
+          "results_count": 0,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "인증 토큰",
+          "results_count": 1,
+          "search_time": 0.05125999450683594,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "버그 파이프라인",
+          "results_count": 1,
+          "search_time": 0.04982948303222656,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "구현 처리",
+          "results_count": 0,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "최적화 저장",
+          "results_count": 0,
+          "search_time": 0.05030632019042969,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "데이터 변환",
+          "results_count": 0,
+          "search_time": 0.04982948303222656,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "ETL",
+          "results_count": 0,
+          "search_time": 0.04506111145019531,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "구현 보안",
+          "results_count": 1,
+          "search_time": 0.04982948303222656,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 보안",
+          "results_count": 2,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 UI",
+          "results_count": 3,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "JWT 사용자",
+          "results_count": 0,
+          "search_time": 0.07009506225585938,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "보안 토큰",
+          "results_count": 1,
+          "search_time": 0.05888938903808594,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 인증",
+          "results_count": 2,
+          "search_time": 0.053882598876953125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "저장",
+          "results_count": 0,
+          "search_time": 0.04601478576660156,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "스타일링 라우팅",
+          "results_count": 10,
+          "search_time": 0.05793571472167969,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "최적화 스타일링",
+          "results_count": 8,
+          "search_time": 0.05412101745605469,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "처리 ETL",
+          "results_count": 0,
+          "search_time": 0.04982948303222656,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 ETL",
+          "results_count": 1,
+          "search_time": 0.050067901611328125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "문제 라우팅",
+          "results_count": 5,
+          "search_time": 0.051021575927734375,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "컴포넌트 라우팅",
+          "results_count": 8,
+          "search_time": 0.052928924560546875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 저장",
+          "results_count": 1,
+          "search_time": 0.05316734313964844,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "데이터",
+          "results_count": 0,
+          "search_time": 0.0438690185546875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "사용자",
+          "results_count": 0,
+          "search_time": 0.04410743713378906,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "보안 로그인",
+          "results_count": 2,
+          "search_time": 0.052928924560546875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 인증",
+          "results_count": 1,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개선 UI",
+          "results_count": 5,
+          "search_time": 0.05507469177246094,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 인증",
+          "results_count": 2,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "JWT",
+          "results_count": 0,
+          "search_time": 0.04410743713378906,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개선 라우팅",
+          "results_count": 7,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "JWT",
+          "results_count": 0,
+          "search_time": 0.04410743713378906,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 JWT",
+          "results_count": 1,
+          "search_time": 0.04982948303222656,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 ETL",
+          "results_count": 0,
+          "search_time": 0.05412101745605469,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "보안 로그인",
+          "results_count": 2,
+          "search_time": 0.049114227294921875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "로그인",
+          "results_count": 1,
+          "search_time": 0.04696846008300781,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개발 데이터",
+          "results_count": 4,
+          "search_time": 0.050067901611328125,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "에러 변환",
+          "results_count": 0,
+          "search_time": 0.04935264587402344,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 인증",
+          "results_count": 2,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개발 보안",
+          "results_count": 5,
+          "search_time": 0.05078315734863281,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "추가 UI",
+          "results_count": 4,
+          "search_time": 0.05125999450683594,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "JWT 보안",
+          "results_count": 1,
+          "search_time": 0.04982948303222656,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "버그 UI",
+          "results_count": 4,
+          "search_time": 0.04887580871582031,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개선 스타일링",
+          "results_count": 9,
+          "search_time": 0.052928924560546875,
+          "hops": 23,
+          "visited_nodes": 23
+        },
+        {
+          "query": "개발 라우팅",
+          "results_count": 6,
+          "search_time": 0.051975250244140625,
+          "hops": 23,
+          "visited_nodes": 23
+        }
+      ]
+    },
+    "original_branch_results": {
+      "system": "branch_based",
+      "workload_size": 200,
+      "avg_insert_time": 0.027434825897216797,
+      "p95_insert_time": 0.034046173095703125,
+      "avg_search_time": 0.6943202018737793,
+      "avg_hops": 1.0,
+      "local_hit_rate": 0.0,
+      "fallback_rate": 1.0,
+      "total_searches": 100,
+      "branch_stats": {
+        "total_branches": 3,
+        "slot_distribution": {
+          "data-pipeline": "A",
+          "frontend-app": "B",
+          "auth-service": "C"
+        }
+      },
+      "search_results": [
+        {
+          "query": "에러 저장",
+          "results_count": 10,
+          "search_time": 0.8692741394042969,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 처리",
+          "results_count": 10,
+          "search_time": 0.8568763732910156,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "로그인",
+          "results_count": 10,
+          "search_time": 0.8192062377929688,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "구현 처리",
+          "results_count": 10,
+          "search_time": 0.8001327514648438,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "보안 JWT",
+          "results_count": 10,
+          "search_time": 0.7510185241699219,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "B"
+        },
+        {
+          "query": "저장 처리",
+          "results_count": 9,
+          "search_time": 1.0590553283691406,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "slot_used": "A"
+        },
+        {
+          "query": "구현 JWT",
+          "results_count": 10,
+          "search_time": 0.7317066192626953,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "상태관리",
+          "results_count": 10,
+          "search_time": 0.7240772247314453,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 저장",
+          "results_count": 10,
+          "search_time": 0.0021457672119140625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "상태관리 스타일링",
+          "results_count": 10,
+          "search_time": 0.7398128509521484,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "보안",
+          "results_count": 9,
+          "search_time": 0.6949901580810547,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "slot_used": "C"
+        },
+        {
+          "query": "최적화 UI",
+          "results_count": 10,
+          "search_time": 0.7939338684082031,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "버그 처리",
+          "results_count": 9,
+          "search_time": 0.7390975952148438,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 ETL",
+          "results_count": 10,
+          "search_time": 0.8459091186523438,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "개선 상태관리",
+          "results_count": 10,
+          "search_time": 0.7548332214355469,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 스타일링",
+          "results_count": 10,
+          "search_time": 0.8041858673095703,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "최적화 라우팅",
+          "results_count": 10,
+          "search_time": 0.74005126953125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "추가 인증",
+          "results_count": 10,
+          "search_time": 0.7851123809814453,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "최적화 처리",
+          "results_count": 10,
+          "search_time": 0.8380413055419922,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "개선 컴포넌트",
+          "results_count": 10,
+          "search_time": 0.7526874542236328,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "구현 스타일링",
+          "results_count": 10,
+          "search_time": 0.7259845733642578,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "라우팅 스타일링",
+          "results_count": 10,
+          "search_time": 0.8940696716308594,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 로그인",
+          "results_count": 10,
+          "search_time": 0.7929801940917969,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "라우팅 상태관리",
+          "results_count": 10,
+          "search_time": 0.7278919219970703,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "변환",
+          "results_count": 10,
+          "search_time": 0.8120536804199219,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "구현 상태관리",
+          "results_count": 10,
+          "search_time": 0.7338523864746094,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "로그인 인증",
+          "results_count": 10,
+          "search_time": 0.7028579711914062,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "보안 로그인",
+          "results_count": 10,
+          "search_time": 0.7102489471435547,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 ETL",
+          "results_count": 10,
+          "search_time": 0.7398128509521484,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "성능 ETL",
+          "results_count": 10,
+          "search_time": 0.7801055908203125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "저장",
+          "results_count": 10,
+          "search_time": 0.7202625274658203,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "C"
+        },
+        {
+          "query": "상태관리 UI",
+          "results_count": 10,
+          "search_time": 0.7379055023193359,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 토큰",
+          "results_count": 10,
+          "search_time": 0.7102489471435547,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "UI",
+          "results_count": 9,
+          "search_time": 0.7240772247314453,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "slot_used": "B"
+        },
+        {
+          "query": "에러 변환",
+          "results_count": 10,
+          "search_time": 0.7648468017578125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "최적화 저장",
+          "results_count": 10,
+          "search_time": 0.7841587066650391,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "구현 파이프라인",
+          "results_count": 10,
+          "search_time": 0.7498264312744141,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "로그인 사용자",
+          "results_count": 10,
+          "search_time": 0.7059574127197266,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 스타일링",
+          "results_count": 10,
+          "search_time": 0.0019073486328125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "상태관리",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 로그인",
+          "results_count": 10,
+          "search_time": 0.7369518280029297,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "변환",
+          "results_count": 10,
+          "search_time": 0.7369518280029297,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "개발 상태관리",
+          "results_count": 10,
+          "search_time": 0.7271766662597656,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "변환 저장",
+          "results_count": 10,
+          "search_time": 0.7638931274414062,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "구현 컴포넌트",
+          "results_count": 10,
+          "search_time": 0.7212162017822266,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 UI",
+          "results_count": 10,
+          "search_time": 0.7417201995849609,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "버그 컴포넌트",
+          "results_count": 9,
+          "search_time": 0.720977783203125,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "slot_used": "C"
+        },
+        {
+          "query": "로그인",
+          "results_count": 10,
+          "search_time": 0.0019073486328125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "에러 JWT",
+          "results_count": 10,
+          "search_time": 0.7460117340087891,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "성능 ETL",
+          "results_count": 10,
+          "search_time": 1.062154769897461,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 스타일링",
+          "results_count": 10,
+          "search_time": 0.8540153503417969,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 저장",
+          "results_count": 10,
+          "search_time": 0.804901123046875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "추가 JWT",
+          "results_count": 10,
+          "search_time": 0.9779930114746094,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "개발 JWT",
+          "results_count": 10,
+          "search_time": 0.7102489471435547,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 UI",
+          "results_count": 10,
+          "search_time": 0.7910728454589844,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "개발 상태관리",
+          "results_count": 10,
+          "search_time": 0.7228851318359375,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "라우팅 상태관리",
+          "results_count": 10,
+          "search_time": 0.0021457672119140625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "구현 파이프라인",
+          "results_count": 10,
+          "search_time": 0.7622241973876953,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "인증 토큰",
+          "results_count": 10,
+          "search_time": 0.7081031799316406,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "버그 파이프라인",
+          "results_count": 10,
+          "search_time": 0.7607936859130859,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "구현 처리",
+          "results_count": 10,
+          "search_time": 0.7469654083251953,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "최적화 저장",
+          "results_count": 10,
+          "search_time": 0.7669925689697266,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "데이터 변환",
+          "results_count": 10,
+          "search_time": 0.7631778717041016,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "ETL",
+          "results_count": 10,
+          "search_time": 0.7688999176025391,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "구현 보안",
+          "results_count": 10,
+          "search_time": 0.7686614990234375,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 보안",
+          "results_count": 10,
+          "search_time": 0.8232593536376953,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "에러 UI",
+          "results_count": 10,
+          "search_time": 0.7929801940917969,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "JWT 사용자",
+          "results_count": 10,
+          "search_time": 0.7166862487792969,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "보안 토큰",
+          "results_count": 10,
+          "search_time": 0.7269382476806641,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "B"
+        },
+        {
+          "query": "추가 인증",
+          "results_count": 10,
+          "search_time": 0.7989406585693359,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "저장",
+          "results_count": 9,
+          "search_time": 0.7202625274658203,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "slot_used": "A"
+        },
+        {
+          "query": "스타일링 라우팅",
+          "results_count": 10,
+          "search_time": 0.7588863372802734,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "최적화 스타일링",
+          "results_count": 10,
+          "search_time": 0.7760524749755859,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "처리 ETL",
+          "results_count": 10,
+          "search_time": 0.8630752563476562,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "추가 ETL",
+          "results_count": 10,
+          "search_time": 0.8268356323242188,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 라우팅",
+          "results_count": 10,
+          "search_time": 0.7312297821044922,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "컴포넌트 라우팅",
+          "results_count": 10,
+          "search_time": 0.7398128509521484,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 저장",
+          "results_count": 10,
+          "search_time": 0.7951259613037109,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "데이터",
+          "results_count": 10,
+          "search_time": 0.7228851318359375,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "사용자",
+          "results_count": 10,
+          "search_time": 0.7059574127197266,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "B"
+        },
+        {
+          "query": "보안 로그인",
+          "results_count": 10,
+          "search_time": 0.0019073486328125,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "A"
+        },
+        {
+          "query": "에러 인증",
+          "results_count": 10,
+          "search_time": 0.7379055023193359,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "개선 UI",
+          "results_count": 10,
+          "search_time": 0.7491111755371094,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "추가 인증",
+          "results_count": 10,
+          "search_time": 0.0019073486328125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "JWT",
+          "results_count": 10,
+          "search_time": 0.881195068359375,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "개선 라우팅",
+          "results_count": 10,
+          "search_time": 0.7410049438476562,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "JWT",
+          "results_count": 10,
+          "search_time": 0.698089599609375,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 JWT",
+          "results_count": 10,
+          "search_time": 0.7901191711425781,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 ETL",
+          "results_count": 10,
+          "search_time": 0.804901123046875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "보안 로그인",
+          "results_count": 10,
+          "search_time": 0.7159709930419922,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "B"
+        },
+        {
+          "query": "로그인",
+          "results_count": 10,
+          "search_time": 0.6959438323974609,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "개발 데이터",
+          "results_count": 10,
+          "search_time": 0.7472038269042969,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "에러 변환",
+          "results_count": 10,
+          "search_time": 0.0016689300537109375,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 인증",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "B"
+        },
+        {
+          "query": "개발 보안",
+          "results_count": 10,
+          "search_time": 0.7212162017822266,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "B"
+        },
+        {
+          "query": "추가 UI",
+          "results_count": 10,
+          "search_time": 0.9171962738037109,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "JWT 보안",
+          "results_count": 10,
+          "search_time": 0.7371902465820312,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "A"
+        },
+        {
+          "query": "버그 UI",
+          "results_count": 10,
+          "search_time": 0.7290840148925781,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 스타일링",
+          "results_count": 10,
+          "search_time": 0.0021457672119140625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        },
+        {
+          "query": "개발 라우팅",
+          "results_count": 10,
+          "search_time": 0.7679462432861328,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "slot_used": "C"
+        }
+      ]
+    },
+    "optimized_branch_results": {
+      "system": "optimized_branch",
+      "workload_size": 200,
+      "avg_insert_time": 0.028891563415527344,
+      "p95_insert_time": 0.03685951232910156,
+      "avg_search_time": 0.5154932351936972,
+      "avg_hops": 1.0,
+      "local_hit_rate": 0.0,
+      "fallback_rate": 1.0,
+      "cache_hit_rate": 0.3233082706766917,
+      "total_searches": 133,
+      "search_type_distribution": {
+        "global_assisted": {
+          "count": 124,
+          "total_time": 63.961029052734375,
+          "total_hops": 1348,
+          "avg_time": 0.5158147504252772,
+          "avg_hops": 10.870967741935484
+        },
+        "dfs_partial": {
+          "count": 9,
+          "total_time": 4.599571228027344,
+          "total_hops": 81,
+          "avg_time": 0.511063469780816,
+          "avg_hops": 9.0
+        }
+      },
+      "branch_stats": {
+        "total_branches": 3,
+        "slot_distribution": {
+          "data-pipeline": "A",
+          "frontend-app": "B",
+          "auth-service": "C"
+        },
+        "cache_size": 90
+      },
+      "search_results": [
+        {
+          "query": "에러 저장",
+          "results_count": 10,
+          "search_time": 0.8230209350585938,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 처리",
+          "results_count": 10,
+          "search_time": 0.8311271667480469,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "로그인",
+          "results_count": 10,
+          "search_time": 0.6990432739257812,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "구현 처리",
+          "results_count": 10,
+          "search_time": 0.7419586181640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "보안 JWT",
+          "results_count": 10,
+          "search_time": 0.7228851318359375,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "저장 처리",
+          "results_count": 9,
+          "search_time": 0.7710456848144531,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "구현 JWT",
+          "results_count": 10,
+          "search_time": 0.6961822509765625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "상태관리",
+          "results_count": 10,
+          "search_time": 0.7097721099853516,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 저장",
+          "results_count": 10,
+          "search_time": 0.0021457672119140625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "상태관리 스타일링",
+          "results_count": 10,
+          "search_time": 0.7350444793701172,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "보안",
+          "results_count": 9,
+          "search_time": 0.6899833679199219,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "최적화 UI",
+          "results_count": 10,
+          "search_time": 0.7569789886474609,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "버그 처리",
+          "results_count": 9,
+          "search_time": 0.7338523864746094,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 ETL",
+          "results_count": 10,
+          "search_time": 0.7941722869873047,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "개선 상태관리",
+          "results_count": 10,
+          "search_time": 0.7989406585693359,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 스타일링",
+          "results_count": 10,
+          "search_time": 0.8749961853027344,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "최적화 라우팅",
+          "results_count": 10,
+          "search_time": 0.7450580596923828,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "추가 인증",
+          "results_count": 10,
+          "search_time": 0.7870197296142578,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "최적화 처리",
+          "results_count": 10,
+          "search_time": 0.7700920104980469,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "개선 컴포넌트",
+          "results_count": 10,
+          "search_time": 0.762939453125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "구현 스타일링",
+          "results_count": 10,
+          "search_time": 0.7200241088867188,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "라우팅 스타일링",
+          "results_count": 10,
+          "search_time": 0.7331371307373047,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 로그인",
+          "results_count": 10,
+          "search_time": 0.797271728515625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "라우팅 상태관리",
+          "results_count": 10,
+          "search_time": 0.7278919219970703,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "변환",
+          "results_count": 10,
+          "search_time": 0.7271766662597656,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "구현 상태관리",
+          "results_count": 10,
+          "search_time": 0.7150173187255859,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "로그인 인증",
+          "results_count": 10,
+          "search_time": 0.7009506225585938,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "보안 로그인",
+          "results_count": 10,
+          "search_time": 0.8881092071533203,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 ETL",
+          "results_count": 10,
+          "search_time": 0.743865966796875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "성능 ETL",
+          "results_count": 10,
+          "search_time": 0.7710456848144531,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "저장",
+          "results_count": 10,
+          "search_time": 0.7171630859375,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "상태관리 UI",
+          "results_count": 10,
+          "search_time": 0.7297992706298828,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 토큰",
+          "results_count": 10,
+          "search_time": 0.6940364837646484,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "UI",
+          "results_count": 9,
+          "search_time": 0.7150173187255859,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "에러 변환",
+          "results_count": 10,
+          "search_time": 0.7569789886474609,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "최적화 저장",
+          "results_count": 10,
+          "search_time": 0.7503032684326172,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "구현 파이프라인",
+          "results_count": 10,
+          "search_time": 0.7398128509521484,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "로그인 사용자",
+          "results_count": 10,
+          "search_time": 0.7121562957763672,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 스타일링",
+          "results_count": 10,
+          "search_time": 0.0019073486328125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "상태관리",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 로그인",
+          "results_count": 10,
+          "search_time": 0.7402896881103516,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "변환",
+          "results_count": 10,
+          "search_time": 0.7088184356689453,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "개발 상태관리",
+          "results_count": 10,
+          "search_time": 0.7119178771972656,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "변환 저장",
+          "results_count": 10,
+          "search_time": 0.7610321044921875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "구현 컴포넌트",
+          "results_count": 10,
+          "search_time": 0.7190704345703125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 UI",
+          "results_count": 10,
+          "search_time": 0.7328987121582031,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "버그 컴포넌트",
+          "results_count": 9,
+          "search_time": 0.9768009185791016,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "로그인",
+          "results_count": 10,
+          "search_time": 0.0040531158447265625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "에러 JWT",
+          "results_count": 10,
+          "search_time": 0.7817745208740234,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "성능 ETL",
+          "results_count": 10,
+          "search_time": 0.8220672607421875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 스타일링",
+          "results_count": 10,
+          "search_time": 0.7832050323486328,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 저장",
+          "results_count": 10,
+          "search_time": 0.8037090301513672,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "추가 JWT",
+          "results_count": 10,
+          "search_time": 0.8251667022705078,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "개발 JWT",
+          "results_count": 10,
+          "search_time": 0.7410049438476562,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 UI",
+          "results_count": 10,
+          "search_time": 0.8251667022705078,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "개발 상태관리",
+          "results_count": 10,
+          "search_time": 0.7417201995849609,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "라우팅 상태관리",
+          "results_count": 10,
+          "search_time": 0.0019073486328125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "구현 파이프라인",
+          "results_count": 10,
+          "search_time": 0.7901191711425781,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "인증 토큰",
+          "results_count": 10,
+          "search_time": 0.7159709930419922,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "버그 파이프라인",
+          "results_count": 10,
+          "search_time": 0.7719993591308594,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "구현 처리",
+          "results_count": 10,
+          "search_time": 0.9372234344482422,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "최적화 저장",
+          "results_count": 10,
+          "search_time": 0.7977485656738281,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "데이터 변환",
+          "results_count": 10,
+          "search_time": 0.8831024169921875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "ETL",
+          "results_count": 10,
+          "search_time": 0.7879734039306641,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "구현 보안",
+          "results_count": 10,
+          "search_time": 0.7100105285644531,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 보안",
+          "results_count": 10,
+          "search_time": 0.7989406585693359,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "에러 UI",
+          "results_count": 10,
+          "search_time": 0.7588863372802734,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "JWT 사용자",
+          "results_count": 10,
+          "search_time": 0.6961822509765625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "보안 토큰",
+          "results_count": 10,
+          "search_time": 0.701904296875,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "추가 인증",
+          "results_count": 10,
+          "search_time": 0.7779598236083984,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "저장",
+          "results_count": 9,
+          "search_time": 0.7100105285644531,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "스타일링 라우팅",
+          "results_count": 10,
+          "search_time": 0.7390975952148438,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "최적화 스타일링",
+          "results_count": 10,
+          "search_time": 0.7770061492919922,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "처리 ETL",
+          "results_count": 10,
+          "search_time": 0.7898807525634766,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "추가 ETL",
+          "results_count": 10,
+          "search_time": 0.80108642578125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 라우팅",
+          "results_count": 10,
+          "search_time": 0.7109642028808594,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "컴포넌트 라우팅",
+          "results_count": 10,
+          "search_time": 0.7390975952148438,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 저장",
+          "results_count": 10,
+          "search_time": 0.7948875427246094,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "데이터",
+          "results_count": 10,
+          "search_time": 0.7441043853759766,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "사용자",
+          "results_count": 10,
+          "search_time": 0.7090568542480469,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "보안 로그인",
+          "results_count": 10,
+          "search_time": 0.0030994415283203125,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "에러 인증",
+          "results_count": 10,
+          "search_time": 0.7879734039306641,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "개선 UI",
+          "results_count": 10,
+          "search_time": 0.7717609405517578,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "추가 인증",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "JWT",
+          "results_count": 10,
+          "search_time": 0.7081031799316406,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "개선 라우팅",
+          "results_count": 10,
+          "search_time": 0.8058547973632812,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "JWT",
+          "results_count": 10,
+          "search_time": 0.6949901580810547,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 JWT",
+          "results_count": 10,
+          "search_time": 0.7889270782470703,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 ETL",
+          "results_count": 10,
+          "search_time": 0.8080005645751953,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "보안 로그인",
+          "results_count": 10,
+          "search_time": 0.7092952728271484,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "로그인",
+          "results_count": 10,
+          "search_time": 0.6890296936035156,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "개발 데이터",
+          "results_count": 10,
+          "search_time": 0.9379386901855469,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "에러 변환",
+          "results_count": 10,
+          "search_time": 0.0021457672119140625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 인증",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "개발 보안",
+          "results_count": 10,
+          "search_time": 0.7190704345703125,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "B"
+        },
+        {
+          "query": "추가 UI",
+          "results_count": 10,
+          "search_time": 0.7898807525634766,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "JWT 보안",
+          "results_count": 10,
+          "search_time": 0.7107257843017578,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "버그 UI",
+          "results_count": 10,
+          "search_time": 0.7338523864746094,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": false,
+          "slot_used": "A"
+        },
+        {
+          "query": "개선 스타일링",
+          "results_count": 10,
+          "search_time": 0.0021457672119140625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "개발 라우팅",
+          "results_count": 10,
+          "search_time": 0.7522106170654297,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": false,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 저장",
+          "results_count": 10,
+          "search_time": 0.0019073486328125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 처리",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "로그인",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "구현 처리",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "보안 JWT",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "저장 처리",
+          "results_count": 9,
+          "search_time": 0.00095367431640625,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "구현 JWT",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "상태관리",
+          "results_count": 10,
+          "search_time": 0.0007152557373046875,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 저장",
+          "results_count": 10,
+          "search_time": 0.0,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "상태관리 스타일링",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "보안",
+          "results_count": 9,
+          "search_time": 0.00095367431640625,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "최적화 UI",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "버그 처리",
+          "results_count": 9,
+          "search_time": 0.00095367431640625,
+          "search_type": "dfs_partial",
+          "hops": 9,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "에러 ETL",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "개선 상태관리",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 스타일링",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "최적화 라우팅",
+          "results_count": 10,
+          "search_time": 0.0,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "추가 인증",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "최적화 처리",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "개선 컴포넌트",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "구현 스타일링",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "라우팅 스타일링",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "추가 로그인",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "라우팅 상태관리",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "변환",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "구현 상태관리",
+          "results_count": 10,
+          "search_time": 0.0,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        },
+        {
+          "query": "로그인 인증",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "보안 로그인",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 ETL",
+          "results_count": 10,
+          "search_time": 0.0,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "성능 ETL",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "저장",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": true,
+          "slot_used": "C"
+        },
+        {
+          "query": "상태관리 UI",
+          "results_count": 10,
+          "search_time": 0.0011920928955078125,
+          "search_type": "global_assisted",
+          "hops": 10,
+          "from_cache": true,
+          "slot_used": "A"
+        },
+        {
+          "query": "문제 토큰",
+          "results_count": 10,
+          "search_time": 0.00095367431640625,
+          "search_type": "global_assisted",
+          "hops": 11,
+          "from_cache": true,
+          "slot_used": "B"
+        }
+      ]
+    },
+    "improvements": {
+      "original_vs_legacy": {
+        "search_time_improvement": -1311.628696073679,
+        "hops_reduction": 95.65217391304348,
+        "insert_time_improvement": -83.9795347349908,
+        "hit_rate_comparison": {
+          "old": 0.66,
+          "new": 0.0,
+          "improvement": -0.66
+        }
+      },
+      "optimized_vs_legacy": {
+        "search_time_improvement": -948.053969144869,
+        "hops_reduction": 95.65217391304348,
+        "insert_time_improvement": -93.74850107922296,
+        "hit_rate_comparison": {
+          "old": 0.66,
+          "new": 0.0,
+          "improvement": -0.66
+        }
+      },
+      "optimized_vs_original": {
+        "search_time_improvement": 25.755691134649016,
+        "hops_reduction": 0.0,
+        "insert_time_improvement": -5.309811419136178,
+        "hit_rate_comparison": {
+          "old": 0.0,
+          "new": 0.0,
+          "improvement": 0.0
+        }
+      }
+    }
+  }
+]
