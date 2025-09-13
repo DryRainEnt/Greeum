@@ -57,7 +57,7 @@ class NativeMCPServer:
         # BaseAdapter 컴포넌트 초기화
         components = self.adapter.initialize_greeum_components()
         if not components:
-            logger.error("❌ Failed to initialize Greeum components")
+            logger.error("[ERROR] Failed to initialize Greeum components")
             raise RuntimeError("Greeum components initialization failed")
         
         logger.info("✅ Native MCP Server initialized with BaseAdapter")
@@ -102,7 +102,7 @@ class NativeMCPServer:
         tools = [
             {
                 "name": "add_memory",
-                "description": "🧠 Add important permanent memories to long-term storage.",
+                "description": "[MEMORY] Add important permanent memories to long-term storage.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -328,7 +328,7 @@ class NativeMCPServer:
         except KeyboardInterrupt:
             logger.info("🛑 Server shutdown requested (Ctrl+C)")
         except Exception as e:
-            logger.error(f"❌ Server error: {e}")
+            logger.error(f"[ERROR] Server error: {e}")
             raise
 
 def main():
@@ -337,7 +337,7 @@ def main():
         server = NativeMCPServer()
         server.run_stdio()
     except Exception as e:
-        logger.error(f"❌ Failed to start server: {e}")
+        logger.error(f"[ERROR] Failed to start server: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

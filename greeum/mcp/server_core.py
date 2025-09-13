@@ -29,7 +29,7 @@ except ImportError:
 # Greeum core imports
 try:
     from greeum.core.block_manager import BlockManager
-    from greeum.core.database_manager import DatabaseManager  
+    from greeum.core import DatabaseManager  # Use factory pattern from __init__.py
     from greeum.core.stm_manager import STMManager
     from greeum.core.duplicate_detector import DuplicateDetector
     from greeum.core.quality_validator import QualityValidator
@@ -98,7 +98,7 @@ class GreeumMCPServer:
         
         @self.app.tool()
         def add_memory(content: str, importance: float = 0.5) -> str:
-            """🧠 Add important permanent memories to long-term storage."""
+            """[MEMORY] Add important permanent memories to long-term storage."""
             return self._handle_add_memory(content, importance)
             
         @self.app.tool()

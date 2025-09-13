@@ -44,7 +44,10 @@ def load_anchors_snapshot(store_path: Path) -> Optional[AnchorsSnapshot]:
             data = json.load(f)
         
         # Version compatibility check
-        if data.get('version', 1) > 1:
+        version = data.get('version', 1)
+        if isinstance(version, str):
+            version = float(version) if '.' in version else int(version)
+        if version > 1:
             raise ValueError(f"Unsupported anchors snapshot version: {data['version']}")
             
         return data

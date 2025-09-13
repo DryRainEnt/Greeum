@@ -132,7 +132,7 @@ class STDIOTransport:
         except anyio.EndOfStream:
             logger.info("📤 STDOUT closed")
         except Exception as e:
-            logger.error(f"❌ STDOUT writer error: {e}")
+            logger.error(f"[ERROR] STDOUT writer error: {e}")
     
     async def send_message(self, session_message: SessionMessage) -> None:
         """메시지 전송"""
@@ -157,7 +157,7 @@ class STDIOTransport:
                 await self.write_stream.aclose()
             logger.info("✅ Transport streams closed")
         except Exception as e:
-            logger.error(f"❌ Error closing transport: {e}")
+            logger.error(f"[ERROR] Error closing transport: {e}")
 
 class STDIOServer:
     """
@@ -199,11 +199,11 @@ class STDIOServer:
                     logger.info("🚀 STDIO server running with 3 concurrent tasks")
         except KeyboardInterrupt:
             # KeyboardInterrupt를 조용히 처리 (상위로 전파하지 않음)
-            logger.info("🔄 Graceful shutdown initiated")
+            logger.info("[PROCESS] Graceful shutdown initiated")
             raise
         except anyio.exceptions.CancelledError:
             # anyio TaskGroup 취소를 조용히 처리
-            logger.info("🔄 Tasks cancelled for shutdown")
+            logger.info("[PROCESS] Tasks cancelled for shutdown")
             raise
     
     async def _message_processor(self) -> None:
@@ -223,4 +223,4 @@ class STDIOServer:
         except anyio.EndOfStream:
             logger.info("🔚 Message processor ended")
         except Exception as e:
-            logger.error(f"❌ Message processor error: {e}")
+            logger.error(f"[ERROR] Message processor error: {e}")

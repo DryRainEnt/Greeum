@@ -275,9 +275,9 @@ class AutoCompactMonitor:
         
         if self.current_risk_level == CompactRiskLevel.CRITICAL:
             recommendations.extend([
-                "🚨 즉시 중요한 컨텍스트를 백업하세요",
-                "🚨 진행 중인 작업을 안전한 지점에서 저장하세요", 
-                "🚨 Auto-compact가 임박했습니다"
+                "[ALERT] 즉시 중요한 컨텍스트를 백업하세요",
+                "[ALERT] 진행 중인 작업을 안전한 지점에서 저장하세요", 
+                "[ALERT] Auto-compact가 임박했습니다"
             ])
         elif self.current_risk_level == CompactRiskLevel.HIGH:
             recommendations.extend([
@@ -412,7 +412,7 @@ class AutoCompactMonitor:
             'low': '🟡', 
             'medium': '🟠',
             'high': '🔴',
-            'critical': '🚨'
+            'critical': '[ALERT]'
         }
         
         emoji = level_emojis.get(status['risk_level'], '❓')
@@ -461,7 +461,7 @@ if __name__ == "__main__":
             monitor.record_context_metrics(15000, history, tools, turns)  # 급감
             event = monitor.detect_auto_compact_event()
             if event:
-                print(f"🚨 Auto-compact 감지됨: {event.event_id}")
+                print(f"[ALERT] Auto-compact 감지됨: {event.event_id}")
     
     # 최종 리포트
     monitor.print_risk_report()

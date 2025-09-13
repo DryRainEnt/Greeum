@@ -12,8 +12,9 @@ from typing import List, Optional, Dict, Any, Union
 from pathlib import Path
 import logging
 
-from .memory_layer import MemoryItem, MemoryLayerType, MemoryPriority
-from .hierarchical_memory import HierarchicalMemorySystem
+# Legacy imports removed - using simplified structures
+# from .memory_layer import MemoryItem, MemoryLayerType, MemoryPriority
+# from .hierarchical_memory import HierarchicalMemorySystem
 
 logger = logging.getLogger(__name__)
 
@@ -25,28 +26,31 @@ class RestoreFilter:
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None
     keywords: Optional[List[str]] = None
-    layers: Optional[List[MemoryLayerType]] = None
+    layers: Optional[List[str]] = None  # Changed from MemoryLayerType enum to strings
     importance_min: Optional[float] = None
     importance_max: Optional[float] = None
     tags: Optional[List[str]] = None
     
-    def matches(self, memory_item: MemoryItem) -> bool:
+    def matches(self, memory_item: Dict[str, Any]) -> bool:
         """메모리 아이템이 필터 조건을 만족하는지 확인"""
         
         # 날짜 범위 체크
-        if self.date_from and memory_item.timestamp < self.date_from:
+        timestamp = memory_item.get('timestamp')
+        if timestamp and isinstance(timestamp, str):
+            timestamp = datetime.fromisoformat(timestamp)
+        if self.date_from and timestamp and timestamp < self.date_from:
             return False
-        if self.date_to and memory_item.timestamp > self.date_to:
+        if self.date_to and timestamp and timestamp > self.date_to:
             return False
             
         # 키워드 체크 (OR 조건)
         if self.keywords:
-            content_lower = memory_item.content.lower()
+            content_lower = memory_item.get('content', '').lower()
             if not any(keyword.lower() in content_lower for keyword in self.keywords):
                 return False
         
         # 계층 체크
-        if self.layers and memory_item.layer not in self.layers:
+        if self.layers and memory_item.get('layer') not in self.layers:
             return False
             
         # 중요도 범위 체크
@@ -80,7 +84,7 @@ class RestoreFilter:
         
         if self.date_from or self.date_to:
             date_range = f"{self.date_from or 'start'} ~ {self.date_to or 'end'}"
-            conditions.append(f"📅 날짜: {date_range}")
+            conditions.append(f"[DATE] 날짜: {date_range}")
         
         if self.keywords:
             conditions.append(f"🔍 키워드: {', '.join(self.keywords)}")
@@ -570,14 +574,14 @@ class MemoryRestoreEngine:
         preview_result = self.restore_from_backup(backup_file, filter_config, dry_run=True)
         
         if not preview_result.success:
-            return f"❌ 미리보기 생성 실패:\n" + "\n".join(preview_result.errors)
+            return f"[ERROR] 미리보기 생성 실패:\n" + "\n".join(preview_result.errors)
         
         return f"""
 📋 복원 미리보기
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📊 복원 대상: {preview_result.total_processed}개 메모리
-   🧠 Working Memory: {preview_result.working_count}개
-   ⚡ STM: {preview_result.stm_count}개  
+   [MEMORY] Working Memory: {preview_result.working_count}개
+   [FAST] STM: {preview_result.stm_count}개  
    🏛️  LTM: {preview_result.ltm_count}개
 
 🔍 필터 조건:

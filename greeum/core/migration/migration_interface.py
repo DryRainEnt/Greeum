@@ -67,7 +67,7 @@ class ForcedMigrationInterface:
             
             if version == SchemaVersion.V253_ACTANT:
                 # Already migrated
-                print("✅ Greeum v2.5.3 database detected - ready to use!")
+                print("[OK] Greeum v2.5.3 database detected - ready to use!")
                 return True
             
             elif version == SchemaVersion.V252_LEGACY:
@@ -80,13 +80,13 @@ class ForcedMigrationInterface:
             
             else:
                 # Unknown schema version
-                print("❌ Unknown database schema detected")
+                print("[ERROR] Unknown database schema detected")
                 print("Please backup your data and reinstall Greeum v2.5.3")
                 return False
                 
         except Exception as e:
             logger.error(f"Migration check failed: {e}")
-            print(f"❌ Database check failed: {e}")
+            print(f"[ERROR] Database check failed: {e}")
             return False
         
         finally:
@@ -103,11 +103,11 @@ class ForcedMigrationInterface:
         
         # Get user consent (required to proceed)
         if not self._get_user_consent():
-            print("❌ Migration required to use v2.5.3. Exiting...")
+            print("[ERROR] Migration required to use v2.5.3. Exiting...")
             return False
         
         # Perform AI-powered migration
-        print("\n🤖 Starting AI-powered migration...")
+        print("\n[AI] Starting AI-powered migration...")
         migration_result = self._perform_ai_migration()
         
         if migration_result.migrated_count > 0:
@@ -117,11 +117,11 @@ class ForcedMigrationInterface:
             # Discover relationships
             self._discover_and_show_relationships()
             
-            print("\n✨ Your memory system is now enhanced with actant structure!")
+            print("\n[SPECIAL] Your memory system is now enhanced with actant structure!")
             print("🔍 Enjoy improved search and relationship analysis capabilities!")
             return True
         else:
-            print("❌ Migration failed. Your original data is safe.")
+            print("[ERROR] Migration failed. Your original data is safe.")
             return False
     
     def _present_migration_case(self) -> None:
@@ -129,28 +129,28 @@ class ForcedMigrationInterface:
         stats = self.migration_stats
         
         print("\n" + "="*60)
-        print("🚨 Greeum v2.5.3 Schema Migration Required")
+        print("[ALERT] Greeum v2.5.3 Schema Migration Required")
         print("="*60)
-        print(f"📊 Legacy database detected with {stats['total_blocks']} memories")
-        print(f"📅 Memory range: {stats['earliest_memory']} to {stats['latest_memory']}")
+        print(f"[INFO] Legacy database detected with {stats['total_blocks']} memories")
+        print(f"[DATE] Memory range: {stats['earliest_memory']} to {stats['latest_memory']}")
         print()
-        print("🎯 Migration Benefits:")
-        print("  ⚡ AI will enhance your memories with structured actant format")
-        print("  🔗 Enables powerful relationship and causality analysis") 
-        print("  🎨 [Subject-Action-Object] structure for better organization")
-        print("  📈 Improved search accuracy and context discovery")
-        print("  🧠 Foundation for advanced memory features in v3.0")
+        print("[TARGET] Migration Benefits:")
+        print("  [FAST] AI will enhance your memories with structured actant format")
+        print("  [LINK] Enables powerful relationship and causality analysis") 
+        print("  [FORMAT] [Subject-Action-Object] structure for better organization")
+        print("  [IMPROVE] Improved search accuracy and context discovery")
+        print("  [MEMORY] Foundation for advanced memory features in v3.0")
         print()
-        print("🔒 Safety Guarantees:")
-        print("  💾 Complete backup created before any changes")
-        print("  🛡️  Original memories preserved (context field untouched)")
-        print("  ↩️  Instant rollback available if needed")
-        print("  ✨ AI parsing failures → memories preserved as-is")
+        print("[SECURE] Safety Guarantees:")
+        print("  [BACKUP] Complete backup created before any changes")
+        print("  [SAFE]  Original memories preserved (context field untouched)")
+        print("  [ROLLBACK]  Instant rollback available if needed")
+        print("  [SPECIAL] AI parsing failures → memories preserved as-is")
         print()
         
         # Show sample contexts
         if stats.get('sample_contexts'):
-            print("📝 Sample memories to be enhanced:")
+            print("[NOTE] Sample memories to be enhanced:")
             for i, sample in enumerate(stats['sample_contexts'], 1):
                 print(f"   {i}. {sample}")
             print()
@@ -177,10 +177,10 @@ class ForcedMigrationInterface:
                     attempts += 1
                     
             except (KeyboardInterrupt, EOFError):
-                print("\n❌ Migration cancelled by user")
+                print("\n[ERROR] Migration cancelled by user")
                 return False
         
-        print("❌ Too many invalid attempts")
+        print("[ERROR] Too many invalid attempts")
         return False
     
     def _perform_ai_migration(self) -> MigrationResult:
@@ -192,7 +192,7 @@ class ForcedMigrationInterface:
             # Create safety backup
             backup_id = self.backup_system.create_backup(str(self.db_path))
             result.backup_id = backup_id
-            print(f"💾 Safety backup created: {backup_id}")
+            print(f"[BACKUP] Safety backup created: {backup_id}")
             
             # Use transaction safety wrapper
             with TransactionSafetyWrapper(str(self.db_path), self.backup_system):
@@ -200,13 +200,13 @@ class ForcedMigrationInterface:
                 if not self.version_manager.upgrade_schema_to_v253():
                     raise RuntimeError("Schema upgrade failed")
                 
-                print("📊 Schema upgraded to v2.5.3")
+                print("[INFO] Schema upgraded to v2.5.3")
                 
                 # Get all legacy blocks
                 legacy_blocks = self._get_legacy_blocks()
                 total_blocks = len(legacy_blocks)
                 
-                print(f"📊 Found {total_blocks} memories to migrate")
+                print(f"[INFO] Found {total_blocks} memories to migrate")
                 
                 # Process blocks with AI parsing
                 for i, block in enumerate(legacy_blocks):
@@ -218,11 +218,11 @@ class ForcedMigrationInterface:
                             # Update block with actant data
                             self._update_block_with_actant(block['block_index'], parse_result)
                             result.migrated_count += 1
-                            status = "✅"
+                            status = "[OK]"
                         else:
                             # Keep original (actant fields remain NULL)
                             result.failed_count += 1 
-                            status = "⚠️"
+                            status = "[WARNING]"
                         
                         # Progress indicator
                         progress = (i + 1) / total_blocks * 100
@@ -284,20 +284,20 @@ class ForcedMigrationInterface:
     
     def _show_migration_results(self, result: MigrationResult) -> None:
         """Display migration results to user"""
-        print(f"\n🎉 Migration completed in {result.total_time:.1f} seconds!")
-        print(f"✅ Successfully migrated: {result.migrated_count}")
-        print(f"⚠️  Preserved as-is: {result.failed_count}")
+        print(f"\n[SUCCESS] Migration completed in {result.total_time:.1f} seconds!")
+        print(f"[OK] Successfully migrated: {result.migrated_count}")
+        print(f"[WARNING]  Preserved as-is: {result.failed_count}")
         
         if result.migrated_count + result.failed_count > 0:
-            print(f"📈 Migration success rate: {result.success_rate*100:.1f}%")
+            print(f"[IMPROVE] Migration success rate: {result.success_rate*100:.1f}%")
         
         if result.errors:
-            print(f"⚠️  {len(result.errors)} errors occurred (data preserved)")
+            print(f"[WARNING]  {len(result.errors)} errors occurred (data preserved)")
         
         # Show parsing statistics
         stats = self.ai_parser.get_parsing_stats()
         if stats['total_parsed'] > 0:
-            print(f"🤖 AI parsing accuracy: {stats['success_rate']*100:.1f}%")
+            print(f"[AI] AI parsing accuracy: {stats['success_rate']*100:.1f}%")
             print(f"   High confidence: {stats['high_confidence']}")
             print(f"   Medium confidence: {stats['medium_confidence']}")
             print(f"   Low confidence: {stats['low_confidence']}")
@@ -323,17 +323,17 @@ class ForcedMigrationInterface:
                 len(relationships['object_dependencies'])
             )
             
-            print(f"🔗 Discovered {total_relationships} relationships:")
+            print(f"[LINK] Discovered {total_relationships} relationships:")
             print(f"   👥 Subject collaborations: {len(relationships['subject_collaborations'])}")
-            print(f"   ⚡ Action causalities: {len(relationships['action_causalities'])}")
-            print(f"   🔗 Object dependencies: {len(relationships['object_dependencies'])}")
+            print(f"   [FAST] Action causalities: {len(relationships['action_causalities'])}")
+            print(f"   [LINK] Object dependencies: {len(relationships['object_dependencies'])}")
             
             # Store relationships in database
             self._store_relationships(relationships)
             
         except Exception as e:
             logger.error(f"Relationship discovery failed: {e}")
-            print(f"⚠️  Relationship discovery failed: {e}")
+            print(f"[WARNING]  Relationship discovery failed: {e}")
     
     def _get_migrated_blocks(self) -> List[ActantParseResult]:
         """Get successfully migrated blocks as ActantParseResult objects"""
@@ -384,29 +384,29 @@ class ForcedMigrationInterface:
     
     def _setup_new_database(self) -> None:
         """Setup new v2.5.3 database"""
-        print("🆕 Setting up new Greeum v2.5.3 database...")
+        print("[NEW] Setting up new Greeum v2.5.3 database...")
         self.version_manager.connect()
         
         if self.version_manager.upgrade_schema_to_v253():
-            print("✅ New database initialized with v2.5.3 schema")
+            print("[OK] New database initialized with v2.5.3 schema")
         else:
             raise RuntimeError("Failed to initialize new database")
     
     def _upgrade_empty_database(self) -> bool:
         """Upgrade empty legacy database to v2.5.3"""
-        print("🔄 Upgrading empty database to v2.5.3...")
+        print("[PROCESS] Upgrading empty database to v2.5.3...")
         
         try:
             with TransactionSafetyWrapper(str(self.db_path), self.backup_system):
                 if self.version_manager.upgrade_schema_to_v253():
-                    print("✅ Database upgraded to v2.5.3")
+                    print("[OK] Database upgraded to v2.5.3")
                     return True
                 else:
                     raise RuntimeError("Schema upgrade failed")
                     
         except Exception as e:
             logger.error(f"Empty database upgrade failed: {e}")
-            print(f"❌ Upgrade failed: {e}")
+            print(f"[ERROR] Upgrade failed: {e}")
             return False
 
 

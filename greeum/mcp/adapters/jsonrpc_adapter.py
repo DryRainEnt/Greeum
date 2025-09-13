@@ -33,7 +33,7 @@ class JSONRPCAdapter(BaseAdapter):
             # Greeum 컴포넌트 사전 초기화
             components = self.initialize_greeum_components()
             if not components:
-                logger.error("❌ Cannot start server: Greeum components unavailable")
+                logger.error("[ERROR] Cannot start server: Greeum components unavailable")
                 sys.exit(1)
             
             # GREEUM_QUIET 환경변수 지원
@@ -46,7 +46,7 @@ class JSONRPCAdapter(BaseAdapter):
             await self._message_loop()
             
         except Exception as e:
-            logger.error(f"❌ JSON-RPC adapter failed: {e}")
+            logger.error(f"[ERROR] JSON-RPC adapter failed: {e}")
             raise
     
     async def _message_loop(self):
@@ -156,7 +156,7 @@ class JSONRPCAdapter(BaseAdapter):
         tools = [
             {
                 "name": "add_memory",
-                "description": "🧠 Add important permanent memories to long-term storage",
+                "description": "[MEMORY] Add important permanent memories to long-term storage",
                 "inputSchema": {
                     "type": "object",
                     "properties": {

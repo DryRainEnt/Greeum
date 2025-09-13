@@ -112,7 +112,8 @@ async def add_memory_frequent(content: str, importance: float = 0.5) -> str:
         return json.dumps({"error": f"메모리 저장 실패: {str(e)}"}, ensure_ascii=False)
 
 
-async def search_memory_contextual(query: str, limit: int = 8) -> str:
+async def search_memory_contextual(query: str, limit: int = 8, slot: Optional[str] = None, 
+                                  radius: int = 2, fallback: bool = True) -> str:
     """
     Contextual memory search: Find related memories to enrich conversations
     
@@ -126,12 +127,20 @@ async def search_memory_contextual(query: str, limit: int = 8) -> str:
     Search tip: You can search not just by keywords, but by emotions, situations, and context.
     Examples: "project", "frustration", "success experience", "interest area", etc.
     
+    Enhanced with anchor-based local search (v2.7.0):
+    - slot: Use specific memory anchor (A-E) for local graph search
+    - radius: Search within N hops from anchor (default 2)
+    - fallback: Use global search if local search fails (default True)
+    
     Args:
         query: Search content (keywords, topics, emotions, situations, etc.)
         limit: Number of memories to find (default 8 for diverse perspectives)
+        slot: Optional anchor slot (A-E) for local graph search
+        radius: Search radius from anchor (default 2 hops)
+        fallback: Enable fallback to global search (default True)
     
     Returns:
-        Related memories with actant analysis information
+        Related memories with actant analysis and search metadata
     """
     try:
         # Import BaseAdapter to get local database search
@@ -186,18 +195,45 @@ async def search_memory_contextual(query: str, limit: int = 8) -> str:
                 # Fallback to block manager
                 pass
         
-        # Use block manager search if search engine failed or unavailable
+        # Use block manager with slot/radius options if available
         if not results and block_manager:
             try:
-                all_blocks = block_manager.search_by_keywords([query], limit=limit)
+                # Enhanced search with slot and radius parameters
+                if hasattr(block_manager, 'search_with_slots'):
+                    all_blocks = block_manager.search_with_slots(
+                        query, 
+                        limit=limit,
+                        use_slots=bool(slot),
+                        slot=slot,
+                        radius=radius,
+                        fallback=fallback
+                    )
+                else:
+                    # Fallback to basic search
+                    all_blocks = block_manager.search_by_keywords([query], limit=limit)
+                    
                 for block in all_blocks:
-                    results.append({
+                    result_dict = {
                         "memory_id": block.get('block_index'),
                         "content": block.get('context', ''),
                         "timestamp": block.get('timestamp', ''),
                         "importance": block.get('importance', 0.5),
-                        "relevance_score": 0.6
-                    })
+                        "relevance_score": block.get('relevance_score', 0.6)
+                    }
+                    
+                    # Add search metadata if available
+                    if 'search_type' in block:
+                        result_dict['search_type'] = block['search_type']
+                    if 'hop_distance' in block:
+                        result_dict['hop_distance'] = block['hop_distance']
+                    if 'slot_used' in block:
+                        result_dict['slot_used'] = block['slot_used']
+                    if 'graph_used' in block:
+                        result_dict['graph_used'] = block['graph_used']
+                    if 'fallback_used' in block:
+                        result_dict['fallback_used'] = block['fallback_used']
+                        
+                    results.append(result_dict)
             except Exception as bm_error:
                 print(f"Block manager search also failed: {bm_error}")
         
@@ -560,7 +596,7 @@ async def suggest_memory_opportunities(current_context: str) -> str:
             recommendation = "🔥 높음 - 즉시 저장 강력 권장"
             action = "add_memory_frequent 도구로 지금 바로 저장하세요!"
         elif value_score >= 1:
-            recommendation = "⚡ 중간 - 저장 권장"
+            recommendation = "[FAST] 중간 - 저장 권장"
             action = "중요한 부분을 골라서 add_memory_frequent로 저장해보세요."
         else:
             recommendation = "💡 낮음 - 선택적 저장"

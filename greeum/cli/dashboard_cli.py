@@ -144,7 +144,7 @@ def export(output: str, include_details: bool):
             else:
                 click.echo("📋 기본 개요만 포함")
         else:
-            click.echo("❌ 리포트 생성에 실패했습니다")
+            click.echo("[ERROR] 리포트 생성에 실패했습니다")
             
     except Exception as e:
         click.echo(f"💥 리포트 내보내기 실패: {e}")
@@ -167,13 +167,13 @@ def _display_overview_friendly(data: dict):
     stats = data['memory_stats']
     health = data['system_health']
     
-    click.echo("🧠 Greeum Memory Dashboard")
+    click.echo("[MEMORY] Greeum Memory Dashboard")
     click.echo("=" * 50)
     
     # 기본 통계
     click.echo(f"📊 전체 메모리: {stats['total_memories']}개")
-    click.echo(f"   🧠 Working Memory: {stats['working_memory_count']}개")
-    click.echo(f"   ⚡ STM: {stats['stm_count']}개")
+    click.echo(f"   [MEMORY] Working Memory: {stats['working_memory_count']}개")
+    click.echo(f"   [FAST] STM: {stats['stm_count']}개")
     click.echo(f"   🏛️  LTM: {stats['ltm_count']}개")
     
     click.echo()
@@ -185,7 +185,7 @@ def _display_overview_friendly(data: dict):
     
     # 용량 정보
     click.echo(f"💾 총 용량: {stats['total_size_mb']:.1f} MB")
-    click.echo(f"⚡ 평균 검색 시간: {health['avg_search_time_ms']:.1f}ms")
+    click.echo(f"[FAST] 평균 검색 시간: {health['avg_search_time_ms']:.1f}ms")
     
     # 경고사항
     if health['warnings']:
@@ -214,8 +214,8 @@ def _display_layer_analytics_friendly(analytics):
     }[analytics.layer_type]
     
     layer_emoji = {
-        MemoryLayerType.WORKING: "🧠",
-        MemoryLayerType.STM: "⚡",
+        MemoryLayerType.WORKING: "[MEMORY]",
+        MemoryLayerType.STM: "[FAST]",
         MemoryLayerType.LTM: "🏛️"
     }[analytics.layer_type]
     
@@ -233,7 +233,7 @@ def _display_layer_analytics_friendly(analytics):
     click.echo(f"   가장 최근 메모리: {analytics.newest_memory_hours:.1f}시간 전")
     
     if analytics.retention_rate > 0:
-        click.echo(f"📈 LTM 승급률: {analytics.retention_rate * 100:.1f}%")
+        click.echo(f"[IMPROVE] LTM 승급률: {analytics.retention_rate * 100:.1f}%")
     
     # 인기 태그
     if analytics.tag_usage:
@@ -262,7 +262,7 @@ def _display_health_detailed(health):
     """상세한 건강도 출력"""
     _display_health_simple(health)
     
-    click.echo(f"\n📈 성능 지표:")
+    click.echo(f"\n[IMPROVE] 성능 지표:")
     click.echo(f"   검색 속도: {health.avg_search_time_ms:.1f}ms")
     click.echo(f"   메모리 사용량: {health.memory_usage_mb:.1f}MB")
     click.echo(f"   데이터베이스 크기: {health.database_size_mb:.1f}MB")

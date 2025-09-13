@@ -348,7 +348,7 @@ if __name__ == "__main__":
     # 테스트용 실행
     logging.basicConfig(level=logging.INFO)
     
-    print("🔗 PreCompact Hook Handler 테스트")
+    print("[LINK] PreCompact Hook Handler 테스트")
     
     # 기본 Hook 등록 테스트
     hook = register_default_precompact_hook()
@@ -374,4 +374,4 @@ if __name__ == "__main__":
         hook.unregister_hook()
         print("✅ Hook 해제 완료")
     else:
-        print("❌ PreCompact Hook 등록 실패")
+        print("[ERROR] PreCompact Hook 등록 실패")

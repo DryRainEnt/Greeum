@@ -15,7 +15,11 @@ Public API:
 - JSON-RPC 2.0 + MCP 프로토콜 완전 준수
 """
 
-__version__ = "2.3.0a4"
+# Use main package version
+try:
+    from greeum import __version__
+except ImportError:
+    __version__ = "unknown"
 __author__ = "DryRainEnt"
 
 # 메인 서버 클래스 및 실행 함수 노출

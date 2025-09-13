@@ -39,7 +39,7 @@ class WorkingGreeumMCPServer:
             logger.info(f"Data directory: {self.data_dir}")
             
             # Import Greeum components (v2.0 structure)
-            from greeum.core.database_manager import DatabaseManager
+            from greeum.core import DatabaseManager  # Thread-safe factory pattern
             from greeum.core.block_manager import BlockManager
             from greeum.core.stm_manager import STMManager
             from greeum.core.cache_manager import CacheManager

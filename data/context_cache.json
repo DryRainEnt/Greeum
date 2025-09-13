@@ -1,26 +1,5 @@
 {
-  "current_context": "배포 준비 상황 39",
-  "waypoints": [
-    {
-      "block_index": 1604,
-      "relevance": 0.7
-    },
-    {
-      "block_index": 1704,
-      "relevance": 0.7
-    },
-    {
-      "block_index": 1919,
-      "relevance": 0.7
-    },
-    {
-      "block_index": 2049,
-      "relevance": 0.7
-    },
-    {
-      "block_index": 2124,
-      "relevance": 0.7
-    }
-  ],
-  "last_updated": "2025-08-02T15:16:17.247571"
+  "current_context": "",
+  "waypoints": [],
+  "last_updated": "2025-09-13T12:03:23.349068"
 }

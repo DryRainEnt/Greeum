@@ -100,12 +100,12 @@ class PhaseThreeSearchCoordinator:
                     wm_results, "working_memory", search_start, layer_time
                 )
             else:
-                print(f"  ❌ Layer 1: 결과 부족 ({len(wm_results)}/{self.min_wm_results})")
+                print(f"  [ERROR] Layer 1: 결과 부족 ({len(wm_results)}/{self.min_wm_results})")
                 self._update_layer_stats("working_memory", layer_time, False)
                 return None
                 
         except Exception as e:
-            print(f"  ❌ Layer 1 오류: {str(e)}")
+            print(f"  [ERROR] Layer 1 오류: {str(e)}")
             return None
     
     def _try_cache_search(self, user_input: str, query_embedding: List[float], 
@@ -128,12 +128,12 @@ class PhaseThreeSearchCoordinator:
                     cached_results, "cache", search_start, layer_time
                 )
             else:
-                print(f"  ❌ Layer 2: 캐시 미스")
+                print(f"  [ERROR] Layer 2: 캐시 미스")
                 self._update_layer_stats("cache", layer_time, False)
                 return None
                 
         except Exception as e:
-            print(f"  ❌ Layer 2 오류: {str(e)}")
+            print(f"  [ERROR] Layer 2 오류: {str(e)}")
             return None
     
     def _try_checkpoint_search(self, user_input: str, query_embedding: List[float], 
@@ -172,12 +172,12 @@ class PhaseThreeSearchCoordinator:
                     checkpoint_results, "checkpoint", search_start, layer_time
                 )
             else:
-                print(f"  ❌ Layer 3: 결과 부족 ({len(checkpoint_results)}/{self.min_checkpoint_results})")
+                print(f"  [ERROR] Layer 3: 결과 부족 ({len(checkpoint_results)}/{self.min_checkpoint_results})")
                 self._update_layer_stats("checkpoint", layer_time, False)
                 return None
                 
         except Exception as e:
-            print(f"  ❌ Layer 3 오류: {str(e)}")
+            print(f"  [ERROR] Layer 3 오류: {str(e)}")
             return None
     
     def _fallback_ltm_search(self, user_input: str, query_embedding: List[float], 
@@ -186,7 +186,7 @@ class PhaseThreeSearchCoordinator:
         try:
             layer_start = time.perf_counter()
             
-            print(f"  🔄 Layer 4 (LTM Fallback) 시작...")
+            print(f"  [PROCESS] Layer 4 (LTM Fallback) 시작...")
             
             # 전체 LTM 검색
             ltm_results = self.block_manager.search_by_embedding(query_embedding, top_k=5)
@@ -213,7 +213,7 @@ class PhaseThreeSearchCoordinator:
             )
             
         except Exception as e:
-            print(f"  ❌ Layer 4 오류: {str(e)}")
+            print(f"  [ERROR] Layer 4 오류: {str(e)}")
             # 최후의 빈 결과 반환
             return self._format_search_result([], "error", search_start, 0)
     

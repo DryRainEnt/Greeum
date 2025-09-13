@@ -39,10 +39,10 @@ async def serve_stdio() -> None:
         await server.run_stdio()
         
     except ImportError as e:
-        logger.error(f"❌ Failed to import server core: {e}")
+        logger.error(f"[ERROR] Failed to import server core: {e}")
         raise RuntimeError(f"MCP server dependencies not available: {e}")
     except Exception as e:
-        logger.error(f"❌ MCP server failed to start: {e}")
+        logger.error(f"[ERROR] MCP server failed to start: {e}")
         raise
 
 async def serve_websocket(port: int = 3000) -> None:
@@ -72,10 +72,10 @@ def run_cli_server(transport: str = "stdio", port: int = 3000) -> None:
     except KeyboardInterrupt:
         logger.info("👋 MCP server stopped by user")
     except Exception as e:
-        logger.error(f"❌ MCP server error: {e}")
+        logger.error(f"[ERROR] MCP server error: {e}")
         sys.exit(1)
 
 # 직접 실행 방지 (CLI 전용)
 if __name__ == "__main__":
-    logger.error("❌ This module is for CLI use only. Use 'greeum mcp serve' command.")
+    logger.error("[ERROR] This module is for CLI use only. Use 'greeum mcp serve' command.")
     sys.exit(1)

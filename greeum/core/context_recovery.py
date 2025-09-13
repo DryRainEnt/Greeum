@@ -410,8 +410,8 @@ class ContextRecoveryManager:
             'code': '🔧', 
             'analysis': '📊',
             'instruction': '📋',
-            'general': '📝'
-        }.get(segment.segment_type, '📝')
+            'general': '[NOTE]'
+        }.get(segment.segment_type, '[NOTE]')
         
         return f"[{timestamp_str}] {type_marker} {segment.content}"
     
@@ -420,13 +420,13 @@ class ContextRecoveryManager:
         timestamp = item.timestamp.strftime("%Y-%m-%d %H:%M:%S")
         
         if item.context_type == "emergency_precompact":
-            return f"🚨 [긴급백업 {timestamp}]\n{item.raw_content}"
+            return f"[ALERT] [긴급백업 {timestamp}]\n{item.raw_content}"
         elif item.context_type == "user_interaction":
             return f"👤 [사용자 {timestamp}]\n{item.raw_content}"
         elif item.context_type == "code_analysis":
             return f"🔧 [코드분석 {timestamp}]\n{item.raw_content}"
         else:
-            return f"📝 [{item.context_type} {timestamp}]\n{item.raw_content}"
+            return f"[NOTE] [{item.context_type} {timestamp}]\n{item.raw_content}"
     
     def _evaluate_recovery_quality(self, original_items: List[ContextBackupItem], recovered_context: str) -> float:
         """복원 품질을 평가합니다."""
@@ -571,7 +571,7 @@ if __name__ == "__main__":
     # 테스트용 실행
     logging.basicConfig(level=logging.INFO)
     
-    print("🔄 Context Recovery System 테스트")
+    print("[PROCESS] Context Recovery System 테스트")
     
     # 임시 테스트 데이터
     test_session_id = "test_session_123"

@@ -39,7 +39,7 @@ from greeum.core.usage_analytics import UsageAnalytics
 # Greeum 모듈 직접 import
 try:
     from greeum.core.block_manager import BlockManager
-    from greeum.core.database_manager import DatabaseManager  
+    from greeum.core import DatabaseManager  # Thread-safe factory pattern  
     from greeum.core.stm_manager import STMManager
     GREEUM_AVAILABLE = True
 except ImportError:
@@ -305,7 +305,7 @@ class ClaudeCodeMCPServer:
                                     importance, quality_result['adjusted_importance'], False, 0.0, len(quality_result['suggestions'])
                                 )
                                 
-                                quality_warning = f"""❌ **Low Quality Content Detected!**
+                                quality_warning = f"""[ERROR] **Low Quality Content Detected!**
 
 **Quality Score**: {quality_result['quality_score']:.1%} ({quality_result['quality_level']})
 **Issues Found**: Quality below acceptable threshold
@@ -499,7 +499,7 @@ class ClaudeCodeMCPServer:
                                     content = memory.get('context', '')[:100] + ('...' if len(memory.get('context', '')) > 100 else '')
                                     result_text += f"{i}. [{timestamp}] {content}\n"
                             else:
-                                result_text = "❌ No memories found"
+                                result_text = "[ERROR] No memories found"
                             
                             return {
                                 "jsonrpc": "2.0",
@@ -639,7 +639,7 @@ class ClaudeCodeMCPServer:
 • Quality Checks: {usage_stats['quality_stats']['total_quality_checks']}"""
                             
                             elif report_type == 'quality':
-                                report_text = f"""📈 **Quality Trends Report** ({days} days)
+                                report_text = f"""[IMPROVE] **Quality Trends Report** ({days} days)
 
 **Quality Distribution**:
 {chr(10).join(f"• {level}: {count}" for level, count in quality_trends['quality_distribution'].items())}
@@ -651,7 +651,7 @@ class ClaudeCodeMCPServer:
 {chr(10).join(f"• {trend['date']}: {trend['duplicate_rate']:.1%} duplicate rate" for trend in quality_trends['duplicate_trends'][-3:])}"""
                             
                             elif report_type == 'performance':
-                                report_text = f"""⚡ **Performance Insights Report** ({days} days)
+                                report_text = f"""[FAST] **Performance Insights Report** ({days} days)
 
 **Performance by Tool**:
 {chr(10).join(f"• {perf['tool_name']}: {perf['avg_duration_ms']:.0f}ms avg ({perf['operation_count']} ops)" for perf in performance_insights['performance_by_tool'][:5])}

@@ -39,7 +39,7 @@ class FastMCPAdapter(BaseAdapter):
         
         @self.app.tool()
         def add_memory(content: str, importance: float = 0.5) -> str:
-            """🧠 Add important permanent memories to long-term storage.
+            """[MEMORY] Add important permanent memories to long-term storage.
             
             ⚠️  USAGE GUIDELINES:
             • ALWAYS search_memory first to avoid duplicates
@@ -47,7 +47,7 @@ class FastMCPAdapter(BaseAdapter):
             • Use appropriate importance levels (see guide below)
             
             ✅ GOOD USES: user preferences, project details, decisions, recurring issues
-            ❌ AVOID: greetings, weather, current time, temporary session info
+            [ERROR] AVOID: greetings, weather, current time, temporary session info
             
             🔍 WORKFLOW: search_memory → analyze results → add_memory (if truly new)
             """
@@ -118,7 +118,7 @@ class FastMCPAdapter(BaseAdapter):
             # Greeum 컴포넌트 사전 초기화
             components = self.initialize_greeum_components()
             if not components:
-                logger.error("❌ Cannot start server: Greeum components unavailable")
+                logger.error("[ERROR] Cannot start server: Greeum components unavailable")
                 sys.exit(1)
             
             # GREEUM_QUIET 환경변수 지원
@@ -140,7 +140,7 @@ class FastMCPAdapter(BaseAdapter):
                     raise
                     
         except Exception as e:
-            logger.error(f"❌ FastMCP adapter failed: {e}")
+            logger.error(f"[ERROR] FastMCP adapter failed: {e}")
             raise
     
     async def _run_in_current_loop(self):

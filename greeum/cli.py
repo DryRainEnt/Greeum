@@ -30,7 +30,7 @@ except ImportError:
         import greeum
         __version__ = greeum.__version__
     except (ImportError, AttributeError):
-        __version__ = "2.1.0"
+        __version__ = "unknown"
 
 @click.group()
 @click.version_option(version=__version__)
@@ -60,7 +60,7 @@ def init_command(db_path, use_embedding, openai_key):
         # 임베딩 모델 초기화
         if use_embedding == "simple":
             from greeum.embedding_models import SimpleEmbeddingModel, register_embedding_model
-            model = SimpleEmbeddingModel()
+            model = SimpleEmbeddingModel(dimension=768)
             register_embedding_model("default", model, set_as_default=True)
             console.print("[green]간단한 임베딩 모델 초기화 완료[/green]")
         elif use_embedding == "sentence-transformer":
@@ -190,27 +190,34 @@ def search_command(query, db_path, limit, mode, slot, radius, fallback):
         # 앵커 기반 검색이 요청된 경우
         if slot:
             try:
-                from greeum.core.search_engine import SearchEngine
-                search_engine = SearchEngine(db_manager)
+                from greeum.core.block_manager import BlockManager
+                from greeum.core.working_memory import AIContextualSlots
+                
+                # BlockManager와 슬롯 시스템 사용
+                block_manager = BlockManager(db_manager)
+                slots = AIContextualSlots()
                 
                 # 앵커 기반 국소 검색 수행
-                result = search_engine.search(
+                blocks = block_manager.search_with_slots(
                     query=query,
-                    top_k=limit,
+                    limit=limit,
+                    use_slots=True,
                     slot=slot,
                     radius=radius,
                     fallback=fallback
                 )
                 
-                blocks = result.get('blocks', [])
-                metadata = result.get('metadata', {})
-                
                 # 검색 정보 출력
                 console.print(f"[blue]앵커 슬롯 {slot} 기반 검색 (반경: {radius}홉)[/blue]")
-                if metadata.get('local_search_used'):
-                    console.print(f"[green]✓ 국소 검색 성공 ({metadata.get('local_results', 0)}개 결과)[/green]")
-                if metadata.get('fallback_used'):
-                    console.print(f"[yellow]⚠ 전역 검색으로 후퇴 ({metadata.get('fallback_results', 0)}개 추가)[/yellow]")
+                
+                # 결과 분석
+                graph_used = any(r.get('graph_used') for r in blocks)
+                hop_distances = [r.get('hop_distance') for r in blocks if r.get('hop_distance') is not None]
+                
+                if graph_used:
+                    console.print(f"[green]✓ 그래프 검색 활성화 (평균 거리: {sum(hop_distances)/len(hop_distances):.1f}홉)[/green]")
+                if any(r.get('search_type') == 'standard' for r in blocks):
+                    console.print(f"[yellow]⚠ 전역 검색 fallback 사용[/yellow]")
                     
             except ImportError:
                 console.print("[red]앵커 기반 검색을 사용할 수 없습니다. 기본 검색을 사용합니다.[/red]")
@@ -455,8 +462,16 @@ def recent_memories_command(limit, db_path):
         console.print(f"[bold red]기억 조회 오류: {str(e)}[/bold red]")
 
 # 앵커 명령어 등록
-from .cli.anchors import register_anchors_commands
-register_anchors_commands(main)
+from .cli.anchors import anchors_group
+main.add_command(anchors_group)
+
+# 메트릭 명령어 등록
+from .cli.metrics_cli import metrics_group
+main.add_command(metrics_group)
+
+# 문서 검증 명령어 등록
+from .cli.validate_cli import validate_group
+main.add_command(validate_group)
 
 if __name__ == "__main__":
     main() 

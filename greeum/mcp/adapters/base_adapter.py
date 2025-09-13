@@ -14,7 +14,7 @@ from typing import Dict, Any, List, Optional
 # Greeum 핵심 컴포넌트
 try:
     from greeum.core.block_manager import BlockManager
-    from greeum.core.database_manager import DatabaseManager  
+    from greeum.core import DatabaseManager  # Thread-safe factory pattern  
     from greeum.core.stm_manager import STMManager
     from greeum.core.duplicate_detector import DuplicateDetector
     from greeum.core.quality_validator import QualityValidator
@@ -39,7 +39,7 @@ class BaseAdapter(ABC):
             return self.components
             
         if not GREEUM_AVAILABLE:
-            logger.error("❌ Greeum components not available")
+            logger.error("[ERROR] Greeum components not available")
             return None
             
         try:
@@ -67,7 +67,7 @@ class BaseAdapter(ABC):
             return self.components
             
         except Exception as e:
-            logger.error(f"❌ Failed to initialize Greeum components: {e}")
+            logger.error(f"[ERROR] Failed to initialize Greeum components: {e}")
             return None
     
     # 공통 도구 구현 (모든 어댑터에서 동일)
@@ -76,7 +76,7 @@ class BaseAdapter(ABC):
         if not self.components:
             self.initialize_greeum_components()
         if not self.components:
-            return "❌ Greeum components not available"
+            return "[ERROR] Greeum components not available"
             
         try:
             # 중복 검사
@@ -120,14 +120,14 @@ Please search existing memories first or provide more specific content."""
             
         except Exception as e:
             logger.error(f"add_memory failed: {e}")
-            return f"❌ Failed to add memory: {str(e)}"
+            return f"[ERROR] Failed to add memory: {str(e)}"
     
     def search_memory_tool(self, query: str, limit: int = 5, depth: int = 0, tolerance: float = 0.5) -> str:
         """메모리 검색 도구 - 연관관계 확장 탐색 기능 추가"""
         if not self.components:
             self.initialize_greeum_components()
         if not self.components:
-            return "❌ Greeum components not available"
+            return "[ERROR] Greeum components not available"
             
         try:
             # 기본 메모리 검색
@@ -166,11 +166,11 @@ Please search existing memories first or provide more specific content."""
                         if memory['relation_type'] == 'direct_match':
                             relation_info = " [🎯]"
                         elif 'depth_1' in memory['relation_type']:
-                            relation_info = " [🔗]"
+                            relation_info = " [[LINK]]"
                         elif 'depth_2' in memory['relation_type']:
-                            relation_info = " [🔗🔗]"
+                            relation_info = " [[LINK][LINK]]"
                         elif 'depth_3' in memory['relation_type']:
-                            relation_info = " [🔗🔗🔗]"
+                            relation_info = " [[LINK][LINK][LINK]]"
                     
                     result_text += f"{i}. [{timestamp}]{relation_info} {content}\n"
                 return result_text
@@ -179,14 +179,14 @@ Please search existing memories first or provide more specific content."""
                 
         except Exception as e:
             logger.error(f"search_memory failed: {e}")
-            return f"❌ Search failed: {str(e)}"
+            return f"[ERROR] Search failed: {str(e)}"
     
     def get_memory_stats_tool(self) -> str:
         """메모리 통계 도구 - 로컬 DB 기준으로 정확한 통계 제공"""
         if not self.components:
             self.initialize_greeum_components()
         if not self.components:
-            return "❌ Greeum components not available"
+            return "[ERROR] Greeum components not available"
             
         try:
             db_manager = self.components['db_manager']
@@ -231,14 +231,14 @@ Please search existing memories first or provide more specific content."""
             
         except Exception as e:
             logger.error(f"get_memory_stats failed: {e}")
-            return f"❌ Stats retrieval failed: {str(e)}"
+            return f"[ERROR] Stats retrieval failed: {str(e)}"
     
     def usage_analytics_tool(self, days: int = 7, report_type: str = "usage") -> str:
         """사용 분석 도구 - 기존 API 완전 호환"""
         if not self.components:
             self.initialize_greeum_components()
         if not self.components:
-            return "❌ Greeum components not available"
+            return "[ERROR] Greeum components not available"
             
         try:
             # UsageAnalytics 실제 메서드 사용
@@ -257,7 +257,7 @@ Please search existing memories first or provide more specific content."""
                     'success_rate': 1.0
                 }
             
-            return f"""📈 **Usage Analytics Report** ({days} days)
+            return f"""[IMPROVE] **Usage Analytics Report** ({days} days)
 
 **Activity Summary**:
 • Total Operations: {analytics.get('total_operations', 0)}
@@ -277,7 +277,7 @@ Please search existing memories first or provide more specific content."""
             
         except Exception as e:
             logger.error(f"usage_analytics failed: {e}")
-            return f"❌ Analytics failed: {str(e)}"
+            return f"[ERROR] Analytics failed: {str(e)}"
     
     def _add_memory_direct(self, content: str, importance: float = 0.5) -> Dict[str, Any]:
         """메모리 직접 추가 - legacy 의존성 완전 제거"""

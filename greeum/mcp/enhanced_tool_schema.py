@@ -16,7 +16,7 @@ class EnhancedToolSchema:
         """Enhanced schema for add_memory tool with detailed usage guidance"""
         return {
             "name": "add_memory",
-            "description": """🧠 Add important permanent memories to long-term storage.
+            "description": """[MEMORY] Add important permanent memories to long-term storage.
             
 ⚠️  USAGE GUIDELINES:
 • ALWAYS search_memory first to avoid duplicates
@@ -24,7 +24,7 @@ class EnhancedToolSchema:
 • Use appropriate importance levels (see guide below)
 
 ✅ GOOD USES: user preferences, project details, decisions, recurring issues
-❌ AVOID: greetings, weather, current time, temporary session info
+[ERROR] AVOID: greetings, weather, current time, temporary session info
 
 🔍 WORKFLOW: search_memory → analyze results → add_memory (if truly new)""",
             
@@ -139,7 +139,7 @@ USE FOR: Current session context, temporary notes, work-in-progress details
 • STM: Session-specific, temporary, will expire
 • LTM: Permanent, important for future sessions
 
-🔄 WORKFLOW: Use during session → stm_promote at end → stm_cleanup""",
+[PROCESS] WORKFLOW: Use during session → stm_promote at end → stm_cleanup""",
             
             "inputSchema": {
                 "type": "object",
@@ -269,7 +269,7 @@ USE FOR MAINTENANCE:
 • Clear low-importance temporary data
 • Optimize memory system performance
 
-🔄 RECOMMENDED: Use after stm_promote at session end""",
+[PROCESS] RECOMMENDED: Use after stm_promote at session end""",
             
             "inputSchema": {
                 "type": "object",
@@ -393,9 +393,9 @@ USE FOR:
         """Enhanced schema for analyze_causality tool"""
         return {
             "name": "analyze_causality",
-            "description": """🔗 Analyze causal relationships between memories in real-time.
+            "description": """[LINK] Analyze causal relationships between memories in real-time.
             
-⚡ PURPOSE:
+[FAST] PURPOSE:
 • Find hidden connections between past experiences and new insights
 • Identify bridge memories that link unrelated concepts
 • Discover causal patterns in memory networks

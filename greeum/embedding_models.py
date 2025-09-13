@@ -134,8 +134,8 @@ class EmbeddingRegistry:
         self.models = {}
         self.default_model = None
         
-        # 기본 모델 등록
-        self.register_model("simple", SimpleEmbeddingModel())
+        # 기본 모델 등록 - 768차원으로 통일
+        self.register_model("simple", SimpleEmbeddingModel(dimension=768))
     
     def register_model(self, name: str, model: EmbeddingModel, set_as_default: bool = False) -> None:
         """

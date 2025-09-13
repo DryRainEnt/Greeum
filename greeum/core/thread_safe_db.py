@@ -271,10 +271,64 @@ class ThreadSafeDatabaseManager:
         except Exception as e:
             logger.error(f"Thread-safe database health check failed: {e}")
             return False
+    
+    # Delegate methods to maintain compatibility with legacy DatabaseManager
+    def get_block(self, block_index: int) -> Optional[Dict[str, Any]]:
+        """Get a specific block by index - delegate to legacy manager"""
+        try:
+            from .database_manager import DatabaseManager as LegacyDatabaseManager
+            legacy_manager = LegacyDatabaseManager(connection_string=self.connection_string)
+            return legacy_manager.get_block(block_index)
+        except Exception as e:
+            logger.error(f"Failed to get block {block_index}: {e}")
+            return None
+    
+    def add_block(self, block_data: Dict[str, Any]) -> Optional[int]:
+        """Add a block - delegate to legacy manager"""
+        try:
+            from .database_manager import DatabaseManager as LegacyDatabaseManager
+            legacy_manager = LegacyDatabaseManager(connection_string=self.connection_string)
+            return legacy_manager.add_block(block_data)
+        except Exception as e:
+            logger.error(f"Failed to add block: {e}")
+            return None
+    
+    def get_last_block_info(self) -> Optional[Dict[str, Any]]:
+        """Get last block info - delegate to legacy manager"""
+        try:
+            from .database_manager import DatabaseManager as LegacyDatabaseManager
+            legacy_manager = LegacyDatabaseManager(connection_string=self.connection_string)
+            return legacy_manager.get_last_block_info()
+        except Exception as e:
+            logger.error(f"Failed to get last block info: {e}")
+            return None
+    
+    def get_blocks(self, **kwargs) -> List[Dict[str, Any]]:
+        """Get blocks - delegate to legacy manager"""
+        try:
+            from .database_manager import DatabaseManager as LegacyDatabaseManager
+            legacy_manager = LegacyDatabaseManager(connection_string=self.connection_string)
+            return legacy_manager.get_blocks(**kwargs)
+        except Exception as e:
+            logger.error(f"Failed to get blocks: {e}")
+            return []
+    
+    def __getattr__(self, name):
+        """Delegate any missing methods to legacy DatabaseManager"""
+        try:
+            from .database_manager import DatabaseManager as LegacyDatabaseManager
+            legacy_manager = LegacyDatabaseManager(connection_string=self.connection_string)
+            if hasattr(legacy_manager, name):
+                return getattr(legacy_manager, name)
+            else:
+                raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+        except Exception as e:
+            logger.error(f"Failed to delegate method {name}: {e}")
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
 
-# 기능 플래그 설정
-GREEUM_THREAD_SAFE = os.getenv('GREEUM_THREAD_SAFE', 'false').lower() == 'true'
+# 기능 플래그 설정 - v2.7.0에서 기본값을 true로 변경
+GREEUM_THREAD_SAFE = os.getenv('GREEUM_THREAD_SAFE', 'true').lower() == 'true'
 
 def get_database_manager_class():
     """

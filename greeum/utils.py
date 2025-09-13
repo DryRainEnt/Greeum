@@ -153,7 +153,7 @@ def check_default_embedding_model() -> dict:
         # 여기서는 "default" 라는 이름의 모델이 등록되어 있다고 가정하고 테스트
         # 혹은 SimpleEmbeddingModel 직접 로드 테스트
         from greeum.embedding_models import SimpleEmbeddingModel
-        model = SimpleEmbeddingModel() # 초기화 성공 여부
+        model = SimpleEmbeddingModel(dimension=768) # 초기화 성공 여부
         embedding = model.encode("테스트 문장")
         if isinstance(embedding, list) and len(embedding) > 0:
              return {"status": "ok", "message": "기본 임베딩 모델(SimpleEmbeddingModel) 로드 및 테스트 인코딩 성공."}

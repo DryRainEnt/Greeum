@@ -335,7 +335,7 @@ def compute_text_importance(text: str) -> float:
     # 최대값 제한
     return min(importance, 1.0)
 
-def simple_hash_embedding(text: str, dimension: int = 128) -> List[float]:
+def simple_hash_embedding(text: str, dimension: int = 768) -> List[float]:
     """
     간단한 해시 기반 임베딩 생성 (임시 대체용)
     

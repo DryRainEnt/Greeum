@@ -1,13 +1,16 @@
 """
-Greeum - 다국어 지원 LLM 독립적인 기억 관리 시스템
+Greeum v3.0.0 - Context-Dependent Neural Memory System
 
-This package contains independent modules to provide a human-like 
-memory system for Large Language Models.
+GraphIndex beam search, context-aware memory formation, spreading activation, 
+and STM/LTM consolidation for Large Language Models with human-like memory capabilities.
 """
 
-__version__ = "2.6.4"
+__version__ = "3.0.0"
 
-# Core components imports
+# v3.0.0 Main Interface
+from .core.context_memory import ContextMemorySystem
+
+# Legacy v2.6.4 compatibility imports
 try:
     from .text_utils import process_user_input, extract_keywords_from_text, extract_tags_from_text, compute_text_importance, convert_numpy_types, extract_keywords_advanced
 except ImportError:

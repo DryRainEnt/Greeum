@@ -26,7 +26,7 @@ except ImportError:
 # Greeum core imports
 try:
     from greeum.core.block_manager import BlockManager
-    from greeum.core.database_manager import DatabaseManager  
+    from greeum.core import DatabaseManager  # Thread-safe factory pattern  
     from greeum.core.stm_manager import STMManager
     from greeum.core.duplicate_detector import DuplicateDetector
     from greeum.core.quality_validator import QualityValidator
@@ -256,10 +256,10 @@ def run_server_sync(log_level: str = 'quiet') -> None:
             logger.info("Server stopped by user")
     except Exception as e:
         # 오류는 quiet 모드에서도 출력 (WARNING 레벨)
-        logger.error(f"❌ Server startup error: {e}")
+        logger.error(f"[ERROR] Server startup error: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
     # 직접 실행 방지 (CLI 전용)
-    logger.error("❌ This module is for CLI use only. Use 'greeum mcp serve' command.")
+    logger.error("[ERROR] This module is for CLI use only. Use 'greeum mcp serve' command.")
     sys.exit(1)

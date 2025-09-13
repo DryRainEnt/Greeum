@@ -31,7 +31,7 @@ except ImportError:
 # Greeum core imports
 try:
     from greeum.core.block_manager import BlockManager
-    from greeum.core.database_manager import DatabaseManager  
+    from greeum.core import DatabaseManager  # Thread-safe factory pattern  
     from greeum.core.stm_manager import STMManager
     from greeum.core.duplicate_detector import DuplicateDetector
     from greeum.core.quality_validator import QualityValidator
@@ -74,7 +74,7 @@ def get_greeum_components():
             
             logger.info("✅ Greeum components initialized successfully")
         except Exception as e:
-            logger.error(f"❌ Failed to initialize Greeum components: {e}")
+            logger.error(f"[ERROR] Failed to initialize Greeum components: {e}")
             _greeum_components = None
     
     return _greeum_components
@@ -165,7 +165,7 @@ def search_memory_direct(query: str, limit: int = 5) -> List[Dict[str, Any]]:
 # FastMCP 도구 정의
 @app.tool()
 def add_memory(content: str, importance: float = 0.5) -> str:
-    """🧠 Add important permanent memories to long-term storage.
+    """[MEMORY] Add important permanent memories to long-term storage.
     
     ⚠️  USAGE GUIDELINES:
     • ALWAYS search_memory first to avoid duplicates
@@ -173,14 +173,14 @@ def add_memory(content: str, importance: float = 0.5) -> str:
     • Use appropriate importance levels (see guide below)
 
     ✅ GOOD USES: user preferences, project details, decisions, recurring issues
-    ❌ AVOID: greetings, weather, current time, temporary session info
+    [ERROR] AVOID: greetings, weather, current time, temporary session info
 
     🔍 WORKFLOW: search_memory → analyze results → add_memory (if truly new)
     """
     try:
         components = get_greeum_components()
         if not components:
-            return "❌ Greeum components not available. Please check installation."
+            return "[ERROR] Greeum components not available. Please check installation."
         
         # 중복 검사
         duplicate_check = components['duplicate_detector'].check_duplicate(content)
@@ -223,7 +223,7 @@ Please search existing memories first or provide more specific content."""
     
     except Exception as e:
         logger.error(f"add_memory failed: {e}")
-        return f"❌ Failed to add memory: {str(e)}"
+        return f"[ERROR] Failed to add memory: {str(e)}"
 
 @app.tool()
 def search_memory(query: str, limit: int = 5) -> str:
@@ -242,7 +242,7 @@ def search_memory(query: str, limit: int = 5) -> str:
     try:
         components = get_greeum_components()
         if not components:
-            return "❌ Greeum components not available. Please check installation."
+            return "[ERROR] Greeum components not available. Please check installation."
         
         results = search_memory_direct(query, limit)
         
@@ -265,7 +265,7 @@ def search_memory(query: str, limit: int = 5) -> str:
     
     except Exception as e:
         logger.error(f"search_memory failed: {e}")
-        return f"❌ Search failed: {str(e)}"
+        return f"[ERROR] Search failed: {str(e)}"
 
 @app.tool()
 def get_memory_stats() -> str:
@@ -282,7 +282,7 @@ def get_memory_stats() -> str:
     try:
         components = get_greeum_components()
         if not components:
-            return "❌ Greeum components not available. Please check installation."
+            return "[ERROR] Greeum components not available. Please check installation."
         
         db_manager = components['db_manager']
         
@@ -308,7 +308,7 @@ def get_memory_stats() -> str:
     
     except Exception as e:
         logger.error(f"get_memory_stats failed: {e}")
-        return f"❌ Stats retrieval failed: {str(e)}"
+        return f"[ERROR] Stats retrieval failed: {str(e)}"
 
 @app.tool()
 def usage_analytics(days: int = 7, report_type: str = "usage") -> str:
@@ -325,11 +325,11 @@ def usage_analytics(days: int = 7, report_type: str = "usage") -> str:
     try:
         components = get_greeum_components()
         if not components:
-            return "❌ Greeum components not available. Please check installation."
+            return "[ERROR] Greeum components not available. Please check installation."
         
         analytics = components['usage_analytics'].get_usage_report(days=days, report_type=report_type)
         
-        return f"""📈 **Usage Analytics Report** ({days} days)
+        return f"""[IMPROVE] **Usage Analytics Report** ({days} days)
 
 **Activity Summary**:
 • Total Operations: {analytics.get('total_operations', 0)}
@@ -349,7 +349,7 @@ def usage_analytics(days: int = 7, report_type: str = "usage") -> str:
     
     except Exception as e:
         logger.error(f"usage_analytics failed: {e}")
-        return f"❌ Analytics failed: {str(e)}"
+        return f"[ERROR] Analytics failed: {str(e)}"
 
 # 서버 실행
 async def main():
@@ -357,7 +357,7 @@ async def main():
     # Greeum 컴포넌트 초기화
     components = get_greeum_components()
     if not components:
-        logger.error("❌ Cannot start server: Greeum components unavailable")
+        logger.error("[ERROR] Cannot start server: Greeum components unavailable")
         sys.exit(1)
     
     logger.info("🚀 Starting Greeum FastMCP server...")

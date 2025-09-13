@@ -106,7 +106,7 @@ class CheckpointManager:
             return checkpoint_data
             
         except Exception as e:
-            print(f"    ❌ 체크포인트 생성 실패: {str(e)}")
+            print(f"    [ERROR] 체크포인트 생성 실패: {str(e)}")
             return {}
     
     def update_checkpoint_access(self, slot_id: str) -> bool:

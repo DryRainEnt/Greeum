@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "greeum"
-version = "2.6.4"
-description = "Universal memory module for LLMs with Context Preservation System, PreCompact Hook integration, and intelligent context processing"
+version = "3.0.0"
+description = "Context-Dependent Neural Memory System for LLMs with GraphIndex beam search, STM/LTM consolidation, and semantic tagging"
 authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.10"

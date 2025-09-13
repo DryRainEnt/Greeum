@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Optional
 import numpy as np
 from pathlib import Path
 from .database_manager import DatabaseManager
+# from .causal_reasoning import CausalRelationshipManager  # Removed for v3.0.0 simplification
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,52 @@ class BlockManager:
             db_manager: DatabaseManager (없으면 기본 SQLite 파일 생성)
         """
         self.db_manager = db_manager or DatabaseManager()
-        logger.info("BlockManager initialization completed")
+        
+        # v2.7.0: Initialize causal reasoning system (disabled for v3.0 stability)
+        self.causal_manager = None
+        logger.debug("Causal reasoning disabled for v3.0 release")
+        
+        # v3.0.0: GraphIndex 통합 - 고성능 그래프 기반 검색
+        try:
+            from ..graph.index import GraphIndex
+            self.graph_index = GraphIndex()
+            self._auto_bootstrap_graph_index()
+            logger.info("GraphIndex integrated successfully")
+        except ImportError as e:
+            logger.warning(f"GraphIndex not available: {e}")
+            self.graph_index = None
+        except Exception as e:
+            logger.error(f"GraphIndex initialization failed: {e}")
+            self.graph_index = None
+        
+        # v3.0.0: AssociationNetwork 통합 - 연상 기억 네트워크
+        try:
+            from .association_network import AssociationNetwork
+            from .spreading_activation import SpreadingActivation
+            self.association_network = AssociationNetwork(self.db_manager)
+            self.spreading_activation = SpreadingActivation(self.association_network, self.db_manager)
+            logger.info("AssociationNetwork integrated successfully")
+        except ImportError as e:
+            logger.warning(f"AssociationNetwork not available: {e}")
+            self.association_network = None
+            self.spreading_activation = None
+        except Exception as e:
+            logger.error(f"AssociationNetwork initialization failed: {e}")
+            self.association_network = None
+            self.spreading_activation = None
+        
+        # 메트릭 추적 (관측성 개선)
+        self.metrics = {
+            'total_searches': 0,
+            'graph_searches': 0,
+            'graph_hits': 0,
+            'fallback_searches': 0,
+            'total_hops': 0,
+            'search_count': 0,
+            'avg_response_time': 0.0,
+            'local_hit_rate': 0.0,
+            'avg_hops': 0.0
+        }
         
     def _compute_hash(self, block_data: Dict[str, Any]) -> str:
         """블록의 해시값 계산. 해시 계산에 포함되지 않아야 할 필드는 이 함수 호출 전에 정리되어야 함."""
@@ -35,6 +81,9 @@ class BlockManager:
         """
         새 블록 추가 (DatabaseManager 사용)
         """
+        import time
+        write_start_time = time.time()
+        
         logger.debug(f"add_block called: context='{context[:20]}...'")
         last_block_info = self.db_manager.get_last_block_info()
         
@@ -89,8 +138,108 @@ class BlockManager:
             # add_block이 실제 추가된 블록의 index를 반환한다고 가정 (DB auto-increment 시 유용)
             # 현재 DatabaseManager.add_block은 전달된 block_data.get('block_index')를 사용하므로, added_idx는 new_block_index와 같음.
             added_block = self.db_manager.get_block(new_block_index)
+            
+            # v2.7.0: Analyze causal relationships after successful block addition
+            if self.causal_manager and added_block:
+                try:
+                    # Get recent blocks for causal analysis (limit to avoid performance issues)
+                    recent_blocks = self.get_blocks(limit=50, sort_by='timestamp', order='desc')  
+                    relationships = self.causal_manager.analyze_and_store_relationships(
+                        added_block, recent_blocks
+                    )
+                    
+                    if relationships:
+                        logger.info(f"Detected {len(relationships)} causal relationships for block {new_block_index}")
+                        # Update metadata with causal relationship count
+                        enhanced_metadata['causal_relationships_count'] = len(relationships)
+                        
+                except Exception as causal_error:
+                    logger.warning(f"Causal analysis failed for block {new_block_index}: {causal_error}")
+            
+            # v3.0.0: AssociationNetwork에 노드 추가
+            if self.association_network:
+                try:
+                    # 메모리 노드 생성
+                    node = self.association_network.create_node(
+                        content=context,
+                        node_type='memory',
+                        memory_id=new_block_index,
+                        embedding=embedding
+                    )
+                    logger.debug(f"Created association node: {node.node_id} for block {new_block_index}")
+                    
+                    # 최근 블록들과 연상 관계 생성
+                    recent_blocks = self.get_blocks(limit=10, sort_by='block_index', order='desc')
+                    for recent_block in recent_blocks[1:]:  # 자기 자신 제외
+                        recent_block_idx = recent_block.get('block_index')
+                        
+                        # 해당 블록의 노드 찾기
+                        for other_node in self.association_network.nodes.values():
+                            if other_node.memory_id == recent_block_idx:
+                                # 키워드 유사도 계산
+                                recent_keywords = set(recent_block.get('keywords', []))
+                                current_keywords = set(keywords)
+                                
+                                # 교집합이 있거나 컨텍스트에 공통 단어가 있으면
+                                common_keywords = recent_keywords & current_keywords
+                                if common_keywords:  # 키워드 교집합
+                                    similarity = len(common_keywords) / max(len(recent_keywords | current_keywords), 1)
+                                    if similarity > 0.1:  # 낮은 임계값
+                                        assoc = self.association_network.create_association(
+                                            source_node_id=node.node_id,
+                                            target_node_id=other_node.node_id,
+                                            association_type='semantic',
+                                            strength=max(0.3, similarity)  # 최소 0.3
+                                        )
+                                        logger.info(f"Created semantic association: {node.node_id} -> {other_node.node_id} (strength: {similarity:.2f})")
+                                
+                                # 시간적 근접성 (최근 10개 블록 내)
+                                else:
+                                    # 시간적으로 가까운 블록들은 약한 연결
+                                    assoc = self.association_network.create_association(
+                                        source_node_id=node.node_id,
+                                        target_node_id=other_node.node_id,
+                                        association_type='temporal',
+                                        strength=0.2
+                                    )
+                                    logger.info(f"Created temporal association: {node.node_id} -> {other_node.node_id}")
+                                break
+                
+                except Exception as e:
+                    logger.warning(f"Failed to update association network: {e}")
+            
+            # Near-Anchor Write: 활성 앵커 주변에 링크 형성
+            links_created = self._update_near_anchor_links(new_block_index, enhanced_metadata)
+            
+            # 메트릭 수집
+            write_end_time = time.time()
+            latency_ms = (write_end_time - write_start_time) * 1000
+            
+            try:
+                from ..core.metrics_collector import MetricsCollector, WriteMetric
+                collector = MetricsCollector()
+                
+                # 앵커 근처 쓰기 여부 확인
+                near_anchor = links_created > 0
+                
+                metric = WriteMetric(
+                    timestamp=datetime.datetime.now(),
+                    block_index=new_block_index,
+                    near_anchor=near_anchor,
+                    links_created=links_created,
+                    latency_ms=latency_ms,
+                    metadata=enhanced_metadata
+                )
+                collector.record_write(metric)
+                logger.debug(f"Write metric recorded: block={new_block_index}, links={links_created}, latency={latency_ms:.1f}ms")
+            except ImportError:
+                logger.debug("MetricsCollector not available")
+            except Exception as e:
+                logger.debug(f"Failed to record write metric: {e}")
+            
             logger.info(f"Block added successfully: index={new_block_index}, hash={current_hash[:10]}...")
-            return added_block
+            # Return just the block_index instead of the full block dict
+            return new_block_index
         except Exception as e:
             logger.error(f"BlockManager: Error adding block to DB - {e}", exc_info=True)
             return None
@@ -272,13 +421,61 @@ class BlockManager:
         logger.info("All blocks integrity verification passed")
         return True
     
+    def search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """Search memories by query string (converts to keywords and semantic search)"""
+        # Convert query to keywords
+        keywords = [word.strip() for word in query.split() if word.strip()]
+        return self.search_by_keywords(keywords, limit)
+    
     def search_by_keywords(self, keywords: List[str], limit: int = 10) -> List[Dict[str, Any]]:
         """키워드로 블록 검색 (DatabaseManager 사용)"""
         return self.db_manager.search_blocks_by_keyword(keywords, limit=limit)
     
     def search_by_embedding(self, query_embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
-        """임베딩 유사도로 블록 검색"""
-        return self.db_manager.search_blocks_by_embedding(query_embedding, top_k=top_k)
+        """임베딩 유사도로 블록 검색 (v3.0.0: SpreadingActivation 통합)"""
+        # 기본 임베딩 검색
+        initial_results = self.db_manager.search_blocks_by_embedding(query_embedding, top_k=top_k)
+        
+        # SpreadingActivation으로 확장 검색
+        if self.spreading_activation and initial_results:
+            try:
+                # 초기 검색 결과에서 노드 ID 추출
+                seed_nodes = []
+                for block in initial_results[:3]:  # 상위 3개만 시드로 사용
+                    block_idx = block.get('block_index')
+                    # 해당 블록의 association node 찾기
+                    for node in self.association_network.nodes.values():
+                        if node.memory_id == block_idx:
+                            seed_nodes.append(node.node_id)
+                            break
+                
+                if seed_nodes:
+                    # 활성화 전파
+                    activation = self.spreading_activation.activate(
+                        seed_nodes=seed_nodes,
+                        initial_activation=1.0
+                    )
+                    
+                    # 활성화된 메모리 가져오기
+                    activated_memories = self.spreading_activation.get_activated_memories(
+                        activation=activation,
+                        threshold=0.3
+                    )
+                    
+                    # 기존 결과와 병합 (중복 제거)
+                    seen_indices = {b['block_index'] for b in initial_results}
+                    for memory in activated_memories:
+                        if memory.get('block_index') not in seen_indices:
+                            initial_results.append(memory)
+                            if len(initial_results) >= top_k * 2:  # 최대 2배까지
+                                break
+                    
+                    logger.debug(f"SpreadingActivation expanded results from {top_k} to {len(initial_results)}")
+            
+            except Exception as e:
+                logger.warning(f"SpreadingActivation failed, using base results: {e}")
+        
+        return initial_results[:top_k]
     
     def filter_by_importance(self, threshold: float = 0.7, limit: int = 100) -> List[Dict[str, Any]]:
         """중요도 기준으로 블록 필터링. DatabaseManager의 기능을 직접 호출."""
@@ -356,13 +553,13 @@ class BlockManager:
             logger.error(f"Integrity verification failed: {e}")
             return False
     
-    def update_block_links(self, block_index: int, neighbors: List[Dict[str, Any]]) -> bool:
+    def update_block_links(self, block_index: int, neighbors: List[int]) -> bool:
         """
         Update neighbor links cache for a block (M2 Implementation).
         
         Args:
             block_index: Block index to update
-            neighbors: List of neighbor info [{"id": "block_123", "w": 0.61}, ...]
+            neighbors: List of neighbor block indices
             
         Returns:
             bool: True if update successful
@@ -374,14 +571,24 @@ class BlockManager:
                 logger.warning(f"Block {block_index} not found for links update")
                 return False
             
+            # Convert neighbor list to proper format
+            neighbor_links = [{"id": idx, "weight": 1.0} for idx in neighbors if idx != block_index]
+            
             # Update links in metadata
             metadata = block.get('metadata', {})
-            metadata['links'] = {"neighbors": neighbors}
+            if 'links' not in metadata:
+                metadata['links'] = {}
+            metadata['links']['neighbors'] = neighbor_links
             
             # Update block in database
             success = self.db_manager.update_block_metadata(block_index, metadata)
             if success:
-                logger.debug(f"Updated links for block {block_index}: {len(neighbors)} neighbors")
+                logger.debug(f"Updated links for block {block_index}: {len(neighbor_links)} neighbors")
+                
+                # GraphIndex 업데이트 (v3.0.0)
+                if self.graph_index:
+                    self._update_graph_index_links(block_index, neighbors)
+                    
             else:
                 logger.warning(f"Failed to update links for block {block_index}")
                 
@@ -391,7 +598,7 @@ class BlockManager:
             logger.error(f"Error updating block links: {e}")
             return False
     
-    def get_block_neighbors(self, block_index: int) -> List[Dict[str, Any]]:
+    def get_block_neighbors(self, block_index: int) -> List[int]:
         """
         Get cached neighbor links for a block.
         
@@ -399,7 +606,7 @@ class BlockManager:
             block_index: Block index
             
         Returns:
-            List of neighbor info or empty list if no cache
+            List of neighbor block indices or empty list if no cache
         """
         try:
             block = self.db_manager.get_block_by_index(block_index)
@@ -408,7 +615,13 @@ class BlockManager:
                 
             metadata = block.get('metadata', {})
             links = metadata.get('links', {})
-            return links.get('neighbors', [])
+            neighbors = links.get('neighbors', [])
+            
+            # Extract block indices from neighbor data
+            if neighbors and isinstance(neighbors[0], dict):
+                return [n.get('id') for n in neighbors if isinstance(n.get('id'), int)]
+            else:
+                return neighbors  # Already a list of ints
             
         except Exception as e:
             logger.debug(f"Error getting block neighbors: {e}")
@@ -426,18 +639,38 @@ class BlockManager:
             use_slots: 슬롯 우선 검색 활성화
             include_relationships: 관계 기반 확장 검색 (v2.5.2+)
             **options: 추가 검색 옵션
+                - slot: 특정 슬롯 지정 (예: 'A', 'B')
+                - radius: 앵커 기반 검색 반경 (기본값: 2)
+                - fallback: 국소 검색 실패 시 전역 검색 (기본값: True)
             
         Returns:
             검색 결과 리스트 (슬롯 + LTM 통합)
         """
         from datetime import datetime
+        import time
         search_start_time = datetime.utcnow()
+        metrics_start_time = time.time()
         
-        logger.debug(f"Enhanced search: query='{query}', use_slots={use_slots}")
+        # 메트릭 추적 변수
+        search_type = None
+        nodes_visited = 0
+        edges_traversed = 0
+        cache_hits = 0
+        cache_misses = 0
+        fallback_triggered = False
+        
+        # 옵션 파싱
+        target_slot = options.get('slot', None)
+        search_radius = options.get('radius', 2)
+        use_fallback = options.get('fallback', True)
+        
+        logger.debug(f"Enhanced search: query='{query}', use_slots={use_slots}, slot={target_slot}, radius={search_radius}")
         
         all_results = []
         slots_results_count = 0
         ltm_results_count = 0
+        graph_search_used = False
+        fallback_used = False
         
         # Analytics 추적을 위한 변수
         analytics = None
@@ -446,6 +679,44 @@ class BlockManager:
             analytics = UsageAnalytics()
         except ImportError:
             pass
+        
+        # 메트릭 업데이트
+        self.metrics['total_searches'] += 1
+        
+        # Phase 0: 앵커 기반 국소 그래프 탐색 (NEW)
+        if use_slots and target_slot:
+            try:
+                from .working_memory import AIContextualSlots
+                slots = AIContextualSlots()
+                slot = slots.get_slot(target_slot)
+                
+                if slot and slot.is_ltm_anchor() and slot.ltm_anchor_block:
+                    # 앵커 주변 그래프 탐색
+                    graph_results = self._search_local_graph(
+                        anchor_block=slot.ltm_anchor_block,
+                        radius=search_radius or slot.search_radius,
+                        query=query,
+                        limit=limit
+                    )
+                    
+                    if graph_results:
+                        for result in graph_results:
+                            result['search_type'] = 'anchor_local'
+                            result['slot_used'] = target_slot
+                            result['radius_used'] = search_radius
+                            result['graph_used'] = True  # 메트릭 추적용
+                            # 홉 거리 메트릭 수집
+                            if result.get('hop_distance') is not None:
+                                self.metrics['total_hops'] += result['hop_distance']
+                                self.metrics['search_count'] += 1
+                        all_results.extend(graph_results)
+                        graph_search_used = True
+                        self.metrics['graph_searches'] += 1
+                        self.metrics['graph_hits'] += len(graph_results)
+                        logger.info(f"Graph search found {len(graph_results)} results from anchor {slot.ltm_anchor_block}")
+                    
+            except Exception as e:
+                logger.error(f"Error in graph search: {e}")
         
         # Phase 1: 슬롯 우선 검색 (빠른 응답)
         if use_slots:
@@ -516,10 +787,64 @@ class BlockManager:
         except Exception as e:
             logger.error(f"Error in LTM search: {e}")
         
+        # Phase 2.5: Fallback 처리
+        if not all_results and use_fallback and graph_search_used:
+            # 그래프 검색이 실패했을 때만 fallback
+            fallback_used = True
+            logger.info("Graph search returned no results, falling back to global search")
+        
         # Phase 3: 결과 랭킹 및 제한
         ranking_start_time = datetime.utcnow()
         ranked_results = self._rank_search_results(all_results, query)
         final_results = ranked_results[:limit]
+        
+        # 메타데이터 추가
+        for result in final_results:
+            if 'search_type' not in result:
+                result['search_type'] = 'fallback' if fallback_used else 'standard'
+            result['graph_used'] = graph_search_used
+            result['fallback_used'] = fallback_used
+        
+        # 메트릭 수집
+        try:
+            from ..core.metrics_collector import MetricsCollector, SearchMetric, SearchType as MetricSearchType
+            
+            # 검색 타입 결정
+            if target_slot and graph_search_used:
+                metric_search_type = MetricSearchType.LOCAL_GRAPH
+            elif use_slots:
+                metric_search_type = MetricSearchType.SLOT_BASED
+            elif fallback_triggered:
+                metric_search_type = MetricSearchType.FALLBACK
+            else:
+                metric_search_type = MetricSearchType.GLOBAL
+            
+            # 메트릭 기록
+            latency_ms = (time.time() - metrics_start_time) * 1000
+            
+            collector = MetricsCollector()
+            metric = SearchMetric(
+                timestamp=datetime.now(),
+                search_type=metric_search_type,
+                query=query[:100],  # 프라이버시를 위해 첫 100자만
+                slot_used=target_slot,
+                radius=search_radius if target_slot else None,
+                total_results=len(final_results),
+                relevant_results=len([r for r in final_results if r.get('score', 0) > 0.7]),
+                latency_ms=latency_ms,
+                hops_traversed=search_radius if graph_search_used else 0,
+                top_score=final_results[0].get('score', 0) if final_results else 0,
+                avg_score=sum(r.get('score', 0) for r in final_results) / len(final_results) if final_results else 0,
+                fallback_triggered=fallback_triggered,
+                nodes_visited=nodes_visited,
+                edges_traversed=edges_traversed,
+                cache_hits=cache_hits,
+                cache_misses=cache_misses
+            )
+            collector.record_search(metric)
+            logger.debug(f"Search metric recorded: type={metric_search_type.value}, latency={latency_ms:.1f}ms")
+        except Exception as e:
+            logger.debug(f"Failed to record search metric: {e}")
         
         # Analytics 추적: 검색 성능 비교
         if analytics:
@@ -538,18 +863,172 @@ class BlockManager:
                 baseline_time = 0
                 baseline_results = []
             
-            analytics.track_search_comparison(
-                query_text=query[:100],  # 프라이버시를 위해 첫 100자만
-                slots_enabled=use_slots,
-                response_time_ms=total_search_time,
-                results_count=len(final_results),
-                slot_hits=slots_results_count,
-                ltm_hits=ltm_results_count,
-                top_result_source=final_results[0].get('source', 'unknown') if final_results else None
-            )
+            # TODO: Implement track_search_comparison in UsageAnalytics
+            # analytics.track_search_comparison(
+            #     query_text=query[:100],  # 프라이버시를 위해 첫 100자만
+            #     slots_enabled=use_slots,
+            #     response_time_ms=total_search_time,
+            #     results_count=len(final_results),
+            #     slot_hits=slots_results_count,
+            #     ltm_hits=ltm_results_count,
+            #     top_result_source=final_results[0].get('source', 'unknown') if final_results else None
+            # )
         
         logger.info(f"Enhanced search completed: {len(final_results)}/{len(all_results)} results returned")
         return final_results
+    
+    def _search_local_graph(self, anchor_block: int, radius: int, query: str, limit: int) -> List[Dict[str, Any]]:
+        """
+        앵커 블록을 중심으로 한 국소 그래프 탐색
+        
+        Args:
+            anchor_block: 시작 앵커 블록 인덱스
+            radius: 탐색 반경 (hop 수)
+            query: 검색 쿼리
+            limit: 반환할 최대 결과 수
+            
+        Returns:
+            그래프 탐색으로 찾은 블록 리스트
+        """
+        # GraphIndex를 사용할 수 있으면 beam_search 사용 (v3.0.0)
+        if self.graph_index and hasattr(self.graph_index, 'beam_search'):
+            try:
+                # beam_search를 위한 목표 함수
+                def is_goal(node_id: str) -> bool:
+                    try:
+                        block_idx = int(node_id)
+                        block = self.db_manager.get_block_by_index(block_idx)
+                        if block:
+                            return self._matches_query(block, query)
+                    except:
+                        pass
+                    return False
+                
+                # GraphIndex beam_search 사용
+                hit_nodes = self.graph_index.beam_search(
+                    start=str(anchor_block),
+                    is_goal=is_goal,
+                    beam=32,
+                    max_hop=radius
+                )
+                
+                # 결과 변환
+                results = []
+                for i, node_id in enumerate(hit_nodes[:limit]):
+                    block_idx = int(node_id)
+                    block = self.db_manager.get_block_by_index(block_idx)
+                    if block:
+                        block_dict = block.to_dict() if hasattr(block, 'to_dict') else block
+                        block_dict['hop_distance'] = i  # 실제 거리는 beam_search가 추적해야 함
+                        block_dict['anchor_block'] = anchor_block
+                        results.append(block_dict)
+                
+                return results
+                
+            except Exception as e:
+                logger.debug(f"GraphIndex search failed, falling back to BFS: {e}")
+        
+        # Fallback: 기존 BFS 사용
+        results = []
+        visited = set()
+        queue = [(anchor_block, 0)]  # (block_id, distance)
+        
+        while queue and len(results) < limit:
+            current_block, distance = queue.pop(0)
+            
+            if current_block in visited or distance > radius:
+                continue
+                
+            visited.add(current_block)
+            
+            # 현재 블록 가져오기
+            block = self.db_manager.get_block_by_index(current_block)
+            if block and self._matches_query(block, query):
+                block_dict = block.to_dict() if hasattr(block, 'to_dict') else block
+                block_dict['hop_distance'] = distance
+                block_dict['anchor_block'] = anchor_block
+                results.append(block_dict)
+            
+            # 이웃 블록들 탐색 (거리가 radius 이내인 경우만)
+            if distance < radius:
+                neighbors = self.get_block_neighbors(current_block)
+                for neighbor_id in neighbors:
+                    if neighbor_id not in visited:
+                        queue.append((neighbor_id, distance + 1))
+        
+        # 거리 기반 정렬 (가까운 것부터)
+        results.sort(key=lambda x: x.get('hop_distance', float('inf')))
+        
+        return results[:limit]
+    
+    def _matches_query(self, block: Any, query: str) -> bool:
+        """블록이 쿼리와 매치되는지 확인"""
+        if not block:
+            return False
+            
+        # 간단한 키워드 매칭 (향후 임베딩 기반으로 개선 가능)
+        query_lower = query.lower()
+        block_content = str(block.get('context', '') if isinstance(block, dict) else getattr(block, 'context', ''))
+        block_keywords = block.get('keywords', []) if isinstance(block, dict) else getattr(block, 'keywords', [])
+        
+        # 컨텐츠나 키워드에 쿼리가 포함되어 있는지 확인
+        if query_lower in block_content.lower():
+            return True
+            
+        for keyword in block_keywords:
+            if query_lower in str(keyword).lower():
+                return True
+                
+        return False
+    
+    def _update_near_anchor_links(self, new_block_index: int, metadata: Dict[str, Any]) -> int:
+        """
+        Near-Anchor Write: 새 블록을 활성 앵커 주변 네트워크에 연결
+        
+        Args:
+            new_block_index: 새로 추가된 블록의 인덱스
+            metadata: 블록의 메타데이터
+            
+        Returns:
+            생성된 링크 수
+        """
+        links_created = 0
+        try:
+            from .working_memory import AIContextualSlots
+            slots = AIContextualSlots()
+            
+            # 모든 활성 앵커 찾기
+            active_anchors = []
+            for slot_name in ['A', 'B', 'C', 'D', 'E']:
+                slot = slots.get_slot(slot_name)
+                if slot and slot.is_ltm_anchor() and slot.ltm_anchor_block:
+                    active_anchors.append(slot.ltm_anchor_block)
+            
+            if not active_anchors:
+                return 0
+            
+            # 가장 가까운 앵커 찾기 (임베딩 기반으로 개선 가능)
+            nearest_anchor = active_anchors[0]  # 일단 첫 번째 앵커 사용
+            
+            # 양방향 링크 생성
+            self.update_block_links(new_block_index, [nearest_anchor])
+            self.update_block_links(nearest_anchor, [new_block_index])
+            links_created += 2  # 양방향 링크
+            
+            # 앵커의 이웃들과도 연결 (2-hop 네트워크)
+            anchor_neighbors = self.get_block_neighbors(nearest_anchor)
+            if anchor_neighbors:
+                # 상위 3개 이웃과 연결
+                top_neighbors = anchor_neighbors[:3]
+                self.update_block_links(new_block_index, top_neighbors)
+                links_created += len(top_neighbors)
+                
+            logger.info(f"Connected new block {new_block_index} to anchor {nearest_anchor} network with {links_created} links")
+            
+        except Exception as e:
+            logger.debug(f"Near-anchor write not available: {e}")
+        
+        return links_created
     
     def _extract_keywords_from_content(self, content: str, max_keywords: int = 5) -> List[str]:
         """컨텐츠에서 간단한 키워드 추출"""
@@ -612,4 +1091,258 @@ class BlockManager:
             
             return score
         
-        return sorted(results, key=calculate_score, reverse=True) 
+        return sorted(results, key=calculate_score, reverse=True)
+    
+    # v2.7.0: Causal Reasoning Methods
+    
+    def get_causal_relationships(self, block_id: int) -> List[Dict[str, Any]]:
+        """
+        특정 블록의 인과관계 조회
+        
+        Args:
+            block_id: 조회할 블록 ID
+            
+        Returns:
+            인과관계 리스트
+        """
+        if not self.causal_manager:
+            logger.warning("Causal reasoning not available")
+            return []
+        
+        return self.causal_manager.get_relationships_for_block(block_id)
+    
+    def get_causal_statistics(self) -> Dict[str, Any]:
+        """
+        인과관계 감지 통계 조회
+        
+        Returns:
+            통계 정보 딕셔너리
+        """
+        if not self.causal_manager:
+            return {'error': 'Causal reasoning not available'}
+        
+        return self.causal_manager.get_detection_statistics()
+    
+    def find_causal_chain(self, start_block_id: int, max_depth: int = 3) -> List[Dict[str, Any]]:
+        """
+        인과관계 체인 탐색 (A → B → C → D 형태)
+        
+        Args:
+            start_block_id: 시작 블록 ID
+            max_depth: 최대 탐색 깊이
+            
+        Returns:
+            인과관계 체인 리스트
+        """
+        if not self.causal_manager:
+            return []
+        
+        try:
+            conn = self.db_manager._get_connection()
+            cursor = conn.cursor()
+            
+            # 재귀적으로 인과관계 체인 탐색
+            chain = []
+            visited = set()
+            
+            def traverse_chain(current_id: int, depth: int):
+                if depth >= max_depth or current_id in visited:
+                    return
+                
+                visited.add(current_id)
+                
+                # 현재 블록이 원인이 되는 관계들 찾기
+                cursor.execute('''
+                    SELECT target_block_id, relation_type, confidence
+                    FROM causal_relationships 
+                    WHERE source_block_id = ? AND confidence >= 0.5
+                    ORDER BY confidence DESC
+                ''', (current_id,))
+                
+                for row in cursor.fetchall():
+                    target_id, relation_type, confidence = row
+                    
+                    # 블록 정보 조회
+                    target_block = self.db_manager.get_block(target_id)
+                    if target_block:
+                        chain.append({
+                            'source_id': current_id,
+                            'target_id': target_id,
+                            'relation_type': relation_type,
+                            'confidence': confidence,
+                            'target_block': target_block,
+                            'depth': depth
+                        })
+                        
+                        # 재귀적으로 계속 탐색
+                        traverse_chain(target_id, depth + 1)
+            
+            traverse_chain(start_block_id, 0)
+            return chain
+            
+        except Exception as e:
+            logger.error(f"Failed to find causal chain from block {start_block_id}: {e}")
+            return []
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """검색 및 성능 메트릭 반환"""
+        # 평균 계산
+        if self.metrics['graph_searches'] > 0:
+            self.metrics['local_hit_rate'] = self.metrics['graph_hits'] / self.metrics['graph_searches']
+        else:
+            self.metrics['local_hit_rate'] = 0.0
+            
+        if self.metrics['search_count'] > 0:
+            self.metrics['avg_hops'] = self.metrics['total_hops'] / self.metrics['search_count']
+        else:
+            self.metrics['avg_hops'] = 0.0
+            
+        return {
+            'total_searches': self.metrics['total_searches'],
+            'graph_searches': self.metrics['graph_searches'],
+            'graph_hits': self.metrics['graph_hits'],
+            'local_hit_rate': round(self.metrics['local_hit_rate'], 3),
+            'avg_hops': round(self.metrics['avg_hops'], 2),
+            'fallback_searches': self.metrics['fallback_searches']
+        }
+        
+    def reset_metrics(self):
+        """메트릭 초기화"""
+        self.metrics = {
+            'total_searches': 0,
+            'graph_searches': 0,
+            'graph_hits': 0,
+            'fallback_searches': 0,
+            'total_hops': 0,
+            'search_count': 0,
+            'avg_response_time': 0.0,
+            'local_hit_rate': 0.0,
+            'avg_hops': 0.0
+        }
+    
+    # GraphIndex 관련 메서드들 (v3.0.0)
+    
+    def _auto_bootstrap_graph_index(self):
+        """첫 실행 시 자동 부트스트랩"""
+        if not self.graph_index:
+            return
+        
+        try:
+            # 기존 블록이 있는지 확인
+            blocks = self.get_blocks(limit=1)
+            if blocks and len(self.graph_index.adj) == 0:
+                # GraphIndex가 비어있으면 부트스트랩
+                self.bootstrap_graph_index()
+        except Exception as e:
+            logger.debug(f"Auto-bootstrap skipped: {e}")
+    
+    def bootstrap_graph_index(self):
+        """기존 블록들로부터 GraphIndex를 부트스트랩"""
+        if not self.graph_index:
+            logger.warning("GraphIndex not available")
+            return
+        
+        logger.info("Bootstrapping GraphIndex from existing blocks...")
+        
+        # 모든 블록 가져오기
+        blocks = self.get_blocks(limit=10000)  # 실제로는 페이징 필요
+        
+        for block in blocks:
+            block_idx = block.get('block_index')
+            if block_idx is None:
+                continue
+            
+            node_id = str(block_idx)
+            
+            # 노드 추가
+            if node_id not in self.graph_index.adj:
+                self.graph_index.adj[node_id] = []
+            
+            # 메타데이터에서 링크 정보 추출
+            metadata = block.get('metadata', {})
+            links = metadata.get('links', {})
+            neighbors = links.get('neighbors', [])
+            
+            for neighbor in neighbors:
+                if isinstance(neighbor, dict):
+                    neighbor_id = str(neighbor.get('id'))
+                    weight = neighbor.get('weight', 1.0)
+                else:
+                    neighbor_id = str(neighbor)
+                    weight = 1.0
+                
+                # 엣지 추가 (중복 체크)
+                existing = {n[0] for n in self.graph_index.adj[node_id]}
+                if neighbor_id not in existing:
+                    self.graph_index.adj[node_id].append((neighbor_id, weight))
+        
+        # 모든 노드의 이웃 정렬 및 제한
+        for node_id in self.graph_index.adj:
+            self.graph_index.adj[node_id].sort(key=lambda x: x[1], reverse=True)
+            self.graph_index.adj[node_id] = self.graph_index.adj[node_id][:self.graph_index.kmax]
+        
+        logger.info(f"GraphIndex bootstrapped with {len(self.graph_index.adj)} nodes")
+    
+    def bootstrap_and_save_graph(self, output_path):
+        """GraphIndex를 부트스트랩하고 스냅샷 저장"""
+        if not self.graph_index:
+            logger.error("GraphIndex not available")
+            return None
+        
+        self.bootstrap_graph_index()
+        
+        # 스냅샷 저장
+        try:
+            from ..graph.snapshot import save_graph_snapshot
+            
+            # 파라미터 준비
+            params = {
+                "theta": self.graph_index.theta,
+                "kmax": self.graph_index.kmax,
+                "alpha": 0.7,
+                "beta": 0.2,
+                "gamma": 0.1
+            }
+            
+            save_graph_snapshot(self.graph_index.adj, params, output_path)
+            return output_path
+        except ImportError as e:
+            logger.error(f"Graph snapshot not available: {e}")
+            return None
+    
+    def _update_graph_index_links(self, block_index: int, neighbors: List[int]):
+        """GraphIndex의 링크 정보를 업데이트"""
+        if not self.graph_index:
+            return
+        
+        try:
+            node_id = str(block_index)
+            
+            # 노드가 없으면 추가
+            if node_id not in self.graph_index.adj:
+                self.graph_index.adj[node_id] = []
+            
+            # 기존 이웃들 가져오기
+            existing_neighbors = {n[0] for n in self.graph_index.adj[node_id]}
+            
+            # 새 이웃들 추가
+            for neighbor_idx in neighbors:
+                neighbor_id = str(neighbor_idx)
+                if neighbor_id not in existing_neighbors:
+                    # 가중치 1.0으로 추가
+                    self.graph_index.adj[node_id].append((neighbor_id, 1.0))
+                    
+                    # 양방향 엣지 (이웃에도 추가)
+                    if neighbor_id not in self.graph_index.adj:
+                        self.graph_index.adj[neighbor_id] = []
+                    
+                    neighbor_existing = {n[0] for n in self.graph_index.adj[neighbor_id]}
+                    if node_id not in neighbor_existing:
+                        self.graph_index.adj[neighbor_id].append((node_id, 1.0))
+            
+            # 가중치 기준 정렬 및 제한
+            self.graph_index.adj[node_id].sort(key=lambda x: x[1], reverse=True)
+            self.graph_index.adj[node_id] = self.graph_index.adj[node_id][:self.graph_index.kmax]
+            
+        except Exception as e:
+            logger.debug(f"Failed to update GraphIndex links: {e}")

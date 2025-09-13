@@ -45,7 +45,7 @@ def export(output: str, include_metadata: bool):
         greeum backup export --output backups/daily_backup.json --no-metadata
     """
     try:
-        click.echo("🔄 메모리 백업을 시작합니다...")
+        click.echo("[PROCESS] 메모리 백업을 시작합니다...")
         
         system = get_hierarchical_system()
         backup_engine = MemoryBackupEngine(system)
@@ -61,7 +61,7 @@ def export(output: str, include_metadata: bool):
                 size_mb = backup_path.stat().st_size / (1024 * 1024)
                 click.echo(f"📁 파일 크기: {size_mb:.2f} MB")
         else:
-            click.echo("❌ 백업 생성에 실패했습니다")
+            click.echo("[ERROR] 백업 생성에 실패했습니다")
             
     except Exception as e:
         click.echo(f"💥 백업 중 오류: {e}")
@@ -147,7 +147,7 @@ def from_file(
         
         if not preview:
             # 실제 복원 실행
-            click.echo("🔄 메모리 복원을 시작합니다...")
+            click.echo("[PROCESS] 메모리 복원을 시작합니다...")
             
             result = restore_engine.restore_from_backup(
                 backup_file=backup_file,
@@ -160,10 +160,10 @@ def from_file(
             if result.success:
                 click.echo("✅ 복원 완료!")
                 click.echo(f"📊 복원 결과:")
-                click.echo(f"   🧠 Working Memory: {result.working_count}개")
-                click.echo(f"   ⚡ STM: {result.stm_count}개") 
+                click.echo(f"   [MEMORY] Working Memory: {result.working_count}개")
+                click.echo(f"   [FAST] STM: {result.stm_count}개") 
                 click.echo(f"   🏛️  LTM: {result.ltm_count}개")
-                click.echo(f"   📈 총 처리: {result.total_processed}개")
+                click.echo(f"   [IMPROVE] 총 처리: {result.total_processed}개")
                 click.echo(f"   ⏱️  소요 시간: {result.execution_time:.2f}초")
                 
                 if result.error_count > 0:
@@ -171,7 +171,7 @@ def from_file(
                     for error in result.errors[:5]:  # 최대 5개 오류만 표시
                         click.echo(f"      - {error}")
             else:
-                click.echo("❌ 복원에 실패했습니다")
+                click.echo("[ERROR] 복원에 실패했습니다")
                 for error in result.errors:
                     click.echo(f"   💥 {error}")
                     

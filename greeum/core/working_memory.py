@@ -101,15 +101,33 @@ class STMWorkingSet:
 
 
 class AIContextualSlots:
-    """AI가 유연하게 활용하는 3-슬롯 시스템"""
+    """AI가 유연하게 활용하는 3-슬롯 시스템 (싱글톤 패턴)"""
+    
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
     
     def __init__(self, ttl_seconds: int = 1800, enable_analytics: bool = True):  # 30분 기본 TTL
+        # 이미 초기화되었으면 스킵
+        if self._initialized:
+            return
+        self._initialized = True
         self.ttl_seconds = ttl_seconds
         self.enable_analytics = enable_analytics
         self.slots: Dict[str, Optional[MemorySlot]] = {
             'active': None,   # 현재 대화 맥락
             'anchor': None,   # LTM 앵커 포인트
-            'buffer': None    # 임시/전환 버퍼
+            'buffer': None,   # 임시/전환 버퍼
+            # v2.7.0: 명시적 슬롯 이름 지원
+            'A': None,
+            'B': None,
+            'C': None,
+            'D': None,
+            'E': None
         }
         
         # Analytics 초기화 (선택적)

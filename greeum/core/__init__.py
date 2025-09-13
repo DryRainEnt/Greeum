@@ -12,8 +12,9 @@ This module contains the core components for STM/LTM memory architecture:
 - WorkingMemory: STM working set management
 """
 
-# Core memory components
-from .database_manager import DatabaseManager
+# Core memory components - using thread-safe factory pattern
+from .thread_safe_db import get_database_manager_class
+DatabaseManager = get_database_manager_class()
 from .block_manager import BlockManager
 
 # Optional components (may not be available in lightweight version)

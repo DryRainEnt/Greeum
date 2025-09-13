@@ -29,7 +29,7 @@ class DatabaseManager:
         self._ensure_data_dir()
         self._setup_connection()
         self._create_schemas()
-        logger.info(f"DatabaseManager 초기화 완료: {self.connection_string} (type: {self.db_type})")
+        # logger.info(f"DatabaseManager initialization complete: {self.connection_string} (type: {self.db_type})")  # Too verbose
     
     def _get_smart_db_path(self) -> str:
         """
@@ -46,7 +46,7 @@ class DatabaseManager:
         # 1. 환경변수 우선 (명시적 설정)
         if 'GREEUM_DATA_DIR' in os.environ:
             env_path = os.path.join(os.environ['GREEUM_DATA_DIR'], 'data', 'memory.db')
-            logger.info(f"📁 Using environment variable path: {env_path}")
+            # logger.info(f"📁 Using environment variable path: {env_path}")  # Too verbose
             return env_path
         
         # 2. 현재 디렉토리에 기존 데이터베이스 존재하면 사용 (프로젝트 로컬)
@@ -54,20 +54,20 @@ class DatabaseManager:
         local_db_path = os.path.join(current_dir, 'data', 'memory.db')
         
         if os.path.exists(local_db_path):
-            logger.info(f"📂 Found existing local database: {local_db_path}")
+            # logger.info(f"[DB] Found existing local database: {local_db_path}")  # Too verbose
             return local_db_path
         
         # 3. 현재 디렉토리에 data 폴더가 있으면 사용 (새 프로젝트)
         data_dir_path = os.path.join(current_dir, 'data')
         if os.path.exists(data_dir_path) and os.path.isdir(data_dir_path):
             new_local_path = os.path.join(data_dir_path, 'memory.db')
-            logger.info(f"📁 Using local data directory: {new_local_path}")
+            # logger.info(f"📁 Using local data directory: {new_local_path}")  # Too verbose
             return new_local_path
         
         # 4. 글로벌 디렉토리 폴백
         home_dir = os.path.expanduser('~')
         global_db_path = os.path.join(home_dir, 'greeum-global', 'data', 'memory.db')
-        logger.info(f"🌐 Using global fallback path: {global_db_path}")
+        # logger.info(f"🌐 Using global fallback path: {global_db_path}")  # Too verbose
         return global_db_path
     
     def _ensure_data_dir(self):
@@ -95,6 +95,9 @@ class DatabaseManager:
     def _create_schemas(self):
         """필요한 테이블 생성"""
         cursor = self.conn.cursor()
+        
+        # Create v3.0.0 tables if needed
+        self._create_v3_tables(cursor)
         
         # 블록 테이블
         cursor.execute('''
@@ -169,6 +172,169 @@ class DatabaseManager:
         
         self.conn.commit()
     
+    def _create_v3_tables(self, cursor):
+        """Create v3.0.0 association-based memory tables"""
+        # Memory nodes table (v3.0.0)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS memory_nodes (
+                node_id TEXT PRIMARY KEY,
+                memory_id INTEGER,
+                node_type TEXT,
+                content TEXT,
+                embedding TEXT,
+                activation_level REAL DEFAULT 0.0,
+                last_activated TEXT,
+                metadata TEXT,
+                created_at TEXT,
+                FOREIGN KEY (memory_id) REFERENCES blocks(block_index)
+            )
+        ''')
+        
+        # Associations table (v3.0.0)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS associations (
+                association_id TEXT PRIMARY KEY,
+                source_node_id TEXT,
+                target_node_id TEXT,
+                association_type TEXT,
+                strength REAL DEFAULT 0.5,
+                weight REAL DEFAULT 1.0,
+                created_at TEXT,
+                last_activated TEXT,
+                activation_count INTEGER DEFAULT 0,
+                metadata TEXT,
+                FOREIGN KEY (source_node_id) REFERENCES memory_nodes(node_id),
+                FOREIGN KEY (target_node_id) REFERENCES memory_nodes(node_id)
+            )
+        ''')
+        
+        # Activation history (v3.0.0)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS activation_history (
+                history_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                node_id TEXT,
+                activation_level REAL,
+                trigger_type TEXT,
+                trigger_source TEXT,
+                timestamp TEXT,
+                session_id TEXT,
+                FOREIGN KEY (node_id) REFERENCES memory_nodes(node_id)
+            )
+        ''')
+        
+        # Context sessions (v3.0.0)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS context_sessions (
+                session_id TEXT PRIMARY KEY,
+                active_nodes TEXT,
+                activation_snapshot TEXT,
+                created_at TEXT,
+                last_updated TEXT,
+                metadata TEXT
+            )
+        ''')
+        
+        # Create indexes for v3 tables
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_nodes_memory ON memory_nodes(memory_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_nodes_activation ON memory_nodes(activation_level)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_associations_source ON associations(source_node_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_associations_target ON associations(target_node_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_associations_strength ON associations(strength)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_activation_history_node ON activation_history(node_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_activation_history_session ON activation_history(session_id)')
+        
+        # Actant model tables (v3.0.0)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS memory_actants (
+                actant_id TEXT PRIMARY KEY,
+                memory_id INTEGER,
+                
+                -- Primary Actants (required)
+                subject_raw TEXT,
+                subject_hash TEXT,
+                action_raw TEXT,
+                action_hash TEXT,
+                object_raw TEXT,
+                object_hash TEXT,
+                
+                -- Secondary Actants (optional)
+                sender_raw TEXT,
+                sender_hash TEXT,
+                receiver_raw TEXT,
+                receiver_hash TEXT,
+                helper_raw TEXT,
+                helper_hash TEXT,
+                opponent_raw TEXT,
+                opponent_hash TEXT,
+                
+                -- Metadata
+                confidence REAL DEFAULT 0.5,
+                parser_version TEXT,
+                parsed_at TEXT,
+                metadata TEXT,
+                
+                FOREIGN KEY (memory_id) REFERENCES blocks(block_index)
+            )
+        ''')
+        
+        # Entity normalization table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS actant_entities (
+                entity_hash TEXT PRIMARY KEY,
+                entity_type TEXT,
+                canonical_form TEXT,
+                variations TEXT,
+                first_seen TEXT,
+                last_seen TEXT,
+                occurrence_count INTEGER DEFAULT 1,
+                metadata TEXT
+            )
+        ''')
+        
+        # Action normalization table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS actant_actions (
+                action_hash TEXT PRIMARY KEY,
+                action_type TEXT,
+                canonical_form TEXT,
+                variations TEXT,
+                tense TEXT,
+                aspect TEXT,
+                first_seen TEXT,
+                last_seen TEXT,
+                occurrence_count INTEGER DEFAULT 1,
+                metadata TEXT
+            )
+        ''')
+        
+        # Actant relations table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS actant_relations (
+                relation_id TEXT PRIMARY KEY,
+                source_actant_id TEXT,
+                target_actant_id TEXT,
+                relation_type TEXT,
+                strength REAL DEFAULT 0.5,
+                evidence_count INTEGER DEFAULT 1,
+                created_at TEXT,
+                last_updated TEXT,
+                metadata TEXT,
+                
+                FOREIGN KEY (source_actant_id) REFERENCES memory_actants(actant_id),
+                FOREIGN KEY (target_actant_id) REFERENCES memory_actants(actant_id)
+            )
+        ''')
+        
+        # Create indexes for actant tables
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_actants_memory ON memory_actants(memory_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_actants_subject ON memory_actants(subject_hash)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_actants_action ON memory_actants(action_hash)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_actants_object ON memory_actants(object_hash)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_entities_type ON actant_entities(entity_type)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_actions_type ON actant_actions(action_type)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_relations_source ON actant_relations(source_actant_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_relations_target ON actant_relations(target_actant_id)')
+    
     def add_block(self, block_data: Dict[str, Any]) -> int:
         """
         새 블록 추가
@@ -180,7 +346,7 @@ class DatabaseManager:
             추가된 블록의 인덱스
         """
         cursor = self.conn.cursor()
-        logger.debug(f"새 블록 추가 시도: index={block_data.get('block_index')}")
+        # logger.debug(f"새 블록 추가 시도: index={block_data.get('block_index')}")  # Debug logging
         
         # 1. 블록 기본 정보 삽입
         cursor.execute('''
@@ -241,7 +407,7 @@ class DatabaseManager:
             ))
         
         self.conn.commit()
-        logger.info(f"Block added successfully: index={block_index}")
+        # logger.info(f"Block added successfully: index={block_index}")  # Too verbose
         return block_index
     
     def get_block(self, block_index: int) -> Optional[Dict[str, Any]]:
@@ -255,7 +421,7 @@ class DatabaseManager:
             블록 데이터 (없으면 None)
         """
         cursor = self.conn.cursor()
-        logger.debug(f"Attempting to retrieve block: index={block_index}")
+        # logger.debug(f"Attempting to retrieve block: index={block_index}")  # Debug logging
         
         # 1. 기본 블록 데이터 조회
         cursor.execute('''
@@ -315,7 +481,7 @@ class DatabaseManager:
             block['embedding'] = embedding_array.tolist()
             block['embedding_model'] = embedding_model
         
-        logger.debug(f"블록 조회 성공: index={block_index}")
+        # logger.debug(f"블록 조회 성공: index={block_index}")  # Debug logging
         return block
     
     def get_blocks(self, start_idx: Optional[int] = None, end_idx: Optional[int] = None,
@@ -469,6 +635,11 @@ class DatabaseManager:
             block_embedding = np.frombuffer(embedding_bytes, dtype=np.float32)
             if embedding_dim:
                 block_embedding = block_embedding[:embedding_dim]
+            
+            # 차원 확인 및 스킵 (차원이 맞지 않으면 건너뛰기)
+            if len(query_embedding) != len(block_embedding):
+                # logger.debug(f"Skipping block {block_index}: dimension mismatch ({len(query_embedding)} != {len(block_embedding)})")
+                continue
             
             # 코사인 유사도 계산
             similarity = np.dot(query_embedding, block_embedding) / (
@@ -674,7 +845,7 @@ class DatabaseManager:
         """데이터베이스 연결 종료"""
         if self.conn:
             self.conn.close()
-            logger.info(f"데이터베이스 연결 종료: {self.connection_string}")
+            logger.info(f"Database connection closed: {self.connection_string}")
 
     def get_short_term_memory_by_id(self, memory_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -704,6 +875,25 @@ class DatabaseManager:
             except json.JSONDecodeError:
                 memory['metadata'] = {} # 파싱 실패 시 빈 객체
         return memory
+    
+    def delete_short_term_memory(self, memory_id: str) -> bool:
+        """
+        특정 단기 기억 삭제
+        
+        Args:
+            memory_id: 삭제할 단기 기억의 ID
+            
+        Returns:
+            삭제 성공 여부
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('DELETE FROM short_term_memories WHERE id = ?', (memory_id,))
+            self.conn.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Failed to delete STM {memory_id}: {e}")
+            return False
 
     def get_last_block_info(self) -> Optional[Dict[str, Any]]:
         """
@@ -913,7 +1103,7 @@ class DatabaseManager:
             ''', (block_index, json.dumps(metadata)))
             
             self.conn.commit()
-            logger.debug(f"Updated metadata for block {block_index}")
+            # logger.debug(f"Updated metadata for block {block_index}")  # Debug logging
             return True
             
         except Exception as e:
@@ -959,5 +1149,5 @@ class DatabaseManager:
             }
             
         except Exception as e:
-            logger.debug(f"Failed to get embedding for block {block_index}: {e}")
+            # logger.debug(f"Failed to get embedding for block {block_index}: {e}")  # Debug logging
             return None 

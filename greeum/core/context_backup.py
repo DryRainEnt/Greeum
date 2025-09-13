@@ -259,12 +259,12 @@ class ContextBackupItem:
     def __str__(self) -> str:
         """문자열 표현"""
         status_emoji = {
-            ProcessingStatus.RAW: "📝",
-            ProcessingStatus.EXTRACTING: "🔄", 
+            ProcessingStatus.RAW: "[NOTE]",
+            ProcessingStatus.EXTRACTING: "[PROCESS]", 
             ProcessingStatus.READY_FOR_LTM: "✅",
             ProcessingStatus.PROCESSED: "💾",
-            ProcessingStatus.LOST: "❌",
-            ProcessingStatus.RECOVERED: "🔄",
+            ProcessingStatus.LOST: "[ERROR]",
+            ProcessingStatus.RECOVERED: "[PROCESS]",
             ProcessingStatus.FAILED: "💥",
             ProcessingStatus.ARCHIVED: "📦"
         }

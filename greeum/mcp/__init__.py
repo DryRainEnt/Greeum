@@ -3,7 +3,11 @@ GreeumMCP - Greeum Memory Engine as MCP Server
 Native MCP Server 우선 로딩
 """
 
-__version__ = "2.3.0a4"
+# Use main package version
+try:
+    from greeum import __version__
+except ImportError:
+    __version__ = "unknown"
 
 # Working MCP Server를 기본으로 복원 (긴급 수정)
 try:
@@ -44,5 +48,5 @@ def run_server(data_dir="./data", server_name="greeum_mcp", port=8000, transport
         from .working_mcp_server import main
         asyncio.run(main())
     except ImportError as e:
-        logging.error(f"❌ Working MCP Server not available: {e}")
+        logging.error(f"[ERROR] Working MCP Server not available: {e}")
         raise RuntimeError("Working MCP Server dependencies not installed") 

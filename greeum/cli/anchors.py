@@ -13,6 +13,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from typing import Optional, Dict, Any
+from datetime import datetime
 
 console = Console()
 
@@ -44,7 +45,7 @@ def status_command(anchor_path: str, verbose: bool):
         anchor_manager = AnchorManager(anchor_path_obj)
         
         # 상태 테이블 생성
-        table = Table(title="🔗 Greeum 앵커 상태", show_header=True, header_style="bold magenta")
+        table = Table(title="[LINK] Greeum 앵커 상태", show_header=True, header_style="bold magenta")
         table.add_column("슬롯", style="dim", width=6)
         table.add_column("앵커 블록 ID", min_width=12)
         table.add_column("요약", min_width=30)
@@ -65,11 +66,11 @@ def status_command(anchor_path: str, verbose: bool):
                     last_used = "알 수 없음"
                 
                 # 상태 표시
-                status = "📌 고정" if slot_info.get('pinned', False) else "🔄 활성"
+                status = "📌 고정" if slot_info.get('pinned', False) else "[PROCESS] 활성"
                 
                 # 요약 텍스트 길이 제한
                 summary = slot_info.get('summary', '요약 없음')
-                if len(summary) > 40:
+                if isinstance(summary, str) and len(summary) > 40:
                     summary = summary[:37] + "..."
                 
                 table.add_row(
@@ -145,23 +146,37 @@ def set_command(slot: str, block_id: int, anchor_path: str, summary: Optional[st
             console.print("[yellow]블록에 임베딩이 없습니다. 간단한 임베딩을 생성합니다.[/yellow]")
             # 간단한 임베딩 생성 (실제로는 더 정교해야 함)
             import hashlib
+            import numpy as np
             hash_val = int(hashlib.md5(str(block_id).encode()).hexdigest()[:8], 16)
-            embedding = [(hash_val % 1000) / 1000.0] * 128
+            embedding = np.array([(hash_val % 1000) / 1000.0] * 768)
+        else:
+            # embedding이 bytes면 numpy array로 변환
+            import numpy as np
+            if isinstance(embedding, bytes):
+                embedding = np.frombuffer(embedding, dtype=np.float32)
+            elif isinstance(embedding, list):
+                embedding = np.array(embedding)
         
         # 앵커 이동 수행
-        success = anchor_manager.move_anchor(
+        anchor_manager.move_anchor(
             slot=slot,
             new_block_id=str(block_id),
-            topic_vec=embedding,
-            summary=summary,
-            hop_budget=hop_budget
+            topic_vec=embedding
         )
+        
+        # 요약과 홉 예산 업데이트
+        if summary:
+            anchor_manager.update_summary(slot, summary)
+        if hop_budget != 3:
+            anchor_manager.set_hop_budget(slot, hop_budget)
+        
+        success = True
         
         if success:
             console.print(f"[green]✅ 슬롯 {slot}에 블록 {block_id} 앵커 설정 완료[/green]")
             console.print(f"[dim]요약: {summary}[/dim]")
         else:
-            console.print(f"[red]❌ 앵커 설정 실패[/red]")
+            console.print(f"[red][ERROR] 앵커 설정 실패[/red]")
             
     except Exception as e:
         console.print(f"[bold red]앵커 설정 실패: {str(e)}[/bold red]")
@@ -188,7 +203,7 @@ def pin_command(slot: str, anchor_path: str):
             else:
                 console.print(f"[yellow]슬롯 {slot}에 앵커가 없지만 고정 상태로 설정됨[/yellow]")
         else:
-            console.print(f"[red]❌ 슬롯 {slot} 고정 실패[/red]")
+            console.print(f"[red][ERROR] 슬롯 {slot} 고정 실패[/red]")
             
     except Exception as e:
         console.print(f"[bold red]앵커 고정 실패: {str(e)}[/bold red]")
@@ -211,11 +226,11 @@ def unpin_command(slot: str, anchor_path: str):
         if success:
             slot_info = anchor_manager.get_slot_info(slot)
             if slot_info:
-                console.print(f"[green]🔄 슬롯 {slot} (블록 {slot_info['anchor_block_id']}) 고정 해제됨[/green]")
+                console.print(f"[green][PROCESS] 슬롯 {slot} (블록 {slot_info['anchor_block_id']}) 고정 해제됨[/green]")
             else:
                 console.print(f"[yellow]슬롯 {slot}에 앵커가 없지만 고정 해제됨[/yellow]")
         else:
-            console.print(f"[red]❌ 슬롯 {slot} 고정 해제 실패[/red]")
+            console.print(f"[red][ERROR] 슬롯 {slot} 고정 해제 실패[/red]")
             
     except Exception as e:
         console.print(f"[bold red]앵커 고정 해제 실패: {str(e)}[/bold red]")
@@ -239,7 +254,7 @@ def clear_command(slot: str, anchor_path: str):
         if success:
             console.print(f"[green]🗑️ 슬롯 {slot} 앵커 삭제 완료[/green]")
         else:
-            console.print(f"[red]❌ 슬롯 {slot} 앵커 삭제 실패[/red]")
+            console.print(f"[red][ERROR] 슬롯 {slot} 앵커 삭제 실패[/red]")
             
     except Exception as e:
         console.print(f"[bold red]앵커 삭제 실패: {str(e)}[/bold red]")

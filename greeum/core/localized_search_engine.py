@@ -89,7 +89,7 @@ class LocalizedSearchEngine:
                     else:
                         print(f"      ⚠️ 체크포인트 없음")
                 else:
-                    print(f"      ❌ 관련성 부족 (< {self.min_slot_relevance})")
+                    print(f"      [ERROR] 관련성 부족 (< {self.min_slot_relevance})")
             
             # 2. 체크포인트 결과 처리
             if localized_results and used_checkpoints > 0:
@@ -105,7 +105,7 @@ class LocalizedSearchEngine:
                 return self._fallback_search(query_embedding, top_k, "no_checkpoint_results", 0)
                 
         except Exception as e:
-            print(f"    ❌ 체크포인트 검색 실패: {str(e)}")
+            print(f"    [ERROR] 체크포인트 검색 실패: {str(e)}")
             return self._fallback_search(query_embedding, top_k, "error", 0)
     
     def _search_localized_blocks(self, block_indices: List[int], 
@@ -188,12 +188,12 @@ class LocalizedSearchEngine:
         """체크포인트 검색 실패 시 전체 LTM 검색 (재귀 제한 포함)"""
         # 무한 재귀 방지
         if _retry_count >= self.max_fallback_retries:
-            print(f"    ❌ Fallback 최대 재시도 횟수 초과 ({_retry_count}/{self.max_fallback_retries})")
+            print(f"    [ERROR] Fallback 최대 재시도 횟수 초과 ({_retry_count}/{self.max_fallback_retries})")
             return []
         fallback_start = time.perf_counter()
         
         try:
-            print(f"    🔄 Fallback 검색 시작 (이유: {reason})")
+            print(f"    [PROCESS] Fallback 검색 시작 (이유: {reason})")
             
             # 전체 LTM 검색
             fallback_results = self.block_manager.search_by_embedding(
@@ -215,14 +215,14 @@ class LocalizedSearchEngine:
             return fallback_results
             
         except Exception as e:
-            print(f"    ❌ Fallback 검색 실패 (재시도 {_retry_count + 1}/{self.max_fallback_retries}): {str(e)}")
+            print(f"    [ERROR] Fallback 검색 실패 (재시도 {_retry_count + 1}/{self.max_fallback_retries}): {str(e)}")
             
             # 재시도 가능한 경우 다시 시도
             if _retry_count < self.max_fallback_retries - 1:
                 time.sleep(0.1)  # 짧은 대기 후 재시도
                 return self._fallback_search(query_embedding, top_k, f"{reason}_retry", _retry_count + 1)
             else:
-                print(f"    ❌ Fallback 최종 실패: 빈 결과 반환")
+                print(f"    [ERROR] Fallback 최종 실패: 빈 결과 반환")
                 return []
     
     def _calculate_slot_relevance(self, slot_embedding: List[float], 

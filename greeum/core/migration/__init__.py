@@ -81,6 +81,9 @@ __all__ = [
     'RollbackError'
 ]
 
-# Version info
-__version__ = "2.5.3"
+# Version info - use main package version
+try:
+    from greeum import __version__
+except ImportError:
+    __version__ = "unknown"
 __migration_version__ = SchemaVersion.V253_ACTANT

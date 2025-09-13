@@ -187,7 +187,7 @@ class DuplicateDetector:
         elif duplicate_type == "partial":
             similarity = best_match["similarity"]
             return (
-                f"📝 Partially similar content found ({similarity:.1%} match). "
+                f"[NOTE] Partially similar content found ({similarity:.1%} match). "
                 f"Content is different enough to store separately.",
                 "store_anyway"
             )
@@ -223,7 +223,7 @@ class DuplicateDetector:
             if content_hash in processed_hashes:
                 results.append(self._create_result(
                     True, "batch_duplicate", [], 1.0,
-                    "🔄 Duplicate within current batch", "skip"
+                    "[PROCESS] Duplicate within current batch", "skip"
                 ))
                 continue
             
@@ -278,7 +278,7 @@ class DuplicateDetector:
         recommendations = []
         
         if duplicate_rate > 0.2:  # 20% 이상
-            recommendations.append("🚨 High duplicate rate detected! Always search before storing new memories.")
+            recommendations.append("[ALERT] High duplicate rate detected! Always search before storing new memories.")
         elif duplicate_rate > 0.1:  # 10% 이상
             recommendations.append("⚠️ Moderate duplicate rate. Consider using search_memory before add_memory.")
         else:

@@ -230,7 +230,7 @@ class ClaudeCodeDetector:
         print("=" * 60)
         
         print(f"Host Type: {env.host_type}")
-        print(f"Is Claude Code: {'✅ YES' if env.is_claude_code else '❌ NO'}")
+        print(f"Is Claude Code: {'✅ YES' if env.is_claude_code else '[ERROR] NO'}")
         print(f"Detection Time: {env.detected_at.strftime('%Y-%m-%d %H:%M:%S')}")
         
         if env.is_claude_code:
@@ -246,9 +246,9 @@ class ClaudeCodeDetector:
             mcp_info = env.session_info.get('mcp_servers', {})
             if mcp_info.get('config_exists'):
                 print(f"  MCP Servers: {mcp_info['server_count']} configured")
-                print(f"  Greeum MCP: {'✅ Configured' if mcp_info['greeum_mcp_configured'] else '❌ Not configured'}")
+                print(f"  Greeum MCP: {'✅ Configured' if mcp_info['greeum_mcp_configured'] else '[ERROR] Not configured'}")
             
-            print(f"  PreCompact Hook: {'✅ Configured' if self.is_precompact_hook_configured() else '❌ Not configured'}")
+            print(f"  PreCompact Hook: {'✅ Configured' if self.is_precompact_hook_configured() else '[ERROR] Not configured'}")
         
         print("=" * 60)
 

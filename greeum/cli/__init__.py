@@ -11,7 +11,7 @@ Greeum v2.0 통합 CLI 시스템
 try:
     import click
 except ImportError:
-    print("❌ Click not installed. Install with: pip install greeum")
+    print("[ERROR] Click not installed. Install with: pip install greeum")
     import sys
     sys.exit(1)
 
@@ -25,13 +25,20 @@ from typing import Optional
 @click.option('--quiet', '-q', is_flag=True, help='Suppress all non-essential output')
 @click.pass_context
 def main(ctx: click.Context, verbose: bool, debug: bool, quiet: bool):
-    """Greeum Universal Memory System v2.6.4"""
+    """Greeum Universal Memory System"""
     
     # Context에 로그 설정 저장
     ctx.ensure_object(dict)
     ctx.obj['verbose'] = verbose
     ctx.obj['debug'] = debug
     ctx.obj['quiet'] = quiet
+    
+    # Console output 설정을 위한 환경변수 설정
+    import os
+    if verbose or debug:
+        os.environ['GREEUM_CLI_VERBOSE'] = '1'
+    else:
+        os.environ.pop('GREEUM_CLI_VERBOSE', None)
     
     # 로그 레벨 설정
     import logging
@@ -115,6 +122,22 @@ def dashboard():
     """Memory dashboard and analytics (v2.6.2)"""
     pass
 
+@main.group()
+def graph():
+    """Graph network management (v3.0.0)"""
+    pass
+
+@main.group()
+def metrics():
+    """Metrics and performance monitoring"""
+    pass
+
+@main.group()
+def validate():
+    """Documentation and code validation"""
+    pass
+
+
 # Memory 서브명령어들
 @memory.command()
 @click.argument('content')
@@ -160,12 +183,13 @@ def add(content: str, importance: float, tags: Optional[str], slot: Optional[str
             )
             
             if block:
-                click.echo(f"✅ Memory added (Block #{block['block_index']})")
+                # block is now just the block_index (int) instead of a dict
+                click.echo(f"✅ Memory added (Block #{block})")
             else:
-                click.echo("❌ Failed to add memory")
+                click.echo("[ERROR] Failed to add memory")
             
     except Exception as e:
-        click.echo(f"❌ Error: {e}")
+        click.echo(f"[ERROR] Error: {e}")
         sys.exit(1)
 
 @memory.command()
@@ -201,7 +225,7 @@ def search(query: str, count: int, threshold: float, slot: str, radius: int, no_
             if slot:
                 search_type = f"🎯 Anchor-based search (slot {slot})"
                 if metadata.get('fallback_used'):
-                    search_type += " → 🔄 Global fallback"
+                    search_type += " → [PROCESS] Global fallback"
                 click.echo(search_type)
                 click.echo(f"   Hit rate: {metadata.get('local_hit_rate', 0):.1%}")
                 click.echo(f"   Avg hops: {metadata.get('avg_hops', 0)}")
@@ -223,12 +247,12 @@ def search(query: str, count: int, threshold: float, slot: str, radius: int, no_
                 click.echo(f"   Score: {final_score:.3f}")
         else:
             if slot and not no_fallback:
-                click.echo(f"❌ No memories found in anchor slot {slot}, and fallback disabled")
+                click.echo(f"[ERROR] No memories found in anchor slot {slot}, and fallback disabled")
             else:
-                click.echo("❌ No memories found")
+                click.echo("[ERROR] No memories found")
             
     except Exception as e:
-        click.echo(f"❌ Search failed: {e}")
+        click.echo(f"[ERROR] Search failed: {e}")
         sys.exit(1)
 
 # MCP 서브명령어들
@@ -246,7 +270,7 @@ def serve(transport: str, port: int, verbose: bool, debug: bool, quiet: bool):
         click.echo(f"🔍 Starting Greeum MCP server ({transport}) - DEBUG mode...")
     elif verbose:
         log_level = 'verbose'
-        click.echo(f"📝 Starting Greeum MCP server ({transport}) - VERBOSE mode...")
+        click.echo(f"[NOTE] Starting Greeum MCP server ({transport}) - VERBOSE mode...")
     else:
         log_level = 'quiet'
         # 기본은 조용함 (출력 없음)
@@ -304,7 +328,7 @@ def serve(transport: str, port: int, verbose: bool, debug: bool, quiet: bool):
             sys.exit(1)
     else:
         if verbose or debug:
-            click.echo(f"❌ Transport '{transport}' not supported")
+            click.echo(f"[ERROR] Transport '{transport}' not supported")
         sys.exit(1)
 
 # API 서브명령어들  
@@ -320,7 +344,7 @@ def serve(port: int, host: str):
         import uvicorn
         uvicorn.run(app, host=host, port=port)
     except ImportError:
-        click.echo("❌ API server dependencies not installed. Try: pip install greeum[api]")
+        click.echo("[ERROR] API server dependencies not installed. Try: pip install greeum[api]")
         sys.exit(1)
     except KeyboardInterrupt:
         click.echo("\n👋 API server stopped")
@@ -375,7 +399,7 @@ def analyze(trends: bool, period: str, output: str):
         if output == 'json':
             click.echo(json.dumps(analysis, indent=2, ensure_ascii=False))
         else:
-            click.echo(f"📈 Analysis Results:")
+            click.echo(f"[IMPROVE] Analysis Results:")
             click.echo(f"  • Total memories: {analysis['total_blocks']}")
             click.echo(f"  • Period: {analysis['analysis_period']}")
             if trends and 'top_keywords' in analysis:
@@ -384,7 +408,7 @@ def analyze(trends: bool, period: str, output: str):
                     click.echo(f"    - {keyword}: {freq} times")
                     
     except Exception as e:
-        click.echo(f"❌ Analysis failed: {e}")
+        click.echo(f"[ERROR] Analysis failed: {e}")
         sys.exit(1)
 
 @ltm.command()
@@ -438,10 +462,10 @@ def verify(repair: bool):
             if repair:
                 click.echo("🔨 Repair functionality not implemented yet")
         else:
-            click.echo("🎉 All blocks verified successfully!")
+            click.echo("[SUCCESS] All blocks verified successfully!")
                     
     except Exception as e:
-        click.echo(f"❌ Verification failed: {e}")
+        click.echo(f"[ERROR] Verification failed: {e}")
         sys.exit(1)
 
 @ltm.command()
@@ -502,7 +526,7 @@ def export(format: str, output: str, limit: int):
         click.echo(f"📄 File size: {output_path.stat().st_size} bytes")
                     
     except Exception as e:
-        click.echo(f"❌ Export failed: {e}")
+        click.echo(f"[ERROR] Export failed: {e}")
         sys.exit(1)
 
 # STM 서브명령어들
@@ -512,7 +536,7 @@ def export(format: str, output: str, limit: int):
 @click.option('--importance', '-i', default=0.3, help='Importance score (0.0-1.0)')
 def add(content: str, ttl: str, importance: float):
     """Add content to short-term memory with TTL"""
-    click.echo(f"🧠 Adding to STM (TTL: {ttl})...")
+    click.echo(f"[MEMORY] Adding to STM (TTL: {ttl})...")
     
     try:
         from ..core import STMManager, DatabaseManager
@@ -523,7 +547,7 @@ def add(content: str, ttl: str, importance: float):
         ttl_pattern = r'(\d+)([hmdw])'
         match = re.match(ttl_pattern, ttl.lower())
         if not match:
-            click.echo("❌ Invalid TTL format. Use: 1h, 30m, 2d, 1w")
+            click.echo("[ERROR] Invalid TTL format. Use: 1h, 30m, 2d, 1w")
             sys.exit(1)
         
         amount, unit = match.groups()
@@ -551,11 +575,11 @@ def add(content: str, ttl: str, importance: float):
         if result:
             click.echo(f"✅ Added to STM (expires: {expiry_time.strftime('%Y-%m-%d %H:%M:%S')})")
         else:
-            click.echo("❌ Failed to add to STM")
+            click.echo("[ERROR] Failed to add to STM")
             sys.exit(1)
                     
     except Exception as e:
-        click.echo(f"❌ STM add failed: {e}")
+        click.echo(f"[ERROR] STM add failed: {e}")
         sys.exit(1)
 
 @stm.command()
@@ -622,7 +646,7 @@ def promote(threshold: float, dry_run: bool):
             click.echo(f"✅ Promoted {promoted_count}/{len(candidates)} entries to LTM")
                     
     except Exception as e:
-        click.echo(f"❌ Promotion failed: {e}")
+        click.echo(f"[ERROR] Promotion failed: {e}")
         sys.exit(1)
 
 @stm.command()
@@ -687,14 +711,14 @@ def cleanup(smart: bool, expired: bool, threshold: float):
         click.echo(f"📊 Remaining STM entries: {total_count - removed_count}")
                     
     except Exception as e:
-        click.echo(f"❌ Cleanup failed: {e}")
+        click.echo(f"[ERROR] Cleanup failed: {e}")
         sys.exit(1)
 
 # AI Context Slots 서브명령어들 (v2.5.1)
 @slots.command()
 def status():
     """Display current AI Context Slots status (v2.5.1)"""
-    click.echo("🧠 AI Context Slots Status Report (v2.5.1)")
+    click.echo("[MEMORY] AI Context Slots Status Report (v2.5.1)")
     click.echo("=" * 50)
     
     try:
@@ -727,7 +751,7 @@ def status():
                 click.echo(f"   Created: {timestamp}")
                 
                 if is_anchor and slot_info.get('anchor_block'):
-                    click.echo(f"   🔗 LTM Anchor: Block #{slot_info['anchor_block']}")
+                    click.echo(f"   [LINK] LTM Anchor: Block #{slot_info['anchor_block']}")
                     
             else:
                 click.echo(f"\n⭕ {slot_name.upper()} Slot: Empty")
@@ -737,7 +761,7 @@ def status():
         click.echo("💡 Use 'greeum slots clear <slot_name>' to clear specific slot")
                     
     except Exception as e:
-        click.echo(f"❌ Error reading slots status: {e}")
+        click.echo(f"[ERROR] Error reading slots status: {e}")
         sys.exit(1)
 
 @slots.command()
@@ -747,7 +771,7 @@ def status():
 @click.option('--radius', default=5, help='Search radius for LTM anchor')
 def set(content: str, importance: float, ltm_anchor: int, radius: int):
     """Add content to AI Context Slots with smart allocation"""
-    click.echo(f"🧠 Adding content to AI Context Slots...")
+    click.echo(f"[MEMORY] Adding content to AI Context Slots...")
     
     try:
         from ..core.working_memory import AIContextualSlots
@@ -770,14 +794,14 @@ def set(content: str, importance: float, ltm_anchor: int, radius: int):
         
         # 결과 출력
         click.echo(f"✅ Content added to {used_slot.upper()} slot")
-        click.echo(f"📝 Content: {content[:80]}{'...' if len(content) > 80 else ''}")
+        click.echo(f"[NOTE] Content: {content[:80]}{'...' if len(content) > 80 else ''}")
         click.echo(f"🎯 AI chose {used_slot} slot based on content analysis")
         
         if ltm_anchor:
-            click.echo(f"🔗 LTM Anchor: Block #{ltm_anchor} (radius: {radius})")
+            click.echo(f"[LINK] LTM Anchor: Block #{ltm_anchor} (radius: {radius})")
         
     except Exception as e:
-        click.echo(f"❌ Failed to add to slots: {e}")
+        click.echo(f"[ERROR] Failed to add to slots: {e}")
         sys.exit(1)
 
 @slots.command()
@@ -809,7 +833,7 @@ def clear(slot_name: str):
                 click.echo(f"⚠️  {slot_name.upper()} slot was already empty")
         
     except Exception as e:
-        click.echo(f"❌ Failed to clear slot: {e}")
+        click.echo(f"[ERROR] Failed to clear slot: {e}")
         sys.exit(1)
 
 @slots.command()
@@ -820,8 +844,8 @@ def search(query: str, limit: int):
     click.echo(f"🔍 Searching with AI Context Slots: '{query}'")
     
     try:
-        from ..core.database_manager import DatabaseManager
-        from ..core.block_manager import BlockManager
+        from greeum.core import DatabaseManager
+        from greeum.core.block_manager import BlockManager
         
         db_manager = DatabaseManager()
         block_manager = BlockManager(db_manager)
@@ -851,10 +875,10 @@ def search(query: str, limit: int):
                 
                 click.echo(f"   Importance: {importance:.2f}")
         else:
-            click.echo("❌ No results found")
+            click.echo("[ERROR] No results found")
         
     except Exception as e:
-        click.echo(f"❌ Search failed: {e}")
+        click.echo(f"[ERROR] Search failed: {e}")
         sys.exit(1)
 
 # Migration 서브명령어들 (v2.5.3 AI-Powered Migration)
@@ -879,14 +903,14 @@ def check(data_dir: str, force: bool):
             success = interface.check_and_force_migration()
         
         if success:
-            click.echo("\n✨ Database is ready for use!")
+            click.echo("\n[SPECIAL] Database is ready for use!")
             sys.exit(0)
         else:
-            click.echo("\n❌ Migration failed or was cancelled")
+            click.echo("\n[ERROR] Migration failed or was cancelled")
             sys.exit(1)
             
     except Exception as e:
-        click.echo(f"❌ Migration check failed: {e}")
+        click.echo(f"[ERROR] Migration check failed: {e}")
         sys.exit(1)
 
 @migrate.command()
@@ -921,7 +945,7 @@ def status(data_dir: str):
         
         if stats:
             click.echo(f"💾 Total Memories: {stats['total_blocks']}")
-            click.echo(f"📅 Date Range: {stats['earliest_memory']} to {stats['latest_memory']}")
+            click.echo(f"[DATE] Date Range: {stats['earliest_memory']} to {stats['latest_memory']}")
         
         if needs_migration:
             click.echo("\n⚠️  Migration Required:")
@@ -942,7 +966,7 @@ def status(data_dir: str):
         version_manager.close()
         
     except Exception as e:
-        click.echo(f"❌ Status check failed: {e}")
+        click.echo(f"[ERROR] Status check failed: {e}")
         sys.exit(1)
 
 @migrate.command()
@@ -966,7 +990,7 @@ def rollback(data_dir: str, backup_id: str, reason: str):
             options = rollback_manager.list_rollback_options()
             
             if not options:
-                click.echo("❌ No rollback options available")
+                click.echo("[ERROR] No rollback options available")
                 return
             
             click.echo("📋 Available rollback options:")
@@ -993,10 +1017,10 @@ def rollback(data_dir: str, backup_id: str, reason: str):
                 if 0 <= backup_index < len(options):
                     backup_id = options[backup_index]['backup_id']
                 else:
-                    click.echo("❌ Invalid selection")
+                    click.echo("[ERROR] Invalid selection")
                     return
             except ValueError:
-                click.echo("❌ Invalid selection")
+                click.echo("[ERROR] Invalid selection")
                 return
         
         # Confirm rollback
@@ -1021,12 +1045,12 @@ def rollback(data_dir: str, backup_id: str, reason: str):
             for error in result['errors']:
                 click.echo(f"   ⚠️  {error}")
         else:
-            click.echo(f"\n❌ Rollback failed!")
+            click.echo(f"\n[ERROR] Rollback failed!")
             for error in result['errors']:
-                click.echo(f"   ❌ {error}")
+                click.echo(f"   [ERROR] {error}")
         
     except Exception as e:
-        click.echo(f"❌ Rollback failed: {e}")
+        click.echo(f"[ERROR] Rollback failed: {e}")
         sys.exit(1)
 
 @migrate.command()
@@ -1043,7 +1067,7 @@ def validate(data_dir: str):
         db_path = Path(data_dir) / "memory.db"
         
         if not db_path.exists():
-            click.echo("❌ Database not found")
+            click.echo("[ERROR] Database not found")
             return
         
         # Create validator
@@ -1063,7 +1087,7 @@ def validate(data_dir: str):
             return
         
         # Run validation
-        click.echo("🔄 Running comprehensive validation...")
+        click.echo("[PROCESS] Running comprehensive validation...")
         results = validator.validate_full_migration(recent_backup_id)
         
         # Display results
@@ -1073,7 +1097,7 @@ def validate(data_dir: str):
             "WARNINGS": "⚠️ ",
             "MINOR_ISSUES": "🔶",
             "MAJOR_ISSUES": "🔴",
-            "CRITICAL_FAILURE": "❌"
+            "CRITICAL_FAILURE": "[ERROR]"
         }
         
         status_icon = status_colors.get(results['overall_status'], "❓")
@@ -1082,7 +1106,7 @@ def validate(data_dir: str):
         # Show individual check results
         for check_name, check_result in results['checks'].items():
             check_status = check_result.get('status', 'UNKNOWN')
-            check_icon = {"PASS": "✅", "WARN": "⚠️ ", "FAIL": "❌", "ERROR": "💥"}.get(check_status, "❓")
+            check_icon = {"PASS": "✅", "WARN": "⚠️ ", "FAIL": "[ERROR]", "ERROR": "💥"}.get(check_status, "❓")
             
             click.echo(f"\n{check_icon} {check_name.replace('_', ' ').title()}: {check_status}")
             
@@ -1103,16 +1127,16 @@ def validate(data_dir: str):
         
         # Migration recommendations
         if results['overall_status'] == "CRITICAL_FAILURE":
-            click.echo(f"\n🚨 CRITICAL: Consider emergency rollback")
+            click.echo(f"\n[ALERT] CRITICAL: Consider emergency rollback")
             click.echo(f"   Run: greeum migrate rollback --backup-id {recent_backup_id}")
         elif results['overall_status'] in ["MAJOR_ISSUES", "MINOR_ISSUES"]:
             click.echo(f"\n💡 Recommendation: Monitor system closely")
             click.echo(f"   Consider rollback if issues persist")
         else:
-            click.echo(f"\n🎉 Migration validation completed successfully!")
+            click.echo(f"\n[SUCCESS] Migration validation completed successfully!")
         
     except Exception as e:
-        click.echo(f"❌ Validation failed: {e}")
+        click.echo(f"[ERROR] Validation failed: {e}")
         sys.exit(1)
 
 @migrate.command()
@@ -1153,7 +1177,7 @@ def cleanup(data_dir: str, keep_backups: int):
             click.echo(f"   Space saved: ~{space_saved/1024:.1f} KB")
         
     except Exception as e:
-        click.echo(f"❌ Cleanup failed: {e}")
+        click.echo(f"[ERROR] Cleanup failed: {e}")
         sys.exit(1)
 
 # v2.6.1 Backup 서브명령어들
@@ -1164,18 +1188,17 @@ def export(output: str, include_metadata: bool):
     """전체 메모리를 백업 파일로 내보내기"""
     try:
         from ..core.backup_restore import MemoryBackupEngine
-        from ..core.hierarchical_memory import HierarchicalMemorySystem
+        # from ..core.hierarchical_memory import HierarchicalMemorySystem  # REMOVED: File deleted
         from ..core.database_manager import DatabaseManager
         from pathlib import Path
         
-        click.echo("🔄 메모리 백업을 시작합니다...")
+        click.echo("[PROCESS] 메모리 백업을 시작합니다...")
         
-        # 계층적 메모리 시스템 초기화
+        # 계층적 메모리 시스템 초기화 - SIMPLIFIED
         db_manager = DatabaseManager()
-        system = HierarchicalMemorySystem(db_manager)
-        system.initialize()
+        # HierarchicalMemorySystem removed - using DatabaseManager directly
         
-        backup_engine = MemoryBackupEngine(system)
+        backup_engine = MemoryBackupEngine(db_manager)
         success = backup_engine.create_backup(output, include_metadata)
         
         if success:
@@ -1185,7 +1208,7 @@ def export(output: str, include_metadata: bool):
                 size_mb = backup_path.stat().st_size / (1024 * 1024)
                 click.echo(f"📁 파일 크기: {size_mb:.2f} MB")
         else:
-            click.echo("❌ 백업 생성에 실패했습니다")
+            click.echo("[ERROR] 백업 생성에 실패했습니다")
             
     except Exception as e:
         click.echo(f"💥 백업 중 오류: {e}")
@@ -1237,7 +1260,7 @@ def auto(schedule: str, output_dir: str, max_backups: int, enable: bool):
                 json.dump(config, f, indent=2, ensure_ascii=False)
             
             click.echo(f"✅ 자동 백업 활성화됨")
-            click.echo(f"   📅 주기: {schedule}")
+            click.echo(f"   [DATE] 주기: {schedule}")
             click.echo(f"   📁 디렉토리: {output_dir}")
             click.echo(f"   🔢 최대 백업 수: {max_backups}개")
             click.echo()
@@ -1324,18 +1347,18 @@ def run_auto():
         backup_filename = f"auto_backup_{timestamp}.json"
         backup_path = backup_dir / backup_filename
         
-        click.echo(f"🔄 자동 백업 실행: {backup_filename}")
+        click.echo(f"[PROCESS] 자동 백업 실행: {backup_filename}")
         
         # 백업 엔진 초기화 및 백업 실행
         from ..core.backup_restore import MemoryBackupEngine
-        from ..core.hierarchical_memory import HierarchicalMemorySystem
+        # from ..core.hierarchical_memory import HierarchicalMemorySystem  # REMOVED: File deleted
         from ..core.database_manager import DatabaseManager
         
         db_manager = DatabaseManager()
         system = HierarchicalMemorySystem(db_manager)
         system.initialize()
         
-        backup_engine = MemoryBackupEngine(system)
+        backup_engine = MemoryBackupEngine(db_manager)
         success = backup_engine.create_backup(str(backup_path), include_metadata=True)
         
         if success:
@@ -1359,7 +1382,7 @@ def run_auto():
             click.echo(f"📊 보존된 백업 수: {min(len(backup_files), max_backups)}개")
             
         else:
-            click.echo("❌ 자동 백업 실패")
+            click.echo("[ERROR] 자동 백업 실패")
             
     except Exception as e:
         click.echo(f"💥 자동 백업 실행 실패: {e}")
@@ -1391,7 +1414,7 @@ def status():
         click.echo(f"{status_emoji} 자동 백업: {status_text}")
         
         if config.get('enabled', False):
-            click.echo(f"   📅 주기: {config.get('schedule', 'unknown')}")
+            click.echo(f"   [DATE] 주기: {config.get('schedule', 'unknown')}")
             click.echo(f"   📁 디렉토리: {config.get('output_dir', 'unknown')}")
             click.echo(f"   🔢 최대 보존: {config.get('max_backups', 10)}개")
             
@@ -1449,9 +1472,9 @@ def from_file(
     """백업 파일로부터 메모리 복원"""
     try:
         from ..core.backup_restore import MemoryRestoreEngine, RestoreFilter
-        from ..core.hierarchical_memory import HierarchicalMemorySystem
+        # from ..core.hierarchical_memory import HierarchicalMemorySystem  # REMOVED
         from ..core.database_manager import DatabaseManager
-        from ..core.memory_layer import MemoryLayerType
+        # from ..core.memory_layer import MemoryLayerType  # REMOVED
         from datetime import datetime
         
         # 복원 필터 생성
@@ -1475,13 +1498,9 @@ def from_file(
         
         layer_list = None
         if layers:
-            layer_map = {
-                'working': MemoryLayerType.WORKING,
-                'stm': MemoryLayerType.STM,
-                'ltm': MemoryLayerType.LTM
-            }
+            # Simplified layer mapping without MemoryLayerType enum
             layer_names = [layer.strip().lower() for layer in layers.split(',')]
-            layer_list = [layer_map[name] for name in layer_names if name in layer_map]
+            layer_list = layer_names  # Just pass as strings
         
         tag_list = None
         if tags:
@@ -1497,10 +1516,9 @@ def from_file(
             tags=tag_list
         )
         
-        # 계층적 메모리 시스템 초기화
+        # 계층적 메모리 시스템 초기화 - SIMPLIFIED
         db_manager = DatabaseManager()
-        system = HierarchicalMemorySystem(db_manager)
-        system.initialize()
+        # HierarchicalMemorySystem removed - using DatabaseManager directly
         
         restore_engine = MemoryRestoreEngine(system)
         
@@ -1518,7 +1536,7 @@ def from_file(
         
         if not preview:
             # 실제 복원 실행
-            click.echo("🔄 메모리 복원을 시작합니다...")
+            click.echo("[PROCESS] 메모리 복원을 시작합니다...")
             
             result = restore_engine.restore_from_backup(
                 backup_file=backup_file,
@@ -1531,10 +1549,10 @@ def from_file(
             if result.success:
                 click.echo("✅ 복원 완료!")
                 click.echo(f"📊 복원 결과:")
-                click.echo(f"   🧠 Working Memory: {result.working_count}개")
-                click.echo(f"   ⚡ STM: {result.stm_count}개") 
+                click.echo(f"   [MEMORY] Working Memory: {result.working_count}개")
+                click.echo(f"   [FAST] STM: {result.stm_count}개") 
                 click.echo(f"   🏛️  LTM: {result.ltm_count}개")
-                click.echo(f"   📈 총 처리: {result.total_processed}개")
+                click.echo(f"   [IMPROVE] 총 처리: {result.total_processed}개")
                 click.echo(f"   ⏱️  소요 시간: {result.execution_time:.2f}초")
                 
                 if result.error_count > 0:
@@ -1542,7 +1560,7 @@ def from_file(
                     for error in result.errors[:5]:  # 최대 5개 오류만 표시
                         click.echo(f"      - {error}")
             else:
-                click.echo("❌ 복원에 실패했습니다")
+                click.echo("[ERROR] 복원에 실패했습니다")
                 for error in result.errors:
                     click.echo(f"   💥 {error}")
                     
@@ -1630,7 +1648,7 @@ def export(output: str, include_details: bool):
             else:
                 click.echo("📋 기본 개요만 포함")
         else:
-            click.echo("❌ 리포트 생성에 실패했습니다")
+            click.echo("[ERROR] 리포트 생성에 실패했습니다")
             
     except Exception as e:
         click.echo(f"💥 리포트 내보내기 실패: {e}")
@@ -1642,13 +1660,13 @@ def _display_dashboard_overview(data: dict):
     stats = data['memory_stats']
     health = data['system_health']
     
-    click.echo("🧠 Greeum Memory Dashboard")
+    click.echo("[MEMORY] Greeum Memory Dashboard")
     click.echo("=" * 50)
     
     # 기본 통계
     click.echo(f"📊 전체 메모리: {stats['total_memories']}개")
-    click.echo(f"   🧠 Working Memory: {stats['working_memory_count']}개")
-    click.echo(f"   ⚡ STM: {stats['stm_count']}개")
+    click.echo(f"   [MEMORY] Working Memory: {stats['working_memory_count']}개")
+    click.echo(f"   [FAST] STM: {stats['stm_count']}개")
     click.echo(f"   🏛️  LTM: {stats['ltm_count']}개")
     
     click.echo()
@@ -1660,7 +1678,7 @@ def _display_dashboard_overview(data: dict):
     
     # 용량 정보
     click.echo(f"💾 총 용량: {stats['total_size_mb']:.1f} MB")
-    click.echo(f"⚡ 평균 검색 시간: {health['avg_search_time_ms']:.1f}ms")
+    click.echo(f"[FAST] 평균 검색 시간: {health['avg_search_time_ms']:.1f}ms")
     
     # 경고사항
     if health['warnings']:
@@ -1700,7 +1718,7 @@ def _display_health_detailed(health):
     """상세한 건강도 출력"""
     _display_health_simple(health)
     
-    click.echo(f"\n📈 성능 지표:")
+    click.echo(f"\n[IMPROVE] 성능 지표:")
     click.echo(f"   검색 속도: {health.avg_search_time_ms:.1f}ms")
     click.echo(f"   메모리 사용량: {health.memory_usage_mb:.1f}MB")
     click.echo(f"   데이터베이스 크기: {health.database_size_mb:.1f}MB")
@@ -1719,6 +1737,261 @@ def _display_health_detailed(health):
         click.echo(f"\n💡 권장사항:")
         for rec in health.recommendations:
             click.echo(f"   • {rec}")
+
+
+# v2.7.0: Causal Reasoning Commands
+@main.group()
+def causal():
+    """Causal reasoning and relationship analysis commands"""
+    pass
+
+
+@causal.command()
+@click.argument('block_id', type=int)
+@click.option('--format', 'output_format', type=click.Choice(['simple', 'detailed', 'json']), 
+              default='simple', help='Output format')
+def relationships(block_id: int, output_format: str):
+    """Show causal relationships for a specific memory block"""
+    try:
+        from greeum.core import DatabaseManager
+        from greeum.core.block_manager import BlockManager
+        
+        db_manager = DatabaseManager()
+        block_manager = BlockManager(db_manager)
+        
+        # Get the block info
+        block = db_manager.get_block(block_id)
+        if not block:
+            click.echo(f"❌ Block #{block_id} not found", err=True)
+            return
+        
+        # Get causal relationships
+        relationships = block_manager.get_causal_relationships(block_id)
+        
+        if output_format == 'json':
+            import json
+            click.echo(json.dumps({
+                'block_id': block_id,
+                'relationships': relationships
+            }, indent=2, ensure_ascii=False))
+            return
+        
+        if not relationships:
+            click.echo(f"🔍 No causal relationships found for block #{block_id}")
+            return
+        
+        click.echo(f"🔗 Causal relationships for block #{block_id}:")
+        click.echo(f"   Context: {block['context'][:60]}...")
+        click.echo()
+        
+        for i, rel in enumerate(relationships, 1):
+            source_id = rel['source_block_id']
+            target_id = rel['target_block_id']
+            relation_type = rel['relation_type']
+            confidence = rel['confidence']
+            
+            # Determine direction
+            if source_id == block_id:
+                direction = "→"
+                other_id = target_id
+                role = "Causes"
+            else:
+                direction = "←"
+                other_id = source_id
+                role = "Caused by"
+            
+            # Get other block context
+            other_block = db_manager.get_block(other_id)
+            other_context = other_block['context'][:50] + "..." if other_block else "Unknown"
+            
+            confidence_emoji = "🔥" if confidence >= 0.8 else "⚡" if confidence >= 0.6 else "💡"
+            
+            click.echo(f"{i}. {confidence_emoji} {role} Block #{other_id} ({confidence:.2f})")
+            click.echo(f"   {direction} {other_context}")
+            click.echo(f"   Type: {relation_type}")
+            
+            if output_format == 'detailed':
+                import json
+                keywords = json.loads(rel.get('keywords_matched', '[]'))
+                if keywords:
+                    click.echo(f"   Keywords: {', '.join(keywords)}")
+                
+                temporal_gap = rel.get('temporal_gap_hours')
+                if temporal_gap is not None:
+                    if temporal_gap < 1:
+                        gap_str = f"{temporal_gap * 60:.0f} minutes"
+                    elif temporal_gap < 24:
+                        gap_str = f"{temporal_gap:.1f} hours"
+                    else:
+                        gap_str = f"{temporal_gap / 24:.1f} days"
+                    click.echo(f"   Time gap: {gap_str}")
+            
+            click.echo()
+        
+    except Exception as e:
+        click.echo(f"❌ Error analyzing relationships: {e}", err=True)
+
+
+@causal.command()
+@click.argument('start_block_id', type=int)
+@click.option('--depth', default=3, help='Maximum chain depth to explore')
+@click.option('--format', 'output_format', type=click.Choice(['simple', 'detailed', 'json']), 
+              default='simple', help='Output format')
+def chain(start_block_id: int, depth: int, output_format: str):
+    """Find causal relationship chains starting from a block"""
+    try:
+        from greeum.core import DatabaseManager
+        from greeum.core.block_manager import BlockManager
+        
+        db_manager = DatabaseManager()
+        block_manager = BlockManager(db_manager)
+        
+        # Get the starting block
+        start_block = db_manager.get_block(start_block_id)
+        if not start_block:
+            click.echo(f"❌ Start block #{start_block_id} not found", err=True)
+            return
+        
+        # Find causal chain
+        chain_results = block_manager.find_causal_chain(start_block_id, depth)
+        
+        if output_format == 'json':
+            import json
+            click.echo(json.dumps({
+                'start_block_id': start_block_id,
+                'chain': chain_results
+            }, indent=2, ensure_ascii=False))
+            return
+        
+        if not chain_results:
+            click.echo(f"🔍 No causal chains found starting from block #{start_block_id}")
+            return
+        
+        click.echo(f"🔗 Causal chain starting from block #{start_block_id}:")
+        click.echo(f"   Start: {start_block['context'][:60]}...")
+        click.echo()
+        
+        # Group by depth for better visualization
+        by_depth = {}
+        for item in chain_results:
+            d = item['depth']
+            if d not in by_depth:
+                by_depth[d] = []
+            by_depth[d].append(item)
+        
+        for depth_level in sorted(by_depth.keys()):
+            items = by_depth[depth_level]
+            indent = "  " * (depth_level + 1)
+            
+            for item in items:
+                confidence = item['confidence']
+                target_block = item['target_block']
+                target_context = target_block['context'][:50] + "..."
+                
+                confidence_emoji = "🔥" if confidence >= 0.8 else "⚡" if confidence >= 0.6 else "💡"
+                
+                click.echo(f"{indent}↓ {confidence_emoji} Block #{item['target_id']} ({confidence:.2f})")
+                click.echo(f"{indent}   {target_context}")
+                
+                if output_format == 'detailed':
+                    click.echo(f"{indent}   Type: {item['relation_type']}")
+        
+    except Exception as e:
+        click.echo(f"❌ Error finding causal chain: {e}", err=True)
+
+
+@causal.command()
+@click.option('--format', 'output_format', type=click.Choice(['simple', 'detailed', 'json']), 
+              default='simple', help='Output format')
+def stats(output_format: str):
+    """Show causal reasoning detection statistics"""
+    try:
+        from greeum.core import DatabaseManager
+        from greeum.core.block_manager import BlockManager
+        
+        db_manager = DatabaseManager()
+        block_manager = BlockManager(db_manager)
+        
+        # Get statistics
+        statistics = block_manager.get_causal_statistics()
+        
+        if 'error' in statistics:
+            click.echo(f"❌ {statistics['error']}", err=True)
+            return
+        
+        if output_format == 'json':
+            import json
+            click.echo(json.dumps(statistics, indent=2, ensure_ascii=False))
+            return
+        
+        click.echo("📊 Causal Reasoning Statistics")
+        click.echo("=" * 35)
+        
+        # Detection summary
+        total_analyzed = statistics.get('total_analyzed', 0)
+        relationships_found = statistics.get('relationships_found', 0)
+        accuracy_estimate = statistics.get('accuracy_estimate', 0.0)
+        
+        click.echo(f"\n🔍 Detection Summary:")
+        click.echo(f"   Total blocks analyzed: {total_analyzed}")
+        click.echo(f"   Relationships found: {relationships_found}")
+        if total_analyzed > 0:
+            detection_rate = (relationships_found / total_analyzed) * 100
+            click.echo(f"   Detection rate: {detection_rate:.1f}%")
+        click.echo(f"   Estimated accuracy: {accuracy_estimate:.1f}%")
+        
+        # Confidence distribution
+        high_conf = statistics.get('high_confidence', 0)
+        medium_conf = statistics.get('medium_confidence', 0)
+        low_conf = statistics.get('low_confidence', 0)
+        
+        click.echo(f"\n📈 Confidence Distribution:")
+        click.echo(f"   🔥 High (≥0.8): {high_conf}")
+        click.echo(f"   ⚡ Medium (0.5-0.8): {medium_conf}")
+        click.echo(f"   💡 Low (<0.5): {low_conf}")
+        
+        # Relationship types
+        by_type = statistics.get('by_type', {})
+        if by_type:
+            click.echo(f"\n🏷️  Relationship Types:")
+            for rel_type, count in by_type.items():
+                if count > 0:
+                    click.echo(f"   {rel_type}: {count}")
+        
+        # Database statistics
+        total_stored = statistics.get('total_stored', 0)
+        stored_dist = statistics.get('stored_confidence_distribution', {})
+        
+        if output_format == 'detailed':
+            click.echo(f"\n💾 Storage Statistics:")
+            click.echo(f"   Total stored relationships: {total_stored}")
+            
+            if stored_dist:
+                click.echo(f"   Stored confidence distribution:")
+                for level, count in stored_dist.items():
+                    click.echo(f"     {level}: {count}")
+        
+    except Exception as e:
+        click.echo(f"❌ Error getting causal statistics: {e}", err=True)
+
+
+# Import and register metrics commands
+try:
+    from .metrics_cli import metrics_group
+    # Replace the empty metrics group with the real one
+    main.commands.pop('metrics', None)
+    main.add_command(metrics_group, name='metrics')
+except ImportError:
+    pass  # Metrics CLI not available
+
+# Import and register validate commands  
+try:
+    from .validate_cli import validate_group
+    # Replace the empty validate group with the real one
+    main.commands.pop('validate', None)
+    main.add_command(validate_group, name='validate')
+except ImportError:
+    pass  # Validate CLI not available
 
 
 if __name__ == '__main__':

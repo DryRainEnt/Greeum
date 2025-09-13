@@ -411,7 +411,7 @@ class QualityValidator:
         elif length_factor.get('issue') == 'too_long':
             suggestions.append("✂️ Content is very long. Consider breaking it into smaller, focused memories.")
         elif length_factor.get('issue') == 'minimal':
-            suggestions.append("📝 Content is quite brief. Adding more context would improve searchability.")
+            suggestions.append("[NOTE] Content is quite brief. Adding more context would improve searchability.")
         
         # 풍부도 관련 제안
         richness = quality_factors.get('richness', {})
@@ -421,7 +421,7 @@ class QualityValidator:
         # 구조 관련 제안
         structure = quality_factors.get('structure', {})
         if 'excessive_repetition' in structure.get('issues', []):
-            suggestions.append("🔄 Reduce repetitive content to improve clarity and conciseness.")
+            suggestions.append("[PROCESS] Reduce repetitive content to improve clarity and conciseness.")
         if structure.get('sentence_count', 0) <= 1 and len(content) > 50:
             suggestions.append("📖 Break long content into multiple sentences for better readability.")
         
