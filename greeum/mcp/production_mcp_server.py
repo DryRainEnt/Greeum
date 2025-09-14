@@ -168,7 +168,7 @@ class NativeMCPServer:
                 "name": "usage_analytics",
                 "description": "📊 Get comprehensive usage analytics and insights.",
                 "inputSchema": {
-                    "type": "object", 
+                    "type": "object",
                     "properties": {
                         "days": {
                             "type": "integer",
@@ -182,6 +182,47 @@ class NativeMCPServer:
                             "description": "Type of analytics report",
                             "enum": ["usage", "quality", "performance", "all"],
                             "default": "usage"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "search",
+                "description": "🔍 Search for information in memory using keywords or semantic similarity.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query for finding relevant memories"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of results",
+                            "minimum": 1,
+                            "maximum": 50,
+                            "default": 5
+                        }
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "name": "fetch",
+                "description": "📄 Fetch a specific memory block by ID or retrieve recent memories.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "block_id": {
+                            "type": "string",
+                            "description": "Specific block ID to retrieve"
+                        },
+                        "count": {
+                            "type": "integer",
+                            "description": "Number of recent memories to fetch if no block_id",
+                            "minimum": 1,
+                            "maximum": 50,
+                            "default": 10
                         }
                     }
                 }
@@ -220,7 +261,29 @@ class NativeMCPServer:
                 days = arguments.get("days", 7)
                 report_type = arguments.get("report_type", "usage")
                 result_text = self.adapter.usage_analytics_tool(days, report_type)
-                
+
+            elif tool_name == "search":
+                # OpenAI GPT 호환을 위한 search 래퍼 - search_memory로 리다이렉트
+                query = arguments.get("query", "")
+                limit = arguments.get("limit", 5)
+                result_text = self.adapter.search_memory_tool(query, limit, 0, 0.5)
+
+            elif tool_name == "fetch":
+                # OpenAI GPT 호환을 위한 fetch 래퍼
+                block_id = arguments.get("block_id")
+                count = arguments.get("count", 10)
+
+                if block_id:
+                    # 특정 블록 조회 (간단 구현)
+                    try:
+                        # block_id를 이용해 검색
+                        result_text = self.adapter.search_memory_tool(f"block_id:{block_id}", 1, 0, 0.9)
+                    except:
+                        result_text = f"Block #{block_id} not found"
+                else:
+                    # 최근 메모리들 조회
+                    result_text = self.adapter.search_memory_tool("*", count, 0, 0.1)
+
             else:
                 return self.create_error_response(request_id, -32601, f"Unknown tool: {tool_name}")
             

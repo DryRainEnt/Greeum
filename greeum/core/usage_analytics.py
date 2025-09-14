@@ -70,6 +70,14 @@ class UsageAnalytics:
         if self.enabled:
             logger.debug(f"Quality metrics: length={content_length}, score={quality_score}, level={quality_level}")
     
+    def log_event(self, event_type: str, tool_name: str = None, metadata: Optional[Dict[str, Any]] = None,
+                  duration_ms: float = None, success: bool = True, error_message: str = None,
+                  session_id: str = None):
+        """Log event (no-op stub) - Added to fix missing method error"""
+        if self.enabled:
+            logger.debug(f"Event: {event_type} - {tool_name}")
+        return True
+
     def close(self):
         """Close analytics (no-op)"""
         pass
