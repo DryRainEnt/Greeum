@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class DFSSearchEngine:
     """DFS-based local-first search engine with global jump capability"""
-    
+
     def __init__(self, db_manager):
         self.db_manager = db_manager
         self.metrics = {
@@ -29,15 +29,25 @@ class DFSSearchEngine:
             "jump_count": 0,
             "jump_success_rate": 0.0
         }
-        
+
         # Initialize global index
         self.global_index = GlobalIndex(db_manager)
         self.jump_optimizer = GlobalJumpOptimizer()
+
+        # P1: Adaptive DFS pattern learning
+        self.adaptive_patterns = {
+            "branch_access_frequency": {},  # branch_id -> access_count
+            "branch_relevance_scores": {},  # branch_id -> avg_score
+            "query_patterns": {},  # query_pattern -> successful_branches
+            "depth_effectiveness": {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0}
+        }
+        self.learning_rate = 0.1  # for exponential moving average
     
-    def search_with_dfs(self, 
+    def search_with_dfs(self,
                         query: str,
                         query_embedding: Optional[np.ndarray] = None,
                         slot: Optional[str] = None,
+                        entry: str = "cursor",
                         depth: int = 3,
                         limit: int = 8,
                         fallback: bool = True) -> Tuple[List[Dict], Dict]:
@@ -58,10 +68,10 @@ class DFSSearchEngine:
         start_time = time.time()
         self.metrics["total_searches"] += 1
         
-        # Get entry point from STM slot
-        entry_point = self._get_entry_point(slot)
+        # Get entry point from STM slot with cursor priority
+        entry_point = self._get_entry_point_with_priority(slot, entry)
         if not entry_point:
-            logger.warning(f"No entry point found for slot {slot}")
+            logger.warning(f"No entry point found for slot {slot}, entry type {entry}")
             # Fallback to most recent block
             entry_point = self._get_most_recent_block()
         
@@ -69,6 +79,7 @@ class DFSSearchEngine:
         search_meta = {
             "search_type": "local",
             "slot": slot,
+            "entry_type": entry,
             "root": None,
             "depth_used": 0,
             "hops": 0,
@@ -94,6 +105,9 @@ class DFSSearchEngine:
         if entry_point:
             search_meta["root"] = entry_point.get("root", entry_point.get("hash"))
         
+        # P1: Update adaptive patterns based on search results
+        self._update_adaptive_patterns(local_results, query, depth, local_hops)
+
         # Check if we have enough results
         if len(local_results) >= limit or not fallback:
             # Local search sufficient
@@ -166,31 +180,42 @@ class DFSSearchEngine:
         
         return results, search_meta
     
-    def _get_entry_point(self, slot: Optional[str]) -> Optional[Dict]:
-        """Get entry point block from STM slot"""
+    def _get_entry_point_with_priority(self, slot: Optional[str], entry_type: str = "cursor") -> Optional[Dict]:
+        """Get entry point block from STM slot with cursor → head → most_recent priority"""
         if not slot:
             return self._get_most_recent_block()
-        
+
         try:
-            # Get STM head for slot
+            # Use STMManager's get_entry_point with priority
             from .stm_manager import STMManager
             stm = STMManager(self.db_manager)
-            head_id = stm.get_active_head(slot)
-            
-            if head_id:
+            entry_block_id = stm.get_entry_point(slot, entry_type)
+
+            if entry_block_id:
                 # Get block by hash
                 cursor = self.db_manager.conn.cursor()
                 cursor.execute("""
                     SELECT * FROM blocks WHERE hash = ?
-                """, (head_id,))
+                """, (entry_block_id,))
                 row = cursor.fetchone()
-                
+
                 if row:
                     return dict(row)
+
+            logger.debug(f"No entry point found for slot {slot}, entry_type {entry_type}")
+
+        except Exception as e:
+            logger.error(f"Failed to get entry point: {e}")
+
+        return None
+
+    def _get_entry_point(self, slot: Optional[str]) -> Optional[Dict]:
+        """Legacy entry point method for backward compatibility"""
+        try:
+            return self._get_entry_point_with_priority(slot, "head")
         except Exception as e:
             logger.warning(f"Failed to get entry point for slot {slot}: {e}")
-        
-        return None
+            return None
     
     def _get_most_recent_block(self) -> Optional[Dict]:
         """Get most recent block as fallback entry point"""
@@ -250,11 +275,15 @@ class DFSSearchEngine:
             else:
                 node_embedding = self._get_node_embedding(node)
                 embedding_cache[node_hash] = node_embedding
-            
+
             score = self._calculate_relevance_improved(
                 node, query, query_embedding, node_embedding
             )
-            
+
+            # P1: Apply adaptive branch weights
+            branch_id = node.get("root", node.get("hash"))
+            score = self._apply_adaptive_weights(score, branch_id, depth)
+
             # Boost score for recent nodes in same branch
             if entry_point.get("root") == node.get("root"):
                 score *= 1.2  # 20% boost for same branch
@@ -537,10 +566,134 @@ class DFSSearchEngine:
         
         return results
     
+    def _apply_adaptive_weights(self, base_score: float, branch_id: str, depth: int) -> float:
+        """
+        P1: Apply adaptive weights based on learned patterns
+
+        Args:
+            base_score: Original relevance score
+            branch_id: Branch/root identifier
+            depth: Current search depth
+
+        Returns:
+            Adjusted score with adaptive weights
+        """
+        adjusted_score = base_score
+
+        # Apply branch relevance weight
+        if branch_id in self.adaptive_patterns["branch_relevance_scores"]:
+            branch_weight = self.adaptive_patterns["branch_relevance_scores"][branch_id]
+            # Blend with exponential moving average
+            adjusted_score = base_score * (1 - self.learning_rate) + base_score * branch_weight * self.learning_rate
+
+        # Apply depth effectiveness weight
+        if depth in self.adaptive_patterns["depth_effectiveness"]:
+            depth_weight = self.adaptive_patterns["depth_effectiveness"][depth]
+            if depth_weight > 0:
+                adjusted_score *= (1 + depth_weight * 0.1)  # Max 10% boost per depth level
+
+        # Apply branch access frequency (popular branches get slight boost)
+        if branch_id in self.adaptive_patterns["branch_access_frequency"]:
+            frequency = self.adaptive_patterns["branch_access_frequency"][branch_id]
+            if frequency > 5:  # Only boost after 5 accesses
+                frequency_boost = min(1.1, 1 + (frequency - 5) * 0.01)  # Max 10% boost
+                adjusted_score *= frequency_boost
+
+        return adjusted_score
+
+    def _update_adaptive_patterns(self, results: List[Dict], query: str, max_depth: int, hops: int):
+        """
+        P1: Update adaptive patterns based on search results
+
+        Args:
+            results: Search results with scores
+            query: Original query
+            max_depth: Maximum depth used
+            hops: Number of hops performed
+        """
+        if not results:
+            return
+
+        # Extract query pattern (simple tokenization)
+        query_tokens = set(query.lower().split()[:3])  # First 3 words as pattern
+        query_pattern = " ".join(sorted(query_tokens))
+
+        # Update branch patterns
+        for result in results:
+            branch_id = result.get("root", result.get("hash"))
+            if not branch_id:
+                continue
+
+            # Update branch access frequency
+            if branch_id not in self.adaptive_patterns["branch_access_frequency"]:
+                self.adaptive_patterns["branch_access_frequency"][branch_id] = 0
+            self.adaptive_patterns["branch_access_frequency"][branch_id] += 1
+
+            # Update branch relevance scores (exponential moving average)
+            score = result.get("_score", 0.5)
+            if branch_id not in self.adaptive_patterns["branch_relevance_scores"]:
+                self.adaptive_patterns["branch_relevance_scores"][branch_id] = score
+            else:
+                old_score = self.adaptive_patterns["branch_relevance_scores"][branch_id]
+                self.adaptive_patterns["branch_relevance_scores"][branch_id] = \
+                    old_score * (1 - self.learning_rate) + score * self.learning_rate
+
+            # Update depth effectiveness
+            depth = result.get("_depth", 1)
+            if depth in self.adaptive_patterns["depth_effectiveness"]:
+                # Higher scores at certain depths indicate effectiveness
+                if score > 0.3:  # Threshold for "effective"
+                    old_effectiveness = self.adaptive_patterns["depth_effectiveness"][depth]
+                    self.adaptive_patterns["depth_effectiveness"][depth] = \
+                        old_effectiveness * (1 - self.learning_rate) + 1.0 * self.learning_rate
+
+        # Update query patterns with successful branches
+        if query_pattern and len(results) > 0:
+            if query_pattern not in self.adaptive_patterns["query_patterns"]:
+                self.adaptive_patterns["query_patterns"][query_pattern] = set()
+
+            # Add top branches for this query pattern
+            for result in results[:3]:  # Top 3 results
+                branch_id = result.get("root", result.get("hash"))
+                if branch_id:
+                    self.adaptive_patterns["query_patterns"][query_pattern].add(branch_id)
+
+        # Log adaptive learning
+        logger.debug(f"P1 Adaptive: Updated patterns for {len(results)} results, "
+                    f"branches tracked: {len(self.adaptive_patterns['branch_access_frequency'])}")
+
+    def get_adaptive_suggestions(self, query: str) -> List[str]:
+        """
+        P1: Get suggested branches based on query patterns
+
+        Returns:
+            List of suggested branch IDs
+        """
+        query_tokens = set(query.lower().split()[:3])
+        query_pattern = " ".join(sorted(query_tokens))
+
+        suggestions = []
+
+        # Direct pattern match
+        if query_pattern in self.adaptive_patterns["query_patterns"]:
+            suggestions.extend(list(self.adaptive_patterns["query_patterns"][query_pattern])[:3])
+
+        # High-relevance branches
+        sorted_branches = sorted(
+            self.adaptive_patterns["branch_relevance_scores"].items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+        for branch_id, score in sorted_branches[:3]:
+            if branch_id not in suggestions and score > 0.5:
+                suggestions.append(branch_id)
+
+        return suggestions[:5]  # Return top 5 suggestions
+
     def get_metrics(self) -> Dict[str, Any]:
         """Get search metrics"""
         metrics = dict(self.metrics)
-        
+
         # Calculate rates
         if metrics["total_searches"] > 0:
             metrics["local_hit_rate"] = metrics["local_hits"] / metrics["total_searches"]
@@ -548,5 +701,14 @@ class DFSSearchEngine:
         else:
             metrics["local_hit_rate"] = 0.0
             metrics["fallback_rate"] = 0.0
+
+        # P1: Add adaptive metrics
+        metrics["adaptive_patterns"] = {
+            "branches_tracked": len(self.adaptive_patterns["branch_access_frequency"]),
+            "query_patterns": len(self.adaptive_patterns["query_patterns"]),
+            "avg_branch_relevance": np.mean(list(self.adaptive_patterns["branch_relevance_scores"].values()))
+                if self.adaptive_patterns["branch_relevance_scores"] else 0.0,
+            "depth_effectiveness": dict(self.adaptive_patterns["depth_effectiveness"])
+        }
         
         return metrics

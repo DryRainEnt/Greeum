@@ -29,8 +29,15 @@ class STMManager:
         # Branch/DFS: STM slots as branch head pointers
         self.branch_heads = {
             "A": None,  # Slot A head block ID
-            "B": None,  # Slot B head block ID  
+            "B": None,  # Slot B head block ID
             "C": None   # Slot C head block ID
+        }
+
+        # Cursor tracking per slot (for entry priority)
+        self.slot_cursors = {
+            "A": None,  # Slot A cursor block ID
+            "B": None,  # Slot B cursor block ID
+            "C": None   # Slot C cursor block ID
         }
         
         # Hysteresis tracking for slot stability
@@ -42,6 +49,112 @@ class STMManager:
         
         # Initialize slots from most recent blocks
         self._initialize_branch_heads()
+
+    def get_entry_point(self, slot: Optional[str] = None, entry_type: str = "cursor") -> Optional[str]:
+        """
+        Get entry point for search based on priority: cursor → head → most_recent
+
+        Args:
+            slot: STM slot (A/B/C), if None uses most active slot
+            entry_type: "cursor", "head", or "most_recent"
+
+        Returns:
+            Block hash ID for entry point or None
+        """
+        if slot is None:
+            # Auto-select most recently accessed slot
+            slot = self._get_most_active_slot()
+
+        if entry_type == "cursor":
+            cursor_id = self.slot_cursors.get(slot)
+            if cursor_id:
+                return cursor_id
+            # Fallback to head if no cursor
+            entry_type = "head"
+
+        if entry_type == "head":
+            head_id = self.branch_heads.get(slot)
+            if head_id:
+                return head_id
+            # Fallback to most_recent if no head
+            entry_type = "most_recent"
+
+        if entry_type == "most_recent":
+            return self._get_most_recent_block_id()
+
+        return None
+
+    def set_cursor(self, slot: str, block_id: str) -> bool:
+        """
+        Set cursor position for a slot
+
+        Args:
+            slot: STM slot (A/B/C)
+            block_id: Block hash ID to set as cursor
+
+        Returns:
+            True if successful
+        """
+        if slot not in self.slot_cursors:
+            return False
+
+        self.slot_cursors[slot] = block_id
+        logger.debug(f"Set cursor for slot {slot}: {block_id[:10]}...")
+        return True
+
+    def clear_cursor(self, slot: str) -> bool:
+        """
+        Clear cursor position for a slot
+
+        Args:
+            slot: STM slot (A/B/C)
+
+        Returns:
+            True if successful
+        """
+        if slot not in self.slot_cursors:
+            return False
+
+        self.slot_cursors[slot] = None
+        logger.debug(f"Cleared cursor for slot {slot}")
+        return True
+
+    def _get_most_active_slot(self) -> str:
+        """
+        Get the most recently accessed slot
+
+        Returns:
+            Slot name (A/B/C) with highest access count or most recent activity
+        """
+        max_access = 0
+        most_active = "A"  # Default
+
+        for slot, stats in self.slot_hysteresis.items():
+            if stats["access_count"] > max_access:
+                max_access = stats["access_count"]
+                most_active = slot
+
+        return most_active
+
+    def _get_most_recent_block_id(self) -> Optional[str]:
+        """
+        Get the most recent block ID from database
+
+        Returns:
+            Most recent block hash ID or None
+        """
+        try:
+            cursor = self.db_manager.conn.cursor()
+            cursor.execute("""
+                SELECT hash FROM blocks
+                ORDER BY timestamp DESC
+                LIMIT 1
+            """)
+            result = cursor.fetchone()
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"Failed to get most recent block: {e}")
+            return None
         
     def clean_expired(self) -> int:
         """만료된 기억 제거 (DatabaseManager 사용)"""
@@ -74,11 +187,24 @@ class STMManager:
             if 'timestamp' not in memory_data or not memory_data['timestamp']:
                  memory_data['timestamp'] = datetime.now().isoformat()
 
-            memory_id = self.db_manager.add_short_term_memory(memory_data)
+            # dict 타입 사전 처리 (v3.0.0.post5 수정)
+            safe_data = {}
+            import json
+            for key, value in memory_data.items():
+                if isinstance(value, (dict, list)):
+                    # dict/list를 JSON 문자열로 변환
+                    safe_data[key] = json.dumps(value, ensure_ascii=False)
+                elif value is None:
+                    # None 값을 빈 문자열로 변환
+                    safe_data[key] = ""
+                else:
+                    safe_data[key] = str(value) if not isinstance(value, (str, int, float)) else value
+
+            memory_id = self.db_manager.add_short_term_memory(safe_data)
             self.clean_expired()
             return memory_id
         except Exception as e:
-            print(f"Error adding short term memory: {e}")
+            logger.error(f"Error adding short term memory: {e}")
             return None
 
     def get_recent_memories(self, count: int = 10) -> List[Dict[str, Any]]:

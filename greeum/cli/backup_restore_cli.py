@@ -10,8 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from ..core.database_manager import DatabaseManager  
-from ..core.hierarchical_memory import HierarchicalMemorySystem
+from ..core.database_manager import DatabaseManager
+from ..core.context_memory import ContextMemorySystem
 from ..core.backup_restore import (
     MemoryBackupEngine, 
     MemoryRestoreEngine, 
@@ -20,11 +20,10 @@ from ..core.backup_restore import (
 from ..core.memory_layer import MemoryLayerType
 
 
-def get_hierarchical_system() -> HierarchicalMemorySystem:
-    """계층적 메모리 시스템 인스턴스 생성"""
+def get_context_system() -> ContextMemorySystem:
+    """컨텍스트 메모리 시스템 인스턴스 생성"""
     db_manager = DatabaseManager()
-    system = HierarchicalMemorySystem(db_manager)
-    system.initialize()
+    system = ContextMemorySystem(db_manager)
     return system
 
 
@@ -47,7 +46,7 @@ def export(output: str, include_metadata: bool):
     try:
         click.echo("[PROCESS] 메모리 백업을 시작합니다...")
         
-        system = get_hierarchical_system()
+        system = get_context_system()
         backup_engine = MemoryBackupEngine(system)
         
         success = backup_engine.create_backup(output, include_metadata)
@@ -130,7 +129,7 @@ def from_file(
             importance_min, importance_max, tags
         )
         
-        system = get_hierarchical_system()
+        system = get_context_system()
         restore_engine = MemoryRestoreEngine(system)
         
         if preview:

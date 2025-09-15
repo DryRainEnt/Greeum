@@ -714,11 +714,11 @@ def cleanup(smart: bool, expired: bool, threshold: float):
         click.echo(f"[ERROR] Cleanup failed: {e}")
         sys.exit(1)
 
-# AI Context Slots 서브명령어들 (v2.5.1)
+# AI Context Slots 서브명령어들 (v3.0.0.post5)
 @slots.command()
 def status():
-    """Display current AI Context Slots status (v2.5.1)"""
-    click.echo("[MEMORY] AI Context Slots Status Report (v2.5.1)")
+    """Display current AI Context Slots status (v3.0.0.post5)"""
+    click.echo("[MEMORY] AI Context Slots Status Report (v3.0.0.post5)")
     click.echo("=" * 50)
     
     try:
@@ -1355,8 +1355,6 @@ def run_auto():
         from ..core.database_manager import DatabaseManager
         
         db_manager = DatabaseManager()
-        system = HierarchicalMemorySystem(db_manager)
-        system.initialize()
         
         backup_engine = MemoryBackupEngine(db_manager)
         success = backup_engine.create_backup(str(backup_path), include_metadata=True)

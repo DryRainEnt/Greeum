@@ -354,31 +354,69 @@ class GlobalJumpOptimizer:
     def __init__(self):
         self.jump_history = []
         self.success_rate = 0.0
-        
-    def should_jump(self, local_results: int, query_complexity: float) -> bool:
-        """Decide whether to perform global jump"""
-        # Simple heuristic: jump if local results insufficient
-        if local_results < 3:
-            return True
-        
-        # Jump if query is complex (many keywords)
-        if query_complexity > 0.7:
-            return True
-        
-        # Jump if recent jumps were successful
-        if self.success_rate > 0.6:
-            return True
-        
-        return False
+        self.query_count = 0  # Track total queries for warm-up
+        self.db_age_queries = 0  # Queries since DB initialization
+
+    def should_jump(self, local_results: int, query_complexity: float,
+                   is_new_db: bool = False, local_quality_score: float = 0.0) -> bool:
+        """Decide whether to perform global jump with conservative approach"""
+        self.query_count += 1
+
+        # P0 Hotfix: Warm-up period for new DB or new root
+        if is_new_db or self.db_age_queries < 5:
+            self.db_age_queries += 1
+            logger.debug(f"Warm-up mode: query {self.db_age_queries}/5, skipping jump")
+            return False
+
+        # Conservative jump conditions (all must be met)
+        conditions = [
+            local_results < 2,  # Very low local results (was 3)
+            local_quality_score < 0.4,  # Local quality insufficient (NEW)
+            query_complexity > 0.8,  # High complexity only (was 0.7)
+            self.success_rate > 0.7  # High jump success rate (was 0.6)
+        ]
+
+        # All conditions must be true for jump
+        should_jump = all(conditions)
+
+        if should_jump:
+            logger.info(f"Global jump triggered: local={local_results}, "
+                       f"quality={local_quality_score:.2f}, "
+                       f"complexity={query_complexity:.2f}, "
+                       f"success_rate={self.success_rate:.2f}")
+        else:
+            logger.debug(f"Jump skipped: conditions={conditions}")
+
+        return should_jump
+
+    def reset_for_new_root(self):
+        """Reset warm-up counter when entering new root/branch"""
+        self.db_age_queries = 0
+        logger.debug("Jump optimizer reset for new root - warm-up period active")
     
-    def record_jump(self, was_useful: bool):
-        """Record jump outcome for learning"""
-        self.jump_history.append(was_useful)
-        
-        # Keep last 100 jumps
-        if len(self.jump_history) > 100:
+    def record_jump(self, was_useful: bool, results_found: int = 0):
+        """Record jump outcome for learning with enhanced tracking"""
+        self.jump_history.append({
+            "success": was_useful,
+            "results": results_found,
+            "timestamp": time.time()
+        })
+
+        # Keep last 20 jumps only (was 100)
+        if len(self.jump_history) > 20:
             self.jump_history.pop(0)
-        
+
         # Update success rate
         if self.jump_history:
-            self.success_rate = sum(self.jump_history) / len(self.jump_history)
+            successes = sum(1 for h in self.jump_history if h["success"])
+            self.success_rate = successes / len(self.jump_history)
+
+    def get_optimizer_stats(self) -> Dict[str, Any]:
+        """Get optimizer statistics"""
+        return {
+            "total_queries": self.query_count,
+            "db_age_queries": self.db_age_queries,
+            "success_rate": self.success_rate,
+            "jump_attempts": len(self.jump_history),
+            "warm_up_active": self.db_age_queries < 5
+        }

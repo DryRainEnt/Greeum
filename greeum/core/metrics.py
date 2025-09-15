@@ -38,6 +38,192 @@ class MetricsCollector:
         # Gauge metrics
         self._current_edge_count = 0
         self._current_beam_width = 32
+
+
+class SearchMetrics:
+    """검색 성능 메트릭스"""
+
+    def __init__(self, timestamp=None, search_type=None, slot=None, root=None,
+                 depth_used=None, hops=None, local_used=None, fallback_used=None,
+                 latency_ms=None, results_count=None):
+        self.timestamp = timestamp or time.time()
+        self.search_type = search_type
+        self.slot = slot
+        self.root = root
+        self.depth_used = depth_used
+        self.hops = hops
+        self.local_used = local_used
+        self.fallback_used = fallback_used
+        self.latency_ms = latency_ms
+        self.results_count = results_count
+
+        # Performance aggregates
+        self.local_hit_rate = 0.0
+        self.avg_hops = 0.0
+        self.p95_latency = 0.0
+        self.merge_undo_rate = 0.0
+
+    def update(self, hit_rate=None, hops=None, latency=None, undo_rate=None):
+        """메트릭스 업데이트"""
+        if hit_rate is not None:
+            self.local_hit_rate = hit_rate
+        if hops is not None:
+            self.avg_hops = hops
+        if latency is not None:
+            self.p95_latency = latency
+        if undo_rate is not None:
+            self.merge_undo_rate = undo_rate
+
+
+class MetricsDashboard:
+    """메트릭스 대시보드"""
+
+    def __init__(self, db_manager=None):
+        self.collector = MetricsCollector()
+        self.search_metrics = SearchMetrics()
+        self.recorded_searches = []
+
+        # v3 Branch/DFS 시스템 연결
+        if db_manager is None:
+            from .database_manager import DatabaseManager
+            db_manager = DatabaseManager()
+
+        self.db_manager = db_manager
+        self._connect_v3_systems()
+
+    def _connect_v3_systems(self):
+        """v3 Branch/DFS 시스템과 연결"""
+        try:
+            from .dfs_search import DFSSearchEngine
+            from .stm_manager import STMManager
+            self.dfs_engine = DFSSearchEngine(self.db_manager)
+            self.stm_manager = STMManager(self.db_manager)
+        except ImportError:
+            # v3 시스템 없으면 기본값 사용
+            self.dfs_engine = None
+            self.stm_manager = None
+
+    def get_search_metrics(self) -> SearchMetrics:
+        """검색 메트릭스 반환"""
+        return self.search_metrics
+
+    def update_search_metrics(self, **kwargs):
+        """검색 메트릭스 업데이트"""
+        self.search_metrics.update(**kwargs)
+
+    def record_search(self, metrics: SearchMetrics):
+        """검색 메트릭스 기록"""
+        self.recorded_searches.append(metrics)
+
+        # Update aggregated metrics
+        if len(self.recorded_searches) >= 10:
+            # Calculate local hit rate
+            local_searches = [m for m in self.recorded_searches if m.local_used]
+            self.search_metrics.local_hit_rate = len(local_searches) / len(self.recorded_searches) * 100
+
+            # Calculate average hops
+            hops_list = [m.hops for m in self.recorded_searches if m.hops is not None]
+            if hops_list:
+                self.search_metrics.avg_hops = sum(hops_list) / len(hops_list)
+
+            # Calculate p95 latency
+            latency_list = [m.latency_ms for m in self.recorded_searches if m.latency_ms is not None]
+            if latency_list:
+                latency_list.sort()
+                p95_index = int(0.95 * len(latency_list))
+                self.search_metrics.p95_latency = latency_list[p95_index] if p95_index < len(latency_list) else latency_list[-1]
+
+    def get_dashboard_export(self):
+        """대시보드 익스포트 데이터"""
+        # v3 실제 데이터 가져오기
+        v3_data = self._get_v3_branch_data()
+
+        return {
+            'local_hit_rate': self.search_metrics.local_hit_rate,
+            'avg_hops': self.search_metrics.avg_hops,
+            'p95_latency': self.search_metrics.p95_latency,
+            'total_searches': len(self.recorded_searches),
+            'v3_branch_data': v3_data
+        }
+
+    def _get_v3_branch_data(self):
+        """v3 Branch/DFS 시스템에서 실제 데이터 가져오기"""
+        if not self.dfs_engine or not self.stm_manager:
+            return {'status': 'v3_systems_not_available'}
+
+        try:
+            # DFS 검색 메트릭
+            dfs_metrics = self.dfs_engine.metrics.copy()
+
+            # Branch 헤드 정보
+            branch_heads = self.stm_manager.branch_heads.copy()
+
+            # 슬롯 사용률
+            slot_usage = {}
+            for slot, hysteresis in self.stm_manager.slot_hysteresis.items():
+                slot_usage[slot] = hysteresis['access_count']
+
+            return {
+                'dfs_search_metrics': dfs_metrics,
+                'branch_heads': branch_heads,
+                'slot_utilization': slot_usage,
+                'adaptive_patterns': self.dfs_engine.adaptive_patterns if hasattr(self.dfs_engine, 'adaptive_patterns') else {}
+            }
+        except Exception as e:
+            return {'error': str(e), 'status': 'failed_to_fetch_v3_data'}
+
+    def get_local_hit_rate(self):
+        """로컬 히트율 반환"""
+        if not self.recorded_searches:
+            return 0.0
+        local_searches = [m for m in self.recorded_searches if m.local_used]
+        return len(local_searches) / len(self.recorded_searches)
+
+    def get_avg_hops(self):
+        """평균 홉 수 반환"""
+        if not self.recorded_searches:
+            return 0.0
+        hops_list = [m.hops for m in self.recorded_searches if m.hops is not None]
+        if not hops_list:
+            return 0.0
+        return sum(hops_list) / len(hops_list)
+
+    def get_jump_rate(self):
+        """점프율 반환 (fallback 사용률)"""
+        if not self.recorded_searches:
+            return 0.0
+        fallback_searches = [m for m in self.recorded_searches if m.fallback_used]
+        return len(fallback_searches) / len(self.recorded_searches)
+
+    def get_p95_latency(self):
+        """P95 지연시간 반환"""
+        return self.search_metrics.p95_latency
+
+    def export_metrics(self, file_path: str):
+        """메트릭스를 파일로 익스포트"""
+        import json
+        data = {
+            'dashboard': {
+                'metrics': self.get_dashboard_export()
+            },
+            'success_indicators': self.get_success_indicators()
+        }
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=2)
+
+    def get_success_indicators(self):
+        """성공 지표 반환"""
+        local_hit_rate = self.get_local_hit_rate()
+        avg_hops = self.get_avg_hops()
+        p95_latency = self.search_metrics.p95_latency
+        merge_undo_rate = self.search_metrics.merge_undo_rate
+
+        return {
+            'local_hit_rate_target': (local_hit_rate >= 0.27, local_hit_rate),
+            'avg_hops_target': (avg_hops <= 8.5, avg_hops),
+            'p95_latency_target': (p95_latency < 150, p95_latency),
+            'merge_undo_rate_target': (merge_undo_rate <= 0.05, merge_undo_rate)
+        }
         
         # Histogram data (recent values for averages)
         self._recent_hops = deque(maxlen=100)  # Last 100 searches

@@ -39,42 +39,54 @@ class FastMCPAdapter(BaseAdapter):
         
         @self.app.tool()
         def add_memory(content: str, importance: float = 0.5) -> str:
-            """[MEMORY] Add important permanent memories to long-term storage.
-            
+            """[MEMORY] Add memories with v3 Branch/Slot priority storage.
+
             ⚠️  USAGE GUIDELINES:
             • ALWAYS search_memory first to avoid duplicates
             • Store meaningful information, not casual conversation
             • Use appropriate importance levels (see guide below)
-            
+
             ✅ GOOD USES: user preferences, project details, decisions, recurring issues
             [ERROR] AVOID: greetings, weather, current time, temporary session info
-            
+
+            🎯 v3 FEATURES:
+            • Auto-selects best slot based on similarity to heads
+            • Stores as child of selected slot head (branch structure)
+            • Returns metadata: slot, root, parent_block, storage_type
+            • Integrates with STM for high-importance (≥0.7) immediate promotion
+
             🔍 WORKFLOW: search_memory → analyze results → add_memory (if truly new)
             """
             # Greeum 컴포넌트 초기화 (필요시)
             if not self.initialized:
                 self.initialize_greeum_components()
-                
+
             return self.add_memory_tool(content, importance)
         
         @self.app.tool()
-        def search_memory(query: str, limit: int = 5) -> str:
-            """🔍 Search existing memories using keywords or semantic similarity.
-            
+        def search_memory(query: str, limit: int = 5, entry: str = "cursor", depth: int = 0) -> str:
+            """🔍 Search memories with v3 Branch/Slot DFS priority system.
+
             ⚠️  ALWAYS USE THIS FIRST before add_memory to avoid duplicates!
-            
+
             ✅ USE WHEN:
             • User mentions 'before', 'previous', 'remember'
             • Starting new conversation (check user context)
             • User asks about past discussions or projects
             • Before storing new information (duplicate check)
-            
-            🎯 SEARCH TIPS: Use specific keywords, try multiple terms if needed
+
+            🎯 v3 FEATURES:
+            • entry="cursor" (default): Search from current cursor position
+            • entry="head": Search from branch head
+            • depth>0: Enable association expansion search
+            • Returns metadata: search_type, entry_type, hops, time_ms
+
+            🔍 SEARCH TIPS: Use specific keywords, try multiple terms if needed
             """
             if not self.initialized:
                 self.initialize_greeum_components()
-                
-            return self.search_memory_tool(query, limit)
+
+            return self.search_memory_tool(query, limit, depth, 0.5, entry)
         
         @self.app.tool()
         def get_memory_stats() -> str:
@@ -194,11 +206,35 @@ class FastMCPAdapter(BaseAdapter):
                 }
             elif method == "tools/list":
                 return {
-                    "jsonrpc": "2.0", 
+                    "jsonrpc": "2.0",
                     "id": request_id,
                     "result": {"tools": [
-                        {"name": "add_memory", "description": "Add memory to Greeum"},
-                        {"name": "search_memory", "description": "Search Greeum memories"},
+                        {
+                            "name": "add_memory",
+                            "description": "Add memories with v3 Branch/Slot priority storage",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "content": {"type": "string", "description": "Memory content"},
+                                    "importance": {"type": "number", "default": 0.5, "minimum": 0.0, "maximum": 1.0}
+                                },
+                                "required": ["content"]
+                            }
+                        },
+                        {
+                            "name": "search_memory",
+                            "description": "Search memories with v3 Branch/Slot DFS priority system",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "query": {"type": "string", "description": "Search query"},
+                                    "limit": {"type": "integer", "default": 5, "minimum": 1},
+                                    "entry": {"type": "string", "default": "cursor", "enum": ["cursor", "head"]},
+                                    "depth": {"type": "integer", "default": 0, "minimum": 0, "maximum": 3}
+                                },
+                                "required": ["query"]
+                            }
+                        },
                         {"name": "get_memory_stats", "description": "Get memory statistics"},
                         {"name": "usage_analytics", "description": "Get usage analytics"}
                     ]}
@@ -217,7 +253,10 @@ class FastMCPAdapter(BaseAdapter):
                 elif tool_name == "search_memory":
                     result = self.search_memory_tool(
                         arguments.get("query", ""),
-                        arguments.get("limit", 5)
+                        arguments.get("limit", 5),
+                        arguments.get("depth", 0),
+                        arguments.get("tolerance", 0.5),
+                        arguments.get("entry", "cursor")
                     )
                 elif tool_name == "get_memory_stats":
                     result = self.get_memory_stats_tool()

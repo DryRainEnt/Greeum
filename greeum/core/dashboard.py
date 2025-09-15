@@ -10,7 +10,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, asdict
 import logging
 
-from .hierarchical_memory import HierarchicalMemorySystem
+from .context_memory import ContextMemorySystem
 from .memory_layer import MemoryLayerType, MemoryPriority
 from .database_manager import DatabaseManager
 
@@ -83,7 +83,7 @@ class SystemHealth:
 class MemoryDashboard:
     """메모리 시스템 대시보드"""
     
-    def __init__(self, hierarchical_system: HierarchicalMemorySystem):
+    def __init__(self, hierarchical_system: ContextMemorySystem):
         self.system = hierarchical_system
         self.db_manager = hierarchical_system.db_manager
     
@@ -495,8 +495,8 @@ def get_dashboard_system(db_manager: Optional[DatabaseManager] = None) -> Memory
     if db_manager is None:
         db_manager = DatabaseManager()
     
-    from .hierarchical_memory import HierarchicalMemorySystem
-    hierarchical_system = HierarchicalMemorySystem(db_manager)
+    from .context_memory import ContextMemorySystem
+    hierarchical_system = ContextMemorySystem(db_manager)
     hierarchical_system.initialize()
     
     return MemoryDashboard(hierarchical_system)

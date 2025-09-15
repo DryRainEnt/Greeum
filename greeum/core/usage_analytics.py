@@ -47,6 +47,10 @@ class UsageAnalytics:
             'memory_growth_rate': 0.0,
             'timestamp': datetime.now().isoformat()
         }
+
+    def get_usage_report(self, days: int = 7, report_type: str = 'usage') -> Dict[str, Any]:
+        """Get usage report - alias for get_analytics_data"""
+        return self.get_analytics_data(days, report_type)
     
     def get_quality_metrics(self) -> Dict[str, Any]:
         """Get quality metrics (returns empty structure)"""
@@ -76,6 +80,15 @@ class UsageAnalytics:
         """Log event (no-op stub) - Added to fix missing method error"""
         if self.enabled:
             logger.debug(f"Event: {event_type} - {tool_name}")
+        return True
+
+    def track_ai_intent(self, intent: str = None, confidence: float = 0.5, metadata: Optional[Dict[str, Any]] = None,
+                       input_content: str = None, predicted_intent: str = None, predicted_slot: str = None,
+                       actual_slot_used: str = None, importance_score: float = None, context_metadata: Optional[Dict[str, Any]] = None, **kwargs):
+        """Track AI intent (no-op stub) - Added for slots functionality"""
+        if self.enabled:
+            intent_to_log = intent or predicted_intent or "unknown"
+            logger.debug(f"AI Intent: {intent_to_log} (confidence: {confidence})")
         return True
 
     def close(self):

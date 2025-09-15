@@ -1,11 +1,11 @@
 """
-Greeum v3.0.0 - Context-Dependent Neural Memory System
+Greeum v3.1.0 - Context-Dependent Neural Memory System with Smart Routing
 
 GraphIndex beam search, context-aware memory formation, spreading activation, 
 and STM/LTM consolidation for Large Language Models with human-like memory capabilities.
 """
 
-__version__ = "3.0.0.post3"
+__version__ = "3.1.0rc1"
 
 # v3.0.0 Main Interface
 from .core.context_memory import ContextMemorySystem

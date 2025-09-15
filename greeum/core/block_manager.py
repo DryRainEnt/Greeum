@@ -232,13 +232,14 @@ class BlockManager:
             # Update STM head to new block
             if slot:
                 stm.update_head(slot, current_hash)
+                logger.info(f"P1: Updated slot {slot} head to {current_hash[:8]}...")
             else:
-                # Update most recent slot
-                most_recent_slot = max(
-                    stm.slot_hysteresis.keys(),
-                    key=lambda k: stm.slot_hysteresis[k]["last_seen_at"]
-                )
-                stm.update_head(most_recent_slot, current_hash)
+                # No slot specified - this shouldn't happen as BaseAdapter should always provide a slot
+                # Use default slot A as fallback
+                logger.warning("No slot specified for block, using default slot A")
+                slot = 'A'
+                stm.update_head(slot, current_hash)
+                logger.info(f"Updated slot {slot} head to {current_hash[:8]}...")
             
             # v2.7.0: Analyze causal relationships after successful block addition
             if self.causal_manager and added_block:
@@ -648,11 +649,11 @@ class BlockManager:
         try:
             cursor = self.db_manager.conn.cursor()
             cursor.execute("""
-                SELECT block_index, hash, root, before, content, tags, 
-                       embedding, created_at, stats
+                SELECT block_index, hash, root, before, context,
+                       timestamp, importance, after, xref
                 FROM blocks WHERE hash = ?
             """, (block_hash,))
-            
+
             row = cursor.fetchone()
             if row:
                 return {
@@ -661,11 +662,11 @@ class BlockManager:
                     'hash': row[1],
                     'root': row[2],
                     'before': row[3],
-                    'content': json.loads(row[4]) if row[4] else {},
-                    'tags': json.loads(row[5]) if row[5] else {},
-                    'embedding': json.loads(row[6]) if row[6] else None,
-                    'created_at': row[7],
-                    'stats': json.loads(row[8]) if row[8] else {}
+                    'context': row[4],
+                    'timestamp': row[5],
+                    'importance': row[6],
+                    'after': json.loads(row[7]) if row[7] else [],
+                    'xref': json.loads(row[8]) if row[8] else []
                 }
         except Exception as e:
             logger.error(f"Failed to get block by hash: {e}")
@@ -808,8 +809,8 @@ class BlockManager:
             return []
     
     # v2.5.1: AI Context Slots 통합 검색 기능
-    def search_with_slots(self, query: str, limit: int = 5, use_slots: bool = True, 
-                         include_relationships: bool = False, **options) -> List[Dict[str, Any]]:
+    def search_with_slots(self, query: str, limit: int = 5, use_slots: bool = True,
+                         entry: str = "cursor", include_relationships: bool = False, **options) -> List[Dict[str, Any]]:
         """
         v3.0.0+ Branch/DFS 우선 검색 시스템
         
@@ -859,12 +860,13 @@ class BlockManager:
         except:
             pass
         
-        # Phase 1: DFS Local-First Search
+        # Phase 1: DFS Local-First Search with entry priority
         dfs_engine = DFSSearchEngine(self.db_manager)
         results, search_meta = dfs_engine.search_with_dfs(
             query=query,
             query_embedding=query_embedding,
             slot=target_slot,
+            entry=entry,
             depth=search_depth,
             limit=limit,
             fallback=use_fallback
@@ -899,7 +901,13 @@ class BlockManager:
         logger.info(f"DFS search completed in {elapsed_ms:.1f}ms: "
                    f"type={search_type}, hops={nodes_visited}, "
                    f"results={len(results)}, fallback={fallback_triggered}")
-        
+
+        # Ensure metadata standardization
+        search_meta.update({
+            "time_ms": elapsed_ms,
+            "result_count": len(results)
+        })
+
         # Analytics tracking
         try:
             from .usage_analytics import UsageAnalytics
@@ -913,8 +921,12 @@ class BlockManager:
             )
         except:
             pass
-        
-        return results
+
+        # Return with standardized metadata for API consistency
+        return {
+            "items": results,
+            "meta": search_meta
+        }
         
         # Legacy code below (kept for compatibility but not executed)
         all_results = []

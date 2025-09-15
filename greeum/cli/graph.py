@@ -20,6 +20,82 @@ def graph_group():
     pass
 
 
+@graph_group.command("status")
+def status_command():
+    """Display branch and memory graph status"""
+    try:
+        from ..core import DatabaseManager, BlockManager
+        from ..core.branch_manager import BranchManager
+        from ..core.stm_manager import STMManager
+
+        console.print("[blue]🌳 Memory Graph Status[/blue]")
+
+        # 초기화
+        db_manager = DatabaseManager()
+        block_manager = BlockManager(db_manager)
+        branch_manager = BranchManager(db_manager)
+        stm_manager = STMManager(db_manager)
+
+        # 전체 통계
+        total_blocks = db_manager.get_total_blocks()
+        recent_blocks = db_manager.get_recent_blocks(limit=10)
+
+        # STM 슬롯 상태
+        stm_slots = stm_manager.branch_heads
+        active_slots = sum(1 for v in stm_slots.values() if v is not None)
+
+        # 메인 테이블
+        table = Table(title="Memory System Overview", show_header=True)
+        table.add_column("Component", style="cyan")
+        table.add_column("Status", style="green")
+        table.add_column("Details", style="white")
+
+        table.add_row("Total Blocks", f"{total_blocks:,}", "Long-term memory blocks")
+        table.add_row("Active STM Slots", f"{active_slots}/3", f"Slots: {list(stm_slots.keys())}")
+        table.add_row("Recent Activity", f"{len(recent_blocks)} blocks", "Last 10 blocks")
+
+        console.print(table)
+
+        # STM 슬롯 상세
+        if active_slots > 0:
+            console.print("\n[blue]📊 STM Slot Details[/blue]")
+            slot_table = Table(show_header=True)
+            slot_table.add_column("Slot", style="cyan")
+            slot_table.add_column("Head Block", style="green")
+            slot_table.add_column("Status", style="yellow")
+
+            for slot, head in stm_slots.items():
+                if head:
+                    slot_table.add_row(slot, head[:16] + "...", "Active")
+                else:
+                    slot_table.add_row(slot, "None", "Empty")
+
+            console.print(slot_table)
+
+        # 최근 블록들
+        if recent_blocks:
+            console.print(f"\n[blue]📝 Recent Blocks (Latest {len(recent_blocks)})[/blue]")
+            block_table = Table(show_header=True)
+            block_table.add_column("Index", style="cyan")
+            block_table.add_column("Timestamp", style="green")
+            block_table.add_column("Content Preview", style="white")
+
+            for block in recent_blocks[-5:]:  # 최신 5개만
+                content = block.get('context', '')[:50] + "..." if len(block.get('context', '')) > 50 else block.get('context', '')
+                timestamp = block.get('timestamp', '')[:19] if block.get('timestamp') else 'Unknown'
+                block_table.add_row(
+                    str(block.get('block_index', 'N/A')),
+                    timestamp,
+                    content
+                )
+
+            console.print(block_table)
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise
+
+
 @graph_group.command("bootstrap")
 @click.option("--blocks", "-n", default=100, help="Number of recent blocks to process")
 @click.option("--force", is_flag=True, help="Force regeneration of all links")
