@@ -354,93 +354,93 @@ class DatabaseManager:
         try:
             # Start transaction
             self.conn.execute("BEGIN TRANSACTION")
-        
-        # 1. 블록 기본 정보 삽입 (브랜치 필드 포함)
-        # Check if branch columns exist
-        cursor.execute("PRAGMA table_info(blocks)")
-        columns = {row[1] for row in cursor.fetchall()}
-        has_branch_columns = {'root', 'before', 'after'}.issubset(columns)
-        
-        if has_branch_columns:
-            # Insert with branch fields
-            cursor.execute('''
-            INSERT INTO blocks (block_index, timestamp, context, importance, hash, prev_hash,
-                              root, before, after, xref, branch_depth, visit_count, last_seen_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                block_data.get('block_index'),
-                block_data.get('timestamp'),
-                block_data.get('context'),
-                block_data.get('importance', 0.0),
-                block_data.get('hash'),
-                block_data.get('prev_hash', ''),
-                block_data.get('root'),
-                block_data.get('before'),
-                json.dumps(block_data.get('after', [])),
+
+            # 1. 블록 기본 정보 삽입 (브랜치 필드 포함)
+            # Check if branch columns exist
+            cursor.execute("PRAGMA table_info(blocks)")
+            columns = {row[1] for row in cursor.fetchall()}
+            has_branch_columns = {'root', 'before', 'after'}.issubset(columns)
+
+            if has_branch_columns:
+                # Insert with branch fields
+                cursor.execute('''
+                INSERT INTO blocks (block_index, timestamp, context, importance, hash, prev_hash,
+                                  root, before, after, xref, branch_depth, visit_count, last_seen_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    block_data.get('block_index'),
+                    block_data.get('timestamp'),
+                    block_data.get('context'),
+                    block_data.get('importance', 0.0),
+                    block_data.get('hash'),
+                    block_data.get('prev_hash', ''),
+                    block_data.get('root'),
+                    block_data.get('before'),
+                    json.dumps(block_data.get('after', [])),
                 json.dumps(block_data.get('xref', [])),
                 block_data.get('branch_depth', 0),
                 block_data.get('visit_count', 0),
                 block_data.get('last_seen_at', 0)
-            ))
-        else:
-            # Legacy insert without branch fields
-            cursor.execute('''
-            INSERT INTO blocks (block_index, timestamp, context, importance, hash, prev_hash)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ''', (
-                block_data.get('block_index'),
-                block_data.get('timestamp'),
-                block_data.get('context'),
-                block_data.get('importance', 0.0),
-                block_data.get('hash'),
-                block_data.get('prev_hash', '')
-            ))
-        
-        block_index = block_data.get('block_index')
-        
-        # 2. 키워드 삽입
-        keywords = block_data.get('keywords', [])
-        for keyword in keywords:
-            cursor.execute('''
-            INSERT OR IGNORE INTO block_keywords (block_index, keyword)
-            VALUES (?, ?)
-            ''', (block_index, keyword))
-        
-        # 3. 태그 삽입
-        tags = block_data.get('tags', [])
-        for tag in tags:
-            cursor.execute('''
-            INSERT OR IGNORE INTO block_tags (block_index, tag)
-            VALUES (?, ?)
-            ''', (block_index, tag))
-        
-        # 4. 메타데이터 삽입
-        metadata = block_data.get('metadata', {})
-        if metadata:
-            cursor.execute('''
-            INSERT INTO block_metadata (block_index, metadata)
-            VALUES (?, ?)
-            ''', (block_index, json.dumps(metadata)))
-        
-        # 5. 임베딩 저장
-        embedding = block_data.get('embedding')
-        if embedding:
-            # NumPy 배열로 변환 후 바이너리로 저장
-            if isinstance(embedding, list):
-                embedding_array = np.array(embedding, dtype=np.float32)
+                ))
             else:
-                embedding_array = embedding
-                
-            cursor.execute('''
-            INSERT INTO block_embeddings (block_index, embedding, embedding_model, embedding_dim)
-            VALUES (?, ?, ?, ?)
-            ''', (
-                block_index,
-                embedding_array.tobytes(),
-                block_data.get('embedding_model', 'default'),
-                len(embedding_array)
-            ))
-        
+                # Legacy insert without branch fields
+                cursor.execute('''
+                INSERT INTO blocks (block_index, timestamp, context, importance, hash, prev_hash)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    block_data.get('block_index'),
+                    block_data.get('timestamp'),
+                    block_data.get('context'),
+                    block_data.get('importance', 0.0),
+                    block_data.get('hash'),
+                    block_data.get('prev_hash', '')
+                ))
+
+            block_index = block_data.get('block_index')
+
+            # 2. 키워드 삽입
+            keywords = block_data.get('keywords', [])
+            for keyword in keywords:
+                cursor.execute('''
+                INSERT OR IGNORE INTO block_keywords (block_index, keyword)
+                VALUES (?, ?)
+                ''', (block_index, keyword))
+
+            # 3. 태그 삽입
+            tags = block_data.get('tags', [])
+            for tag in tags:
+                cursor.execute('''
+                INSERT OR IGNORE INTO block_tags (block_index, tag)
+                VALUES (?, ?)
+                ''', (block_index, tag))
+
+            # 4. 메타데이터 삽입
+            metadata = block_data.get('metadata', {})
+            if metadata:
+                cursor.execute('''
+                INSERT INTO block_metadata (block_index, metadata)
+                VALUES (?, ?)
+                ''', (block_index, json.dumps(metadata)))
+
+            # 5. 임베딩 저장
+            embedding = block_data.get('embedding')
+            if embedding:
+                # NumPy 배열로 변환 후 바이너리로 저장
+                if isinstance(embedding, list):
+                    embedding_array = np.array(embedding, dtype=np.float32)
+                else:
+                    embedding_array = embedding
+
+                cursor.execute('''
+                INSERT INTO block_embeddings (block_index, embedding, embedding_model, embedding_dim)
+                VALUES (?, ?, ?, ?)
+                ''', (
+                    block_index,
+                    embedding_array.tobytes(),
+                    block_data.get('embedding_model', 'default'),
+                    len(embedding_array)
+                ))
+
             # Commit transaction
             self.conn.commit()
             logger.debug(f"Block {block_index} saved successfully")
