@@ -125,6 +125,35 @@ Please search existing memories first or provide more specific content."""
                 len(quality_result.get('suggestions', []))
             )
 
+            # v3.1.0rc7: Check if save actually succeeded
+            if block_result is None:
+                return f"""❌ **Memory Save Failed!**
+
+**Error**: Block could not be saved to database
+**Content**: {content[:50]}...
+**Possible Cause**: Database transaction failure or index conflict
+
+Please try again or check database status."""
+
+            # Get block index from result
+            block_index = None
+            if isinstance(block_result, int):
+                block_index = block_result
+            elif isinstance(block_result, dict):
+                block_index = block_result.get('id', block_result.get('block_index'))
+
+            # Verify save if we have an index
+            if block_index and block_index != 'unknown':
+                verify_block = self.components['db_manager'].get_block(block_index)
+                if not verify_block:
+                    return f"""⚠️ **Memory Save Uncertain!**
+
+**Reported Index**: #{block_index}
+**Status**: Block not found in database after save
+**Action Required**: Please verify with search_memory
+
+This may indicate a transaction rollback or database issue."""
+
             # 성공 응답 - 슬롯 정보 포함
             quality_feedback = f"""
 **Quality Score**: {quality_result['quality_score']:.1%} ({quality_result['quality_level']})
@@ -157,10 +186,12 @@ Please search existing memories first or provide more specific content."""
                         routing_info += f"\n• Similarity: {sr['similarity_score']:.2%}"
                     if sr.get('placement'):
                         routing_info += f"\n• Placement: {sr['placement']}"
+                    if sr.get('reason'):
+                        routing_info += f"\n• Reason: {sr['reason']}"
 
             return f"""✅ **Memory Successfully Added!**
 
-**Block Index**: #{block_result.get('id', block_result.get('block_index', 'unknown'))}
+**Block Index**: #{block_index if block_index else 'unknown'}
 **Storage**: Branch-based (v3 System){slot_info}
 **Duplicate Check**: ✅ Passed{quality_feedback}{suggestions_text}{routing_info}"""
 
@@ -217,18 +248,19 @@ Please search existing memories first or provide more specific content."""
             return self._add_memory_fallback(content, importance, slot)
 
     def _auto_select_slot(self, stm_manager, content: str, embedding: Optional[List[float]]):
-        """스마트 라우팅을 통한 슬롯 자동 선택"""
+        """스마트 라우팅을 통한 슬롯 자동 선택 - v3.1.0rc7 개선"""
         if not stm_manager:
             return "A", None
+
+        MINIMUM_THRESHOLD = 0.4  # 최소 유사도 임계값
 
         try:
             # DFS 검색 엔진을 통한 유사도 계산
             dfs_engine = self.components.get('dfs_search')
             if dfs_engine and embedding:
                 # 현재 슬롯 헤드들과 유사도 비교
-                best_slot = "A"
-                best_similarity = 0.0
-                placement_type = 'new_branch'
+                slot_similarities = {}
+                empty_slots = []
 
                 for slot_name in ["A", "B", "C"]:
                     head_block_id = stm_manager.branch_heads.get(slot_name)
@@ -238,30 +270,71 @@ Please search existing memories first or provide more specific content."""
                             slot_blocks = dfs_engine.search_from_block(head_block_id, content, limit=3)
                             if slot_blocks:
                                 similarity = slot_blocks[0].get('similarity', 0.0)
-                                if similarity > best_similarity:
-                                    best_similarity = similarity
-                                    best_slot = slot_name
-                                    if similarity > 0.7:
-                                        placement_type = 'existing_branch'
-                                    elif similarity > 0.4:
-                                        placement_type = 'divergence'
+                                slot_similarities[slot_name] = similarity
                         except Exception:
-                            continue
+                            slot_similarities[slot_name] = 0.0
+                    else:
+                        empty_slots.append(slot_name)
 
-                smart_routing_info = {
-                    'enabled': True,
-                    'slot_updated': best_slot,
-                    'similarity_score': best_similarity,
-                    'placement': placement_type
-                }
+                # 최고 유사도 슬롯 찾기
+                if slot_similarities:
+                    best_slot = max(slot_similarities, key=slot_similarities.get)
+                    best_similarity = slot_similarities[best_slot]
 
-                return best_slot, smart_routing_info
+                    # 최소 임계값 체크
+                    if best_similarity >= MINIMUM_THRESHOLD:
+                        # 임계값 이상이면 해당 슬롯 사용
+                        if best_similarity > 0.7:
+                            placement_type = 'existing_branch'
+                        else:
+                            placement_type = 'divergence'
+
+                        smart_routing_info = {
+                            'enabled': True,
+                            'slot_updated': best_slot,
+                            'similarity_score': best_similarity,
+                            'placement': placement_type
+                        }
+                        return best_slot, smart_routing_info
+
+                    # 임계값 미달시 - 새 슬롯 또는 글로벌 재할당
+                    if empty_slots:
+                        # 빈 슬롯이 있으면 새 맥락으로 할당
+                        new_slot = empty_slots[0]
+                        smart_routing_info = {
+                            'enabled': True,
+                            'slot_updated': new_slot,
+                            'similarity_score': 0.0,
+                            'placement': 'new_context',
+                            'reason': f'Below threshold ({best_similarity:.2f} < {MINIMUM_THRESHOLD})'
+                        }
+                        return new_slot, smart_routing_info
+                    else:
+                        # 모든 슬롯이 사용중이면 가장 연관도 낮은 슬롯을 재할당
+                        least_relevant_slot = min(slot_similarities, key=slot_similarities.get)
+
+                        # 글로벌 검색으로 더 나은 위치 찾기
+                        smart_routing_info = {
+                            'enabled': True,
+                            'slot_updated': least_relevant_slot,
+                            'similarity_score': slot_similarities[least_relevant_slot],
+                            'placement': 'global_reallocation',
+                            'reason': f'All below threshold, reallocating least relevant ({least_relevant_slot})'
+                        }
+                        return least_relevant_slot, smart_routing_info
+
+                # 모든 슬롯이 비어있는 경우
+                if empty_slots:
+                    return empty_slots[0], {'enabled': True, 'placement': 'initial', 'slot_updated': empty_slots[0]}
 
         except Exception as e:
-            logger.debug(f"Smart routing failed, using LRU: {e}")
+            logger.debug(f"Smart routing failed: {e}")
 
-        # Fallback: LRU 방식
-        return "A", None
+        # Fallback: 첫 번째 빈 슬롯 또는 A
+        for slot in ["A", "B", "C"]:
+            if not stm_manager.branch_heads.get(slot):
+                return slot, {'enabled': False, 'placement': 'fallback_empty'}
+        return "A", {'enabled': False, 'placement': 'fallback_default'}
 
     def _add_memory_fallback(self, content: str, importance: float, slot: str) -> Dict[str, Any]:
         """Fallback 메모리 저장"""

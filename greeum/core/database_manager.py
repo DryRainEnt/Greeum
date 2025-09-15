@@ -338,18 +338,22 @@ class DatabaseManager:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_relations_source ON actant_relations(source_actant_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_relations_target ON actant_relations(target_actant_id)')
     
-    def add_block(self, block_data: Dict[str, Any]) -> int:
+    def add_block(self, block_data: Dict[str, Any]) -> Optional[int]:
         """
-        새 블록 추가
-        
+        새 블록 추가 - v3.1.0rc7: 트랜잭션 안전성 개선
+
         Args:
             block_data: 블록 데이터
-            
+
         Returns:
-            추가된 블록의 인덱스
+            추가된 블록의 인덱스 또는 None (실패시)
         """
         cursor = self.conn.cursor()
-        # logger.debug(f"새 블록 추가 시도: index={block_data.get('block_index')}")  # Debug logging
+        block_index = block_data.get('block_index')
+
+        try:
+            # Start transaction
+            self.conn.execute("BEGIN TRANSACTION")
         
         # 1. 블록 기본 정보 삽입 (브랜치 필드 포함)
         # Check if branch columns exist
@@ -437,9 +441,22 @@ class DatabaseManager:
                 len(embedding_array)
             ))
         
-        self.conn.commit()
-        # logger.info(f"Block added successfully: index={block_index}")  # Too verbose
-        return block_index
+            # Commit transaction
+            self.conn.commit()
+            logger.debug(f"Block {block_index} saved successfully")
+            return block_index
+
+        except sqlite3.IntegrityError as e:
+            # Rollback on constraint violations (e.g., duplicate index)
+            self.conn.rollback()
+            logger.error(f"Integrity error adding block {block_index}: {e}")
+            return None
+
+        except Exception as e:
+            # Rollback on any other error
+            self.conn.rollback()
+            logger.error(f"Failed to add block {block_index}: {e}")
+            return None
     
     def get_block(self, block_index: int) -> Optional[Dict[str, Any]]:
         """

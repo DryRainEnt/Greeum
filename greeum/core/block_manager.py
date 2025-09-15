@@ -261,9 +261,17 @@ class BlockManager:
         
         try:
             added_idx = self.db_manager.add_block(block_to_store_in_db)
-            # add_block이 실제 추가된 블록의 index를 반환한다고 가정 (DB auto-increment 시 유용)
-            # 현재 DatabaseManager.add_block은 전달된 block_data.get('block_index')를 사용하므로, added_idx는 new_block_index와 같음.
+
+            # v3.1.0rc7: Verify block was actually saved
+            if added_idx is None:
+                logger.error(f"Failed to save block {new_block_index} - add_block returned None")
+                return None
+
+            # Verify the block exists in DB
             added_block = self.db_manager.get_block(new_block_index)
+            if not added_block:
+                logger.error(f"Block {new_block_index} not found after save - transaction may have failed")
+                return None
             
             # Update parent's after field if we have a parent
             if before_id:
