@@ -380,7 +380,8 @@ Please search existing memories first or provide more specific content."""
                     limit=limit,
                     use_slots=True,
                     entry=entry,
-                    depth=depth
+                    depth=depth,
+                    fallback=True  # MCP에서는 항상 글로벌 폴백 활성화
                 )
                 # search_with_slots는 dict 반환 {'items': [...], 'meta': {...}}
                 if isinstance(result, dict):

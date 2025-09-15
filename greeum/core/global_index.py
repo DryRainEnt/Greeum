@@ -359,33 +359,46 @@ class GlobalJumpOptimizer:
 
     def should_jump(self, local_results: int, query_complexity: float,
                    is_new_db: bool = False, local_quality_score: float = 0.0) -> bool:
-        """Decide whether to perform global jump with conservative approach"""
+        """Decide whether to perform global jump with improved logic"""
         self.query_count += 1
 
-        # P0 Hotfix: Warm-up period for new DB or new root
-        if is_new_db or self.db_age_queries < 5:
-            self.db_age_queries += 1
-            logger.debug(f"Warm-up mode: query {self.db_age_queries}/5, skipping jump")
-            return False
+        # Always allow global search when local results are insufficient
+        # This is critical for search functionality
+        if local_results == 0:
+            logger.info(f"Global jump triggered: No local results found")
+            return True
 
-        # Conservative jump conditions (all must be met)
-        conditions = [
-            local_results < 2,  # Very low local results (was 3)
-            local_quality_score < 0.4,  # Local quality insufficient (NEW)
-            query_complexity > 0.8,  # High complexity only (was 0.7)
-            self.success_rate > 0.7  # High jump success rate (was 0.6)
+        # P0 Hotfix: Warm-up period for new DB or new root (reduced from 5 to 2)
+        if is_new_db or self.db_age_queries < 2:
+            self.db_age_queries += 1
+            # Allow jump even in warm-up if no local results
+            if local_results == 0:
+                return True
+            logger.debug(f"Warm-up mode: query {self.db_age_queries}/2, checking conditions")
+
+        # Improved jump conditions (more permissive)
+        # Jump if we have very few local results OR low quality
+        conditions_any = [
+            local_results < 3,  # Few local results
+            local_quality_score < 0.3,  # Low quality results
         ]
 
-        # All conditions must be true for jump
-        should_jump = all(conditions)
+        # Additional boost conditions
+        conditions_boost = [
+            query_complexity > 0.5,  # Moderate complexity (reduced from 0.8)
+            self.query_count > 5,  # After initial queries (instead of success_rate check)
+        ]
+
+        # Jump if ANY primary condition is met AND at least one boost condition
+        should_jump = any(conditions_any) and any(conditions_boost)
 
         if should_jump:
             logger.info(f"Global jump triggered: local={local_results}, "
                        f"quality={local_quality_score:.2f}, "
                        f"complexity={query_complexity:.2f}, "
-                       f"success_rate={self.success_rate:.2f}")
+                       f"query_count={self.query_count}")
         else:
-            logger.debug(f"Jump skipped: conditions={conditions}")
+            logger.debug(f"Jump skipped: local={local_results}, quality={local_quality_score:.2f}")
 
         return should_jump
 
