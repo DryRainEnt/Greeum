@@ -64,6 +64,32 @@ class BlockManager:
             logger.error(f"AssociationNetwork initialization failed: {e}")
             self.association_network = None
             self.spreading_activation = None
+
+        # v3.1.0rc7: BranchIndexManager 통합
+        self.branch_index_manager = None
+        try:
+            from .branch_index import BranchIndexManager
+            self.branch_index_manager = BranchIndexManager(self.db_manager)
+            logger.info("BranchIndexManager integrated successfully")
+        except ImportError as e:
+            logger.debug(f"BranchIndexManager not available: {e}")
+        except Exception as e:
+            logger.error(f"BranchIndexManager initialization failed: {e}")
+
+        # v3.1.0rc7: BranchAwareStorage 통합 - 브랜치 인식 저장
+        self.branch_aware_storage = None
+        if self.branch_index_manager:
+            try:
+                from .branch_aware_storage import BranchAwareStorage
+                self.branch_aware_storage = BranchAwareStorage(
+                    db_manager=self.db_manager,
+                    branch_index_manager=self.branch_index_manager
+                )
+                logger.info("BranchAwareStorage integrated successfully")
+            except ImportError as e:
+                logger.debug(f"BranchAwareStorage not available: {e}")
+            except Exception as e:
+                logger.error(f"BranchAwareStorage initialization failed: {e}")
         
         # 메트릭 추적 (관측성 개선)
         self.metrics = {
@@ -85,14 +111,15 @@ class BlockManager:
         block_str = json.dumps(block_copy, sort_keys=True, ensure_ascii=False)
         return hashlib.sha256(block_str.encode('utf-8')).hexdigest()
     
-    def add_block(self, context: str, keywords: List[str], tags: List[str], 
-                 embedding: List[float], importance: float, 
+    def add_block(self, context: str, keywords: List[str], tags: List[str],
+                 embedding: List[float], importance: float,
                  metadata: Optional[Dict[str, Any]] = None,
                  embedding_model: Optional[str] = 'default',
                  slot: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         새 블록 추가 - Branch/DFS 구조로 저장
-        
+        v3.1.0rc7: Branch-aware storage with dynamic threshold
+
         Args:
             context: 메모리 내용
             keywords: 키워드 리스트
@@ -117,28 +144,56 @@ class BlockManager:
         if self.merge_engine and slot:
             self._evaluate_auto_merge(stm, slot)
         
+        # v3.1.0rc7: Use branch-aware storage if available
+        branch_info = None
+        if self.branch_aware_storage and embedding:
+            try:
+                # Convert embedding to numpy array if needed
+                emb_array = np.array(embedding, dtype=np.float32) if embedding else None
+                branch_info = self.branch_aware_storage.store_with_branch_awareness(
+                    content=context,
+                    embedding=emb_array,
+                    importance=importance
+                )
+
+                # Override slot selection based on branch awareness
+                if branch_info and branch_info.get('selected_slot'):
+                    slot = branch_info['selected_slot']
+                    logger.info(f"Branch-aware storage selected slot {slot} "
+                              f"with similarity {branch_info.get('similarity', 0):.3f}")
+            except Exception as e:
+                logger.warning(f"Branch-aware storage failed: {e}, falling back to default")
+
         # Get active head from STM slot
         head_id = stm.get_active_head(slot)
         head_block = None
         root_id = None
         before_id = None
-        
-        if head_id:
+
+        # If branch-aware storage provided branch info, use it
+        if branch_info and branch_info.get('branch_root'):
+            root_id = branch_info['branch_root']
+            if branch_info.get('before_hash'):
+                before_id = branch_info['before_hash']
+
+        if head_id and not before_id:
             # Get head block info
             cursor = self.db_manager.conn.cursor()
             cursor.execute("""
                 SELECT block_index, root, hash FROM blocks WHERE hash = ?
             """, (head_id,))
             head_info = cursor.fetchone()
-            
+
             if head_info:
                 head_block = {
                     'block_index': head_info[0],
                     'root': head_info[1] or head_id,  # Use head as root if no root
                     'hash': head_info[2]
                 }
-                root_id = head_block['root']
-                before_id = head_block['hash']
+                if not root_id:
+                    root_id = head_block['root']
+                if not before_id:
+                    before_id = head_block['hash']
         
         # Generate new block ID
         new_block_id = str(uuid.uuid4())
