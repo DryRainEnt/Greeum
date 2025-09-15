@@ -374,7 +374,11 @@ Please search existing memories first or provide more specific content."""
         try:
             search_engine = self.components.get('search_engine')
             if search_engine:
-                return search_engine.search(query, limit=limit)
+                result = search_engine.search(query, top_k=limit)
+                # SearchEngine.search()는 dict를 반환하므로 blocks 키에서 실제 블록 추출
+                if isinstance(result, dict):
+                    return result.get('blocks', [])
+                return result
 
             # Fallback: DB 직접 검색
             return self._search_memory_fallback(query, limit)
