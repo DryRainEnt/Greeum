@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [3.1.0rc3.dev1] - 2025-01-16
+
+### Fixed
+- **Search System Overhaul**: Replaced vector-based search with DFS-based search
+  - MCP tools now use `BlockManager.search_with_slots()` directly
+  - CLI commands switched from `SearchEngine` to `BlockManager`
+  - Resolved issue where newly added memories weren't searchable
+
+### Root Cause Analysis
+- **Embedding Storage Issue**: Embeddings stored in separate `block_embeddings` table
+- **SearchEngine Failure**: Vector similarity search couldn't load embeddings properly
+- **API Mismatch**: `SearchEngine.search()` returns dict, tools expected list
+
+### Technical Changes
+- Modified `native/tools.py` to use BlockManager's DFS search
+- Updated CLI search command to bypass broken SearchEngine
+- Both MCP and CLI now use v3 DFS system for accurate results
+
 ## [3.1.0rc2] - 2025-01-15
 
 ### Fixed

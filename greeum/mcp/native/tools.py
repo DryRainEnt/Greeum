@@ -370,17 +370,32 @@ Please search existing memories first or provide more specific content."""
             return f"ERROR: Search failed: {str(e)}"
 
     def _search_memory_v3(self, query: str, limit: int, entry: str, depth: int) -> List[Dict[str, Any]]:
-        """v3 검색 엔진 사용"""
+        """v3 검색 엔진 사용 - BlockManager.search_with_slots() 우선"""
         try:
+            # BlockManager의 DFS 검색 우선 사용
+            block_manager = self.components.get('block_manager')
+            if block_manager:
+                result = block_manager.search_with_slots(
+                    query=query,
+                    limit=limit,
+                    use_slots=True,
+                    entry=entry,
+                    depth=depth
+                )
+                # search_with_slots는 dict 반환 {'items': [...], 'meta': {...}}
+                if isinstance(result, dict):
+                    return result.get('items', [])
+                return result
+
+            # SearchEngine fallback
             search_engine = self.components.get('search_engine')
             if search_engine:
                 result = search_engine.search(query, top_k=limit)
-                # SearchEngine.search()는 dict를 반환하므로 blocks 키에서 실제 블록 추출
                 if isinstance(result, dict):
                     return result.get('blocks', [])
                 return result
 
-            # Fallback: DB 직접 검색
+            # DB 직접 검색
             return self._search_memory_fallback(query, limit)
         except Exception as e:
             logger.warning(f"v3 search failed, using fallback: {e}")

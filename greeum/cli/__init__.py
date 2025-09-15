@@ -202,21 +202,29 @@ def add(content: str, importance: float, tags: Optional[str], slot: Optional[str
 def search(query: str, count: int, threshold: float, slot: str, radius: int, no_fallback: bool):
     """Search memories by keywords/semantic similarity"""
     try:
-        from ..core.search_engine import SearchEngine
-        
-        # Use enhanced search engine with anchor support
-        search_engine = SearchEngine()
-        
-        # Perform search with anchor parameters
-        result = search_engine.search(
+        from ..core.block_manager import BlockManager
+        from ..core.database_manager import DatabaseManager
+
+        # Use BlockManager for DFS-based search instead of SearchEngine
+        db_manager = DatabaseManager()
+        block_manager = BlockManager(db_manager)
+
+        # Perform search with v3 DFS system
+        result = block_manager.search_with_slots(
             query=query,
-            top_k=count,
-            slot=slot,
-            radius=radius,
+            limit=count,
+            use_slots=True,
+            entry="cursor",
+            depth=3 if slot else 0,
             fallback=not no_fallback
         )
-        
-        blocks = result.get('blocks', [])
+
+        # Extract blocks from result
+        if isinstance(result, dict):
+            blocks = result.get('items', [])
+            metadata = result.get('meta', {})
+        else:
+            blocks = result
         metadata = result.get('metadata', {})
         timing = result.get('timing', {})
         
