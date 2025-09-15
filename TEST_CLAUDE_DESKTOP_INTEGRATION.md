@@ -23,7 +23,6 @@ Claude Desktop 설정 파일에 다음 내용 추가:
         "/Users/dryrain/DevRoom/Greeum/greeum/mcp/native_mcp_server.py"
       ],
       "env": {
-        "GREEUM_DATA_DIR": "/Users/dryrain/greeum-global",
         "GREEUM_LOG_LEVEL": "INFO",
         "PYTHONPATH": "/Users/dryrain/DevRoom/Greeum:/Users/dryrain/DevRoom/GreeumMCP"
       }

@@ -223,7 +223,7 @@ pip install numpy>=1.24.0
 ```
 
 #### Step 2: Configure Claude Desktop
-Edit `~/.config/claude-desktop/claude_desktop_config.json` (Linux/macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS), `~/.config/claude-desktop/claude_desktop_config.json` (Linux), or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
 {
@@ -234,7 +234,6 @@ Edit `~/.config/claude-desktop/claude_desktop_config.json` (Linux/macOS) or `%AP
         "/path/to/GreeumMCP/minimal_mcp_server.py"
       ],
       "env": {
-        "GREEUM_DATA_DIR": "/path/to/greeum-global",
         "GREEUM_LOG_LEVEL": "INFO",
         "PYTHONPATH": "/path/to/Greeum:/path/to/GreeumMCP"
       }
@@ -242,6 +241,10 @@ Edit `~/.config/claude-desktop/claude_desktop_config.json` (Linux/macOS) or `%AP
   }
 }
 ```
+
+**Note**: GREEUM_DATA_DIR is optional. Without it, Greeum will automatically use:
+- Project local: `./data/memory.db` (when in project directory)
+- User home: `~/.greeum/memory.db` (as fallback)
 
 #### Step 3: Create MCP Server Script
 Ensure your GreeumMCP installation includes `minimal_mcp_server.py` or `working_mcp_server.py`:
@@ -308,7 +311,7 @@ In Claude Code, you can now use:
    - Check Python version compatibility (3.10+)
 
 3. **Permission errors:**
-   - Ensure GREEUM_DATA_DIR is writable
+   - Ensure data directory is writable
    - Check file permissions on MCP server script
 
 **Successful Configuration Indicators:**
