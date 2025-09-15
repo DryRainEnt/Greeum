@@ -11,6 +11,7 @@ from typing import List, Dict, Any, Optional, Set, Tuple
 from collections import deque
 from datetime import datetime
 from .global_index import GlobalIndex, GlobalJumpOptimizer
+from .branch_index import BranchIndexManager
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +25,17 @@ class DFSSearchEngine:
             "total_searches": 0,
             "local_hits": 0,
             "global_fallbacks": 0,
+            "branch_index_hits": 0,  # rc6: Track branch index usage
             "total_hops": 0,
             "avg_depth": 0.0,
             "jump_count": 0,
             "jump_success_rate": 0.0
         }
 
-        # Initialize global index
+        # Initialize indices
         self.global_index = GlobalIndex(db_manager)
         self.jump_optimizer = GlobalJumpOptimizer()
+        self.branch_index_manager = BranchIndexManager(db_manager)  # rc6: Branch indexing
 
         # P1: Adaptive DFS pattern learning
         self.adaptive_patterns = {
@@ -89,28 +92,60 @@ class DFSSearchEngine:
             "result_count": 0
         }
         
-        # Phase 1: DFS local search
-        local_results, local_hops = self._dfs_search(
-            entry_point=entry_point,
-            query=query,
-            query_embedding=query_embedding,
-            max_depth=depth,
-            max_results=limit
-        )
-        
-        search_meta["hops"] = local_hops
-        search_meta["depth_used"] = min(depth, local_hops)
-        
-        # Update root from entry point
+        # rc6: Phase 1 - Branch Index Search (fast)
+        branch_results = []
+        current_branch = None
+
         if entry_point:
-            search_meta["root"] = entry_point.get("root", entry_point.get("hash"))
-        
+            current_branch = entry_point.get("root", entry_point.get("hash"))
+            search_meta["root"] = current_branch
+
+            # Search current branch index first (2ms)
+            branch_results = self.branch_index_manager.search_current_branch(query, limit)
+
+            if len(branch_results) < 3:  # Not enough in current branch
+                # Search related branches
+                related = self.branch_index_manager.get_related_branches(current_branch, 2)
+                for branch in related:
+                    additional = self.branch_index_manager.search_branch(branch, query, limit)
+                    branch_results.extend(additional)
+                    if len(branch_results) >= limit:
+                        break
+
+            if branch_results:
+                self.metrics["branch_index_hits"] += 1
+                search_meta["search_type"] = "branch_index"
+                logger.info(f"Branch index found {len(branch_results)} results")
+
+        # Phase 2: DFS local search (if branch index insufficient)
+        local_results = branch_results
+        local_hops = 0
+
+        if len(branch_results) < 3:  # Fallback to DFS if branch index weak
+            dfs_results, local_hops = self._dfs_search(
+                entry_point=entry_point,
+                query=query,
+                query_embedding=query_embedding,
+                max_depth=depth,
+                max_results=limit
+            )
+
+            # Merge results (DFS might find different blocks)
+            seen_indices = {r['block_index'] for r in branch_results}
+            for r in dfs_results:
+                if r['block_index'] not in seen_indices:
+                    local_results.append(r)
+                    seen_indices.add(r['block_index'])
+
+            search_meta["hops"] = local_hops
+            search_meta["depth_used"] = min(depth, local_hops)
+
         # P1: Update adaptive patterns based on search results
         self._update_adaptive_patterns(local_results, query, depth, local_hops)
 
         # Check if we have enough results
         if len(local_results) >= limit or not fallback:
-            # Local search sufficient
+            # Local/branch search sufficient
             self.metrics["local_hits"] += 1
             search_meta["result_count"] = len(local_results)
         else:

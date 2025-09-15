@@ -376,21 +376,23 @@ class GlobalJumpOptimizer:
                 return True
             logger.debug(f"Warm-up mode: query {self.db_age_queries}/2, checking conditions")
 
-        # Improved jump conditions (more permissive)
+        # rc6: More aggressive global fallback
         # Jump if we have very few local results OR low quality
         conditions_any = [
-            local_results < 3,  # Few local results
-            local_quality_score < 0.3,  # Low quality results
+            local_results < 3,  # Changed from 6 to 3 - be more aggressive
+            local_quality_score < 0.5,  # Increased from 0.3 - higher quality bar
         ]
 
-        # Additional boost conditions
+        # Additional boost conditions (simplified)
         conditions_boost = [
-            query_complexity > 0.5,  # Moderate complexity (reduced from 0.8)
-            self.query_count > 5,  # After initial queries (instead of success_rate check)
+            query_complexity > 0.3,  # Lower threshold (was 0.5)
+            self.query_count > 2,  # After just 2 queries (was 5)
+            local_results < 5,  # Always boost if less than 5 results
         ]
 
-        # Jump if ANY primary condition is met AND at least one boost condition
-        should_jump = any(conditions_any) and any(conditions_boost)
+        # Jump if ANY primary condition is met OR any boost condition
+        # Changed from AND to OR for more aggressive fallback
+        should_jump = any(conditions_any) or (local_results < 10 and any(conditions_boost))
 
         if should_jump:
             logger.info(f"Global jump triggered: local={local_results}, "
