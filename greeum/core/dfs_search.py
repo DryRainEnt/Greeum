@@ -242,32 +242,38 @@ class DFSSearchEngine:
                    max_depth: int,
                    max_results: int) -> Tuple[List[Dict], int]:
         """
-        Perform DFS search from entry point with improved heuristics
-        
+        Perform DFS search from entry point with branch-based exploration
+
         Returns:
             (results, hop_count)
         """
         results = []
         visited = set()
+        visited_branches = set()  # Track visited branches
         hop_count = 0
-        
-        # Priority queue for better traversal: (priority, node, depth, score)
+        min_score_threshold = 0.3  # Minimum cumulative score threshold
+
+        # Priority queue for better traversal: (priority, node, depth, score, branch_id)
         # Higher priority = explore first
         import heapq
-        queue = [(-1.0, entry_point, 0, 1.0)]  # Negative for max-heap
-        
+        entry_branch = entry_point.get("root", entry_point.get("hash"))
+        queue = [(-1.0, entry_point, 0, 1.0, entry_branch)]  # Negative for max-heap
+
         # Cache for embeddings
         embedding_cache = {}
-        
+
+        # Track results per branch for quality check
+        branch_results = {}
+
         while queue and len(results) < max_results:
-            neg_priority, node, depth, parent_score = heapq.heappop(queue)
-            
+            neg_priority, node, depth, parent_score, current_branch = heapq.heappop(queue)
+
             if not node or node.get("hash") in visited:
                 continue
-            
+
             visited.add(node.get("hash"))
             hop_count += 1
-            
+
             # Calculate relevance score with caching
             node_hash = node.get("hash")
             if node_hash in embedding_cache:
@@ -280,52 +286,78 @@ class DFSSearchEngine:
                 node, query, query_embedding, node_embedding
             )
 
-            # P1: Apply adaptive branch weights
+            # Track branch for region exploration
             branch_id = node.get("root", node.get("hash"))
-            score = self._apply_adaptive_weights(score, branch_id, depth)
+            if branch_id not in branch_results:
+                branch_results[branch_id] = []
 
             # Boost score for recent nodes in same branch
-            if entry_point.get("root") == node.get("root"):
+            if entry_point.get("root") == branch_id:
                 score *= 1.2  # 20% boost for same branch
-            
+
             # Combine with parent score (propagation)
             combined_score = score * 0.8 + parent_score * 0.2
-            
-            # Add to results if relevant (lower threshold for local)
-            threshold = 0.05 if depth <= 1 else 0.1
+
+            # Add to results if relevant (lower threshold)
+            threshold = 0.03  # Lower threshold for more inclusive results
             if score > threshold:
                 node_copy = dict(node)
                 node_copy["_score"] = combined_score
                 node_copy["_depth"] = depth
                 results.append(node_copy)
-            
-            # Continue DFS if not at max depth
-            if depth < max_depth:
+                branch_results[branch_id].append(combined_score)
+
+            # Check if current branch has enough quality results
+            branch_total_score = sum(branch_results.get(branch_id, []))
+
+            # Branch-based exploration strategy
+            # 1. Continue exploring current branch if quality is good OR depth is shallow
+            # 2. No hard depth limit - continue while finding relevant content
+            should_continue = (
+                branch_total_score < min_score_threshold or  # Need more quality results
+                depth < 5 or  # Always explore at least 5 levels
+                score > 0.2  # Current node is still relevant
+            )
+
+            if should_continue:
                 # Get neighbors
                 children = self._get_children(node)
                 parent = self._get_parent(node)
                 xrefs = self._get_xrefs(node)
-                
+
                 # Calculate priorities for each neighbor
                 for child in children:
                     if child and child.get("hash") not in visited:
-                        # Children get high priority
                         child_score = self._quick_score(child, query)
                         priority = combined_score * 0.9 + child_score * 0.1
-                        heapq.heappush(queue, (-priority, child, depth + 1, combined_score))
-                
-                # Parent with lower priority
+                        child_branch = child.get("root", child.get("hash"))
+                        heapq.heappush(queue, (-priority, child, depth + 1, combined_score, child_branch))
+
+                # Parent exploration
                 if parent and parent.get("hash") not in visited:
-                    parent_score = self._quick_score(parent, query)
-                    priority = combined_score * 0.7 + parent_score * 0.3
-                    heapq.heappush(queue, (-priority, parent, depth + 1, combined_score * 0.8))
-                
-                # Cross-references with lowest priority
-                for xref in xrefs[:2]:  # Limit xref exploration
+                    parent_score_val = self._quick_score(parent, query)
+                    priority = combined_score * 0.7 + parent_score_val * 0.3
+                    parent_branch = parent.get("root", parent.get("hash"))
+                    heapq.heappush(queue, (-priority, parent, depth + 1, combined_score * 0.8, parent_branch))
+
+                # Cross-references - explore more if current branch is weak
+                xref_limit = 5 if branch_total_score < 0.2 else 2
+                for xref in xrefs[:xref_limit]:
                     if xref and xref.get("hash") not in visited:
                         xref_score = self._quick_score(xref, query)
                         priority = combined_score * 0.5 + xref_score * 0.5
-                        heapq.heappush(queue, (-priority, xref, depth + 1, combined_score * 0.5))
+                        xref_branch = xref.get("root", xref.get("hash"))
+                        heapq.heappush(queue, (-priority, xref, depth + 1, combined_score * 0.5, xref_branch))
+
+            # Branch switching: if current branch is exhausted, try before branches
+            if branch_total_score < min_score_threshold and branch_id not in visited_branches:
+                visited_branches.add(branch_id)
+                # Get before branch
+                before_branch = self._get_before_branch(node)
+                if before_branch and before_branch.get("hash") not in visited:
+                    logger.info(f"Switching to before branch: {before_branch.get('hash')[:8]}")
+                    before_branch_id = before_branch.get("root", before_branch.get("hash"))
+                    heapq.heappush(queue, (-0.8, before_branch, 0, 0.8, before_branch_id))
         
         return results, hop_count
     
@@ -367,7 +399,44 @@ class DFSSearchEngine:
                     return dict(row)
         except Exception as e:
             logger.debug(f"Failed to get parent: {e}")
-        
+
+        return None
+
+    def _get_before_branch(self, node: Dict) -> Optional[Dict]:
+        """Get the head of the before branch for branch switching"""
+        try:
+            # First try to get the root of the before branch
+            before_hash = node.get("before")
+            if not before_hash:
+                return None
+
+            cursor = self.db_manager.conn.cursor()
+            # Get the before node
+            cursor.execute("""
+                SELECT * FROM blocks WHERE hash = ?
+            """, (before_hash,))
+            before_node = cursor.fetchone()
+
+            if before_node:
+                before_dict = dict(before_node)
+                # Get the root of that branch
+                before_root = before_dict.get("root", before_dict.get("hash"))
+
+                # Find the head node of that branch (most recent in that branch)
+                cursor.execute("""
+                    SELECT * FROM blocks
+                    WHERE root = ?
+                    ORDER BY block_index DESC
+                    LIMIT 1
+                """, (before_root,))
+                branch_head = cursor.fetchone()
+
+                if branch_head:
+                    return dict(branch_head)
+                return before_dict
+        except Exception as e:
+            logger.debug(f"Failed to get before branch: {e}")
+
         return None
     
     def _get_xrefs(self, node: Dict) -> List[Dict]:
@@ -417,14 +486,15 @@ class DFSSearchEngine:
             if query_lower in context_lower:
                 score += weights['exact_match']
             
-            # Word overlap with TF-IDF-like scoring
+            # Word overlap with improved scoring
             query_words = set(query_lower.split())
             context_words = set(context_lower.split())
-            
+
             if query_words and context_words:
                 overlap = len(query_words & context_words)
-                # Normalize by both query and context length
-                normalized_overlap = overlap / (len(query_words) ** 0.5 * len(context_words) ** 0.5)
+                # Better normalization: ratio of matched words to query words
+                # This gives higher scores when more query terms are found
+                normalized_overlap = overlap / len(query_words) if query_words else 0
                 score += weights['word_overlap'] * min(1.0, normalized_overlap)
         
         # Embedding similarity (use cached embedding)
