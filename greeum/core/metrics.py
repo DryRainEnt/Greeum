@@ -12,32 +12,6 @@ from collections import defaultdict, deque
 from datetime import datetime, timedelta
 
 
-class MetricsCollector:
-    """
-    Thread-safe metrics collector for Greeum anchor memory system.
-    
-    Collects metrics specified in Architecture Reform Plan 311-316:
-    - greeum_anchors_switches_per_min
-    - greeum_local_hit_rate / greeum_fallback_rate  
-    - greeum_avg_hops / greeum_beam_width
-    - greeum_anchor_moves_total
-    - greeum_edge_count / greeum_edge_growth_rate
-    """
-    
-    def __init__(self):
-        self._lock = threading.Lock()
-        self._start_time = time.time()
-        
-        # Counter metrics
-        self._anchor_moves_total = defaultdict(int)  # by slot
-        self._anchor_switches_total = 0
-        self._local_searches_total = 0
-        self._local_hits_total = 0
-        self._fallback_searches_total = 0
-        
-        # Gauge metrics
-        self._current_edge_count = 0
-        self._current_beam_width = 32
 
 
 class SearchMetrics:
@@ -224,14 +198,42 @@ class MetricsDashboard:
             'p95_latency_target': (p95_latency < 150, p95_latency),
             'merge_undo_rate_target': (merge_undo_rate <= 0.05, merge_undo_rate)
         }
-        
+
+
+class MetricsCollector:
+    """
+    Thread-safe metrics collector for Greeum anchor memory system.
+
+    Collects metrics specified in Architecture Reform Plan 311-316:
+    - greeum_anchors_switches_per_min
+    - greeum_local_hit_rate / greeum_fallback_rate
+    - greeum_avg_hops / greeum_beam_width
+    - greeum_anchor_moves_total
+    - greeum_edge_count / greeum_edge_growth_rate
+    """
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._start_time = time.time()
+
+        # Counter metrics
+        self._anchor_moves_total = defaultdict(int)  # by slot
+        self._anchor_switches_total = 0
+        self._local_searches_total = 0
+        self._local_hits_total = 0
+        self._fallback_searches_total = 0
+
+        # Gauge metrics
+        self._current_edge_count = 0
+        self._current_beam_width = 32
+
         # Histogram data (recent values for averages)
         self._recent_hops = deque(maxlen=100)  # Last 100 searches
         self._recent_switch_times = deque(maxlen=50)  # Last 50 switches
-        
+
         # Edge growth tracking
         self._edge_count_history = []  # (timestamp, count) pairs
-        
+
     def record_anchor_move(self, slot: str) -> None:
         """Record anchor movement for specified slot."""
         with self._lock:

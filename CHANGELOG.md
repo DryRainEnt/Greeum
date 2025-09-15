@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
+## [3.1.0rc2] - 2025-01-15
+
+### Fixed
+- **Critical Metrics Fix**: Resolved `AttributeError: 'MetricsCollector' object has no attribute 'record_fallback_search'`
+  - Fixed malformed `MetricsCollector` class structure in `metrics.py`
+  - Corrected misplaced `__init__` code that was breaking class methods
+  - Removed duplicate class definitions
+
+- **Import Strategy**: Changed metrics import approach for better stability
+  - Removed direct imports in `search_engine.py`
+  - Implemented runtime imports using `from . import metrics`
+  - Prevents import-time errors and ensures fresh module loading
+
+### Enhanced
+- **Search Functionality**: Both CLI and MCP search now work flawlessly
+  - CLI `greeum memory search` command fully operational
+  - MCP search tools returning proper results
+  - Metrics collection functioning without errors
+
+### Technical Details
+- Fixed indentation issues in `metrics.py` where class methods were outside class scope
+- Updated 4 metric function calls in `search_engine.py` to use runtime imports
+- Ensured singleton pattern in `get_metrics_collector()` works correctly
+- All metrics (local search, fallback, beam width) properly recorded
+
 ## [3.1.0rc1] - 2025-01-15
 
 ### Fixed

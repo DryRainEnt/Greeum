@@ -5,7 +5,7 @@ GraphIndex beam search, context-aware memory formation, spreading activation,
 and STM/LTM consolidation for Large Language Models with human-like memory capabilities.
 """
 
-__version__ = "3.1.0rc1"
+__version__ = "3.1.0rc2"
 
 # v3.0.0 Main Interface
 from .core.context_memory import ContextMemorySystem
