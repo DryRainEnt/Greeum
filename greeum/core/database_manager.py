@@ -35,41 +35,52 @@ class DatabaseManager:
     def _get_smart_db_path(self) -> str:
         """
         지능형 데이터베이스 경로 감지
-        
+
         우선순위:
-        1. GREEUM_DATA_DIR 환경변수 (명시적 설정)
-        2. 현재 디렉토리의 data/memory.db (프로젝트 로컬)
-        3. ~/greeum-global/data/memory.db (글로벌 폴백)
-        
+        1. 현재 디렉토리의 data/memory.db (프로젝트 로컬 우선)
+        2. GREEUM_DATA_DIR 환경변수 (명시적 설정)
+        3. ~/.greeum/memory.db (사용자 홈 디렉토리)
+
         Returns:
             str: 최적의 데이터베이스 파일 경로
         """
-        # 1. 환경변수 우선 (명시적 설정)
-        if 'GREEUM_DATA_DIR' in os.environ:
-            env_path = os.path.join(os.environ['GREEUM_DATA_DIR'], 'data', 'memory.db')
-            # logger.info(f"📁 Using environment variable path: {env_path}")  # Too verbose
-            return env_path
-        
-        # 2. 현재 디렉토리에 기존 데이터베이스 존재하면 사용 (프로젝트 로컬)
+        # 1. 현재 디렉토리에 기존 데이터베이스 존재하면 사용 (프로젝트 로컬 최우선)
         current_dir = os.getcwd()
         local_db_path = os.path.join(current_dir, 'data', 'memory.db')
-        
+
         if os.path.exists(local_db_path):
-            # logger.info(f"[DB] Found existing local database: {local_db_path}")  # Too verbose
+            logger.info(f"[DB] Using local project database: {local_db_path}")
             return local_db_path
-        
-        # 3. 현재 디렉토리에 data 폴더가 있으면 사용 (새 프로젝트)
+
+        # 2. 현재 디렉토리에 data 폴더가 있으면 사용 (새 프로젝트)
         data_dir_path = os.path.join(current_dir, 'data')
         if os.path.exists(data_dir_path) and os.path.isdir(data_dir_path):
             new_local_path = os.path.join(data_dir_path, 'memory.db')
-            # logger.info(f"📁 Using local data directory: {new_local_path}")  # Too verbose
+            logger.info(f"[DB] Creating database in local data directory: {new_local_path}")
             return new_local_path
-        
-        # 4. 글로벌 디렉토리 폴백
+
+        # 3. 환경변수 확인 (명시적 설정)
+        if 'GREEUM_DATA_DIR' in os.environ:
+            env_dir = os.environ['GREEUM_DATA_DIR']
+            # 환경변수가 가리키는 위치에 memory.db가 직접 있는지 확인
+            direct_path = os.path.join(env_dir, 'memory.db')
+            if os.path.exists(direct_path):
+                logger.info(f"[DB] Using environment variable path: {direct_path}")
+                return direct_path
+            # data 서브디렉토리에 있는지 확인
+            sub_path = os.path.join(env_dir, 'data', 'memory.db')
+            if os.path.exists(sub_path):
+                logger.info(f"[DB] Using environment variable path: {sub_path}")
+                return sub_path
+            # 둘 다 없으면 data 서브디렉토리에 생성
+            logger.info(f"[DB] Creating database at environment path: {sub_path}")
+            return sub_path
+
+        # 4. 사용자 홈 디렉토리 폴백
         home_dir = os.path.expanduser('~')
-        global_db_path = os.path.join(home_dir, 'greeum-global', 'data', 'memory.db')
-        # logger.info(f"🌐 Using global fallback path: {global_db_path}")  # Too verbose
-        return global_db_path
+        user_db_path = os.path.join(home_dir, '.greeum', 'memory.db')
+        logger.info(f"[DB] Using user home directory: {user_db_path}")
+        return user_db_path
     
     def _ensure_data_dir(self):
         """데이터 디렉토리 존재 확인"""

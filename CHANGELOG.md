@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [3.1.0rc3.dev2] - 2025-01-16
+
+### Fixed
+- **Database Path Resolution**: Fixed critical issue where MCP was using wrong database
+  - Changed priority: Local project `data/memory.db` now takes precedence over environment variable
+  - Improved `GREEUM_DATA_DIR` handling to check both direct path and `data/` subdirectory
+  - Changed fallback from `~/greeum-global/data/memory.db` to `~/.greeum/memory.db`
+
+### Root Cause Analysis
+- **Wrong Database Reference**: MCP was using `/Users/dryrain/greeum-global/memory.db` (12 blocks from 2025-09-02)
+- **Actual Data Location**: Real data was in `/Users/dryrain/DevRoom/Greeum/data/memory.db` (656+ blocks)
+- **Search Deception**: Only newly added memories were searchable, making it appear partially working
+
+### Technical Changes
+- Modified `DatabaseManager._get_smart_db_path()` to prioritize local project database
+- Flexible environment variable handling for both direct and subdirectory paths
+- Better logging for database path selection
+
 ## [3.1.0rc3.dev1] - 2025-01-16
 
 ### Fixed
