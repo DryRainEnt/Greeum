@@ -2,6 +2,34 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL REQUIREMENTS (v3.1.1a1+)
+
+### Semantic Embedding Requirement
+**MANDATORY**: The system requires proper semantic embeddings for core functionality.
+
+**Problem**: Without sentence-transformers or equivalent semantic embedding models:
+- All similarities compute to ~0 (using hash-based random embeddings)
+- Slot selection degrades to meaningless round-robin
+- The 0.4 similarity threshold becomes ineffective
+- Context-aware memory grouping fails completely
+- Branch-based indexing provides no value
+
+**Solution**: Install semantic embedding support:
+```bash
+# Option 1: Install with full dependencies (RECOMMENDED)
+pip install greeum[full]
+
+# Option 2: Install sentence-transformers separately
+pip install sentence-transformers
+
+# Verify installation:
+python -c "from sentence_transformers import SentenceTransformer; print('✓ Ready')"
+```
+
+**Version History**:
+- v3.1.0: FAILED - Discovered using random hash embeddings
+- v3.1.1a1: Target - Proper semantic embeddings implementation
+
 ## Project Overview
 
 **Greeum** (pronounced "그리음") is a universal memory module for Large Language Models (LLMs) that provides human-like memory capabilities. It's designed to be LLM-agnostic and supports multiple languages, particularly Korean and English.

@@ -352,8 +352,11 @@ class DatabaseManager:
         block_index = block_data.get('block_index')
 
         try:
-            # Start transaction
-            self.conn.execute("BEGIN TRANSACTION")
+            # Check if we're already in a transaction
+            in_transaction = self.conn.in_transaction
+            if not in_transaction:
+                # Start transaction only if not already in one
+                self.conn.execute("BEGIN TRANSACTION")
 
             # 1. 블록 기본 정보 삽입 (브랜치 필드 포함)
             # Check if branch columns exist
@@ -441,20 +444,23 @@ class DatabaseManager:
                     len(embedding_array)
                 ))
 
-            # Commit transaction
-            self.conn.commit()
+            # Commit transaction only if we started it
+            if not in_transaction:
+                self.conn.commit()
             logger.debug(f"Block {block_index} saved successfully")
             return block_index
 
         except sqlite3.IntegrityError as e:
             # Rollback on constraint violations (e.g., duplicate index)
-            self.conn.rollback()
+            if not in_transaction:
+                self.conn.rollback()
             logger.error(f"Integrity error adding block {block_index}: {e}")
             return None
 
         except Exception as e:
-            # Rollback on any other error
-            self.conn.rollback()
+            # Rollback on any other error only if we started the transaction
+            if 'in_transaction' in locals() and not in_transaction:
+                self.conn.rollback()
             logger.error(f"Failed to add block {block_index}: {e}")
             return None
     

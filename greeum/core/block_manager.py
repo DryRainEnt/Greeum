@@ -14,12 +14,14 @@ logger = logging.getLogger(__name__)
 class BlockManager:
     """장기 기억 블록을 관리하는 클래스 (DatabaseManager 사용)"""
     
-    def __init__(self, db_manager: Optional[DatabaseManager] = None):
+    def __init__(self, db_manager: Optional[DatabaseManager] = None, stm_manager=None):
         """BlockManager 초기화
         Args:
             db_manager: DatabaseManager (없으면 기본 SQLite 파일 생성)
+            stm_manager: Optional STMManager instance (shared with other components)
         """
         self.db_manager = db_manager or DatabaseManager()
+        self.stm_manager = stm_manager  # Store shared STM manager
         self.merge_checkpoints = []  # Store merge checkpoints
         
         # v2.7.0: Initialize causal reasoning system (disabled for v3.0 stability)
@@ -136,9 +138,14 @@ class BlockManager:
         
         logger.debug(f"add_block called: context='{context[:20]}...', slot={slot}")
         
-        # Get STM manager for branch head management
-        from .stm_manager import STMManager
-        stm = STMManager(self.db_manager)
+        # Get or create STM manager for branch head management
+        if self.stm_manager:
+            stm = self.stm_manager
+        else:
+            # Fallback: create local instance if not provided
+            from .stm_manager import STMManager
+            stm = STMManager(self.db_manager)
+            self.stm_manager = stm  # Store for future use
         
         # Auto-merge evaluation (before adding new block)
         if self.merge_engine and slot:

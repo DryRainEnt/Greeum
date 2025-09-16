@@ -432,11 +432,25 @@ class STMManager:
             # Update or insert branch_meta
             import json
             heads_json = json.dumps(self.branch_heads)
-            
-            cursor.execute("""
-                INSERT OR REPLACE INTO branch_meta (root, heads, last_modified)
-                VALUES (?, ?, ?)
-            """, (root_id, heads_json, time.time()))
+            current_time = time.time()
+
+            # Check if this root already exists
+            cursor.execute("SELECT created_at FROM branch_meta WHERE root = ?", (root_id,))
+            existing = cursor.fetchone()
+
+            if existing:
+                # Update existing entry
+                cursor.execute("""
+                    UPDATE branch_meta
+                    SET heads = ?, last_modified = ?
+                    WHERE root = ?
+                """, (heads_json, current_time, root_id))
+            else:
+                # Insert new entry with all required fields
+                cursor.execute("""
+                    INSERT INTO branch_meta (root, heads, created_at, last_modified)
+                    VALUES (?, ?, ?, ?)
+                """, (root_id, heads_json, current_time, current_time))
             
             self.db_manager.conn.commit()
             

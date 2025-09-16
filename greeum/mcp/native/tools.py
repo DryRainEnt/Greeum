@@ -266,12 +266,34 @@ This may indicate a transaction rollback or database issue."""
                     head_block_id = stm_manager.branch_heads.get(slot_name)
                     if head_block_id:
                         try:
-                            # 해당 슬롯의 컨텍스트와 유사도 계산
-                            slot_blocks = dfs_engine.search_from_block(head_block_id, content, limit=3)
-                            if slot_blocks:
-                                similarity = slot_blocks[0].get('similarity', 0.0)
+                            # 해당 슬롯의 헤드 블록과 직접 유사도 계산
+                            # Get the head block's embedding
+                            cursor = self.components['db_manager'].conn.cursor()
+                            cursor.execute("""
+                                SELECT e.embedding, e.embedding_dim
+                                FROM blocks b
+                                JOIN block_embeddings e ON b.block_index = e.block_index
+                                WHERE b.hash = ?
+                            """, (head_block_id,))
+                            result = cursor.fetchone()
+
+                            if result and embedding:
+                                # Calculate cosine similarity
+                                import numpy as np
+                                head_embedding = np.frombuffer(result[0], dtype=np.float32)
+                                query_embedding = np.array(embedding, dtype=np.float32)
+
+                                # Normalize vectors
+                                head_norm = head_embedding / (np.linalg.norm(head_embedding) + 1e-10)
+                                query_norm = query_embedding / (np.linalg.norm(query_embedding) + 1e-10)
+
+                                # Calculate cosine similarity
+                                similarity = float(np.dot(head_norm, query_norm))
                                 slot_similarities[slot_name] = similarity
-                        except Exception:
+                            else:
+                                slot_similarities[slot_name] = 0.0
+                        except Exception as e:
+                            logger.debug(f"Error calculating similarity for slot {slot_name}: {e}")
                             slot_similarities[slot_name] = 0.0
                     else:
                         empty_slots.append(slot_name)
