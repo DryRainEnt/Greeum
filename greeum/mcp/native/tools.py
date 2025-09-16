@@ -17,8 +17,12 @@ import json
 import hashlib
 
 logger = logging.getLogger("greeum_native_tools")
-# Enable DEBUG logging temporarily
-logging.basicConfig(level=logging.DEBUG)
+# Enable DEBUG logging temporarily with file output
+debug_handler = logging.FileHandler('/tmp/greeum_mcp_debug.log')
+debug_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+debug_handler.setFormatter(formatter)
+logger.addHandler(debug_handler)
 logger.setLevel(logging.DEBUG)
 
 class GreeumMCPTools:

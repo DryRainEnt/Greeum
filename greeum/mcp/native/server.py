@@ -250,7 +250,7 @@ def run_server_sync(log_level: str = 'quiet') -> None:
     except KeyboardInterrupt:
         if not is_quiet:
             logger.info("Server stopped by user")
-    except anyio.exceptions.CancelledError:
+    except anyio.CancelledError:
         # anyio TaskGroup이 KeyboardInterrupt를 CancelledError로 변환함
         if not is_quiet:
             logger.info("Server stopped by user")

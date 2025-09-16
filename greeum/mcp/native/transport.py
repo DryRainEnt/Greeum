@@ -201,7 +201,7 @@ class STDIOServer:
             # KeyboardInterrupt를 조용히 처리 (상위로 전파하지 않음)
             logger.info("[PROCESS] Graceful shutdown initiated")
             raise
-        except anyio.exceptions.CancelledError:
+        except anyio.CancelledError:
             # anyio TaskGroup 취소를 조용히 처리
             logger.info("[PROCESS] Tasks cancelled for shutdown")
             raise
