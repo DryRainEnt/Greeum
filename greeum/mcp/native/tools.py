@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
 Greeum Native MCP Server - MCP Tools Implementation
-임시로 직접 구현하여 v3 기능 지원
+Direct implementation for v3 features
 
-핵심 기능:
-- v3 슬롯/브랜치 시스템 직접 구현
-- 스마트 라우팅 및 메타데이터 지원
-- DFS 우선 검색
-- MCP 프로토콜 응답 형식 준수
+Core Features:
+- Direct v3 slot/branch system implementation
+- Smart routing and metadata support
+- DFS-first search
+- MCP protocol response format compliance
 """
 
 import logging
@@ -20,25 +20,25 @@ logger = logging.getLogger("greeum_native_tools")
 
 class GreeumMCPTools:
     """
-    Greeum MCP 도구 핸들러
+    Greeum MCP tools handler
 
-    v3 기능 직접 구현:
-    - 슬롯/브랜치 시스템
-    - 스마트 라우팅
-    - DFS 우선 검색
-    - 모든 최신 기능 포함
+    Direct v3 implementation:
+    - Slot/branch system
+    - Smart routing
+    - DFS-first search
+    - All latest features included
     """
 
     def __init__(self, greeum_components: Dict[str, Any]):
         """
         Args:
-            greeum_components: DatabaseManager, BlockManager 등이 포함된 딕셔너리
+            greeum_components: Dictionary containing DatabaseManager, BlockManager, etc.
         """
         self.components = greeum_components
         logger.info("Greeum MCP tools initialized with direct v3 implementation")
 
     def _get_version(self) -> str:
-        """중앙화된 버전 참조"""
+        """Centralized version reference"""
         try:
             from greeum import __version__
             return __version__
@@ -47,14 +47,14 @@ class GreeumMCPTools:
 
     async def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> str:
         """
-        도구 실행 메인 라우터
+        Main tool execution router
 
         Args:
-            tool_name: 실행할 도구 이름 (add_memory, search_memory 등)
-            arguments: 도구에 전달할 파라미터
+            tool_name: Tool name to execute (add_memory, search_memory, etc.)
+            arguments: Parameters to pass to the tool
 
         Returns:
-            str: MCP 형식의 응답 텍스트
+            str: MCP format response text
         """
         try:
             if tool_name == "add_memory":
@@ -69,6 +69,8 @@ class GreeumMCPTools:
                 return await self._handle_analyze_causality(arguments)
             elif tool_name == "infer_causality":
                 return await self._handle_infer_causality(arguments)
+            elif tool_name == "system_doctor":
+                return await self._handle_system_doctor(arguments)
             else:
                 raise ValueError(f"Unknown tool: {tool_name}")
 
@@ -78,17 +80,17 @@ class GreeumMCPTools:
 
     async def _handle_add_memory(self, arguments: Dict[str, Any]) -> str:
         """
-        add_memory 도구 처리 - v3 기능 직접 구현
+        Handle add_memory tool - direct v3 implementation
 
-        v3 기능 포함:
-        1. 중복 검사
-        2. 품질 검증
-        3. 슬롯/브랜치 기반 메모리 추가
-        4. 스마트 라우팅
-        5. 사용 통계 로깅
+        v3 features included:
+        1. Duplicate checking
+        2. Quality validation
+        3. Slot/branch based memory addition
+        4. Smart routing
+        5. Usage statistics logging
         """
         try:
-            # 파라미터 추출
+            # Extract parameters
             content = arguments.get("content")
             if not content:
                 raise ValueError("content parameter is required")
@@ -97,28 +99,28 @@ class GreeumMCPTools:
             if not (0.0 <= importance <= 1.0):
                 raise ValueError("importance must be between 0.0 and 1.0")
 
-            # 컴포넌트 확인
+            # Check components
             if not self._check_components():
                 return "ERROR: Greeum components not available. Please check installation."
 
-            # 중복 검사
+            # Check for duplicates
             duplicate_check = self.components['duplicate_detector'].check_duplicate(content)
             if duplicate_check["is_duplicate"]:
                 similarity = duplicate_check["similarity_score"]
-                return f"""⚠️  **Potential Duplicate Memory Detected**
+                return f"""**WARNING: Potential Duplicate Memory Detected**
 
 **Similarity**: {similarity:.1%} with existing memory
 **Similar Memory**: Block #{duplicate_check['similar_block_index']}
 
 Please search existing memories first or provide more specific content."""
 
-            # 품질 검증
+            # Validate quality
             quality_result = self.components['quality_validator'].validate_memory_quality(content, importance)
 
-            # v3 BlockManager를 통한 메모리 추가
+            # Add memory via v3 BlockManager
             block_result = self._add_memory_via_v3_core(content, importance)
 
-            # 사용 통계 로깅
+            # Log usage statistics
             self.components['usage_analytics'].log_quality_metrics(
                 len(content), quality_result['quality_score'], quality_result['quality_level'],
                 importance, importance, False, duplicate_check["similarity_score"],
@@ -127,7 +129,7 @@ Please search existing memories first or provide more specific content."""
 
             # v3.1.0rc7: Check if save actually succeeded
             if block_result is None:
-                return f"""❌ **Memory Save Failed!**
+                return f"""**ERROR: Memory Save Failed!**
 
 **Error**: Block could not be saved to database
 **Content**: {content[:50]}...
@@ -146,7 +148,7 @@ Please try again or check database status."""
             if block_index and block_index != 'unknown':
                 verify_block = self.components['db_manager'].get_block(block_index)
                 if not verify_block:
-                    return f"""⚠️ **Memory Save Uncertain!**
+                    return f"""**WARNING: Memory Save Uncertain!**
 
 **Reported Index**: #{block_index}
 **Status**: Block not found in database after save
@@ -154,7 +156,7 @@ Please try again or check database status."""
 
 This may indicate a transaction rollback or database issue."""
 
-            # 성공 응답 - 슬롯 정보 포함
+            # Success response - include slot info
             quality_feedback = f"""
 **Quality Score**: {quality_result['quality_score']:.1%} ({quality_result['quality_level']})
 **Adjusted Importance**: {importance:.2f} (original: {importance:.2f})"""
@@ -163,12 +165,12 @@ This may indicate a transaction rollback or database issue."""
             if quality_result.get('suggestions'):
                 suggestions_text = f"\n\n**Quality Suggestions**:\n" + "\n".join(f"• {s}" for s in quality_result['suggestions'][:2])
 
-            # 슬롯/브랜치 정보 표시
+            # Display slot/branch info
             slot_info = ""
             routing_info = ""
 
             if isinstance(block_result, dict):
-                # 슬롯 정보
+                # Slot information
                 if block_result.get('slot'):
                     slot_info = f"\n**STM Slot**: {block_result['slot']}"
                 if block_result.get('branch_root'):
@@ -176,10 +178,10 @@ This may indicate a transaction rollback or database issue."""
                 if block_result.get('parent_block'):
                     slot_info += f"\n**Parent Block**: #{block_result['parent_block']}"
 
-                # 스마트 라우팅 정보
+                # Smart routing information
                 if block_result.get('metadata', {}).get('smart_routing'):
                     sr = block_result['metadata']['smart_routing']
-                    routing_info = f"\n\n🎯 **Smart Routing Applied**:"
+                    routing_info = f"\n\n**Smart Routing Applied**:"
                     if sr.get('slot_updated'):
                         routing_info += f"\n• Selected Slot: {sr['slot_updated']}"
                     if sr.get('similarity_score') is not None:
@@ -189,32 +191,32 @@ This may indicate a transaction rollback or database issue."""
                     if sr.get('reason'):
                         routing_info += f"\n• Reason: {sr['reason']}"
 
-            return f"""✅ **Memory Successfully Added!**
+            return f"""**SUCCESS: Memory Successfully Added!**
 
 **Block Index**: #{block_index if block_index else 'unknown'}
 **Storage**: Branch-based (v3 System){slot_info}
-**Duplicate Check**: ✅ Passed{quality_feedback}{suggestions_text}{routing_info}"""
+**Duplicate Check**: Passed{quality_feedback}{suggestions_text}{routing_info}"""
 
         except Exception as e:
             logger.error(f"add_memory failed: {e}")
             return f"ERROR: Failed to add memory: {str(e)}"
 
     def _add_memory_via_v3_core(self, content: str, importance: float = 0.5) -> Dict[str, Any]:
-        """v3 핵심 경로를 통한 메모리 저장"""
+        """Save memory through v3 core path"""
         from greeum.text_utils import process_user_input
         import time
 
         block_manager = self.components['block_manager']
         stm_manager = self.components.get('stm_manager')
 
-        # 텍스트 처리
+        # Process text
         result = process_user_input(content)
 
-        # 스마트 라우팅을 통한 슬롯 선택
+        # Select slot via smart routing
         slot, smart_routing_info = self._auto_select_slot(stm_manager, content, result.get('embedding'))
 
         try:
-            # v3 BlockManager.add_block 사용
+            # Use v3 BlockManager.add_block
             block_result = block_manager.add_block(
                 context=content,
                 keywords=result.get("keywords", []),
@@ -225,7 +227,7 @@ This may indicate a transaction rollback or database issue."""
                 slot=slot
             )
 
-            # 결과 정규화
+            # Normalize result
             if isinstance(block_result, int):
                 return {
                     'id': block_result,
@@ -248,14 +250,14 @@ This may indicate a transaction rollback or database issue."""
             return self._add_memory_fallback(content, importance, slot)
 
     def _auto_select_slot(self, stm_manager, content: str, embedding: Optional[List[float]]):
-        """스마트 라우팅을 통한 슬롯 자동 선택 - v3.1.0rc7 개선"""
+        """Auto-select slot via smart routing - v3.1.0rc7 improvement"""
         if not stm_manager:
             return "A", None
 
-        MINIMUM_THRESHOLD = 0.4  # 최소 유사도 임계값
+        MINIMUM_THRESHOLD = 0.4  # Minimum similarity threshold
 
         try:
-            # DFS 검색 엔진을 통한 유사도 계산
+            # Calculate similarity via DFS search engine
             dfs_engine = self.components.get('dfs_search')
             if dfs_engine and embedding:
                 # 현재 슬롯 헤드들과 유사도 비교
@@ -283,13 +285,27 @@ This may indicate a transaction rollback or database issue."""
                                 head_embedding = np.frombuffer(result[0], dtype=np.float32)
                                 query_embedding = np.array(embedding, dtype=np.float32)
 
-                                # Normalize vectors
-                                head_norm = head_embedding / (np.linalg.norm(head_embedding) + 1e-10)
-                                query_norm = query_embedding / (np.linalg.norm(query_embedding) + 1e-10)
+                                # IMPORTANT: Only use first 384 dimensions (actual model output)
+                                # The rest is zero-padding for compatibility
+                                ACTUAL_DIM = 384  # paraphrase-multilingual-MiniLM-L12-v2 dimension
 
-                                # Calculate cosine similarity
-                                similarity = float(np.dot(head_norm, query_norm))
-                                slot_similarities[slot_name] = similarity
+                                # Use only the meaningful part (first 384 dimensions)
+                                head_embedding = head_embedding[:ACTUAL_DIM]
+                                query_embedding = query_embedding[:ACTUAL_DIM]
+
+                                # Normalize vectors
+                                head_norm_val = np.linalg.norm(head_embedding)
+                                query_norm_val = np.linalg.norm(query_embedding)
+
+                                if head_norm_val > 0 and query_norm_val > 0:
+                                    head_norm = head_embedding / head_norm_val
+                                    query_norm = query_embedding / query_norm_val
+
+                                    # Calculate cosine similarity
+                                    similarity = float(np.dot(head_norm, query_norm))
+                                    slot_similarities[slot_name] = similarity
+                                else:
+                                    slot_similarities[slot_name] = 0.0
                             else:
                                 slot_similarities[slot_name] = 0.0
                         except Exception as e:
@@ -367,7 +383,7 @@ This may indicate a transaction rollback or database issue."""
 
         db_manager = self.components['db_manager']
 
-        # 텍스트 처리
+        # Process text
         result = process_user_input(content)
         result["importance"] = importance
 
@@ -431,14 +447,14 @@ This may indicate a transaction rollback or database issue."""
             tolerance = arguments.get("tolerance", 0.5)
             entry = arguments.get("entry", "cursor")
 
-            # 컴포넌트 확인
+            # Check components
             if not self._check_components():
                 return "ERROR: Greeum components not available"
 
             # 검색 실행
             results = self._search_memory_v3(query, limit, entry, depth)
 
-            # 사용 통계 로깅
+            # Log usage statistics
             self.components['usage_analytics'].log_event(
                 "tool_usage", "search_memory",
                 {"query_length": len(query), "results_found": len(results), "limit_requested": limit},
@@ -446,7 +462,7 @@ This may indicate a transaction rollback or database issue."""
             )
 
             if results:
-                search_info = f"🔍 Found {len(results)} memories"
+                search_info = f"Found {len(results)} memories"
                 if depth > 0:
                     search_info += f" (depth {depth}, tolerance {tolerance:.1f})"
                 search_info += ":\n"
@@ -522,12 +538,12 @@ This may indicate a transaction rollback or database issue."""
             last_block_info = db_manager.get_last_block_info()
             total_blocks = last_block_info.get('block_index', 0) + 1 if last_block_info else 0
 
-            return f"""📊 **Memory System Statistics**
+            return f"""**Memory System Statistics**
 
 **Total Blocks**: {total_blocks}
 **Database**: SQLite (ThreadSafe)
 **Version**: {self._get_version()}
-**Status**: ✅ Active"""
+**Status**: Active"""
 
         except Exception as e:
             logger.error(f"get_memory_stats failed: {e}")
@@ -551,7 +567,7 @@ This may indicate a transaction rollback or database issue."""
 
 **Report Type**: {report_type}
 **Period**: Last {days} days
-**Status**: ✅ Analytics tracking active
+**Status**: Analytics tracking active
 
 *Detailed analytics implementation in progress*"""
 
@@ -566,6 +582,109 @@ This may indicate a transaction rollback or database issue."""
     async def _handle_infer_causality(self, arguments: Dict[str, Any]) -> str:
         """infer_causality 도구 처리"""
         return "ERROR: Causal inference not available in current configuration"
+
+    async def _handle_system_doctor(self, arguments: Dict[str, Any]) -> str:
+        """
+        system_doctor 도구 처리 - 시스템 진단 및 자동 복구
+
+        Arguments:
+            check_only: bool - 진단만 수행 (기본: False)
+            auto_fix: bool - 자동 복구 실행 (기본: True)
+            include_backup: bool - 백업 생성 (기본: True)
+
+        Returns:
+            진단 보고서 및 복구 결과
+        """
+        try:
+            # Import doctor module
+            import sys
+            from pathlib import Path
+            sys.path.append(str(Path(__file__).parent.parent.parent))
+            from greeum.cli.doctor import GreeumDoctor
+
+            # Extract parameters
+            check_only = arguments.get("check_only", False)
+            auto_fix = arguments.get("auto_fix", not check_only)
+            include_backup = arguments.get("include_backup", True)
+
+            # Doctor 인스턴스 생성
+            doctor = GreeumDoctor()
+
+            # 백업 생성 (필요시)
+            backup_path = None
+            if auto_fix and include_backup:
+                try:
+                    backup_path = doctor.backup_database()
+                except Exception as e:
+                    logger.warning(f"Backup failed: {e}")
+
+            # 시스템 진단
+            health = doctor.check_health()
+
+            # 보고서 생성
+            report = []
+            report.append("**Greeum System Diagnostics**\n")
+
+            # 종합 점수
+            score = health['total_score']
+            if score >= 90:
+                status = "🟢 Healthy"
+            elif score >= 70:
+                status = "🟡 Warning"
+            elif score >= 50:
+                status = "🟠 Critical"
+            else:
+                status = "🔴 Emergency"
+
+            report.append(f"**Overall Status**: {status} (Score: {score:.0f}/100)\n")
+
+            # 각 카테고리별 상태
+            for category, data in health.items():
+                if category == 'total_score':
+                    continue
+
+                report.append(f"\n**{category.upper()}**")
+                report.append(f"Score: {data['score']}/100")
+
+                if data.get('stats'):
+                    for key, value in data['stats'].items():
+                        report.append(f"• {key}: {value}")
+
+                if data.get('issues'):
+                    report.append("Issues:")
+                    for issue in data['issues']:
+                        report.append(f"  WARNING: {issue}")
+
+            # 복구 수행 (필요시)
+            if auto_fix and not check_only and doctor.issues:
+                report.append("\n🔧 **Auto-Repair Results**\n")
+
+                fixes = doctor.fix_issues(force=False)
+                if fixes:
+                    report.append(f"Successfully fixed {len(fixes)} issues:")
+                    for fix in fixes:
+                        report.append(f"  • {fix}")
+
+                    # 재진단
+                    health_after = doctor.check_health()
+                    report.append(f"\n**Final Score**: {health_after['total_score']:.0f}/100")
+                else:
+                    report.append("No issues could be automatically fixed.")
+
+            # 권장사항
+            if doctor.issues and check_only:
+                report.append("\n📌 **Recommendations**:")
+                report.append("Run with `auto_fix: true` to fix issues automatically")
+
+            # 백업 정보
+            if backup_path:
+                report.append(f"\n**Backup**: {backup_path}")
+
+            return "\n".join(report)
+
+        except Exception as e:
+            logger.error(f"system_doctor failed: {e}")
+            return f"**ERROR: System Doctor Failed**\n\nFailed to run diagnostics: {str(e)}\n\nPlease check system installation."
 
     def _check_components(self) -> bool:
         """컴포넌트 가용성 확인"""

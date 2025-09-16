@@ -258,7 +258,7 @@ class EmbeddingRegistry:
         except ImportError:
             # Fallback to Simple
             logger.warning(
-                "⚠️ sentence-transformers 미설치 - SimpleEmbeddingModel 사용"
+                "WARNING: sentence-transformers not installed - using SimpleEmbeddingModel"
             )
             self.register_model("simple", SimpleEmbeddingModel(dimension=768), set_as_default=True)
 

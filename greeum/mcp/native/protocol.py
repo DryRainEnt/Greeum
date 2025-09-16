@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
 Greeum Native MCP Server - JSON-RPC Protocol Processor
-JSON-RPC 2.0 및 MCP 프로토콜 메시지 처리
+Handles JSON-RPC 2.0 and MCP protocol messages
 
-핵심 기능:
-- JSON-RPC 2.0 스펙 완전 준수
-- MCP 프로토콜 메시지 라우팅
-- 안전한 에러 처리 및 응답 생성
-- Pydantic 기반 타입 안전성
+Core Features:
+- Full JSON-RPC 2.0 specification compliance
+- MCP protocol message routing
+- Safe error handling and response generation
+- Pydantic-based type safety
 """
 
 import logging
@@ -23,13 +23,13 @@ logger = logging.getLogger("greeum_native_protocol")
 
 class JSONRPCProcessor:
     """
-    JSON-RPC 2.0 메시지 프로세서
-    
-    MCP 프로토콜 지원 메서드:
-    - initialize: 서버 초기화
-    - initialized: 초기화 완료 통지
-    - tools/list: 도구 목록 조회
-    - tools/call: 도구 실행
+    JSON-RPC 2.0 message processor
+
+    Supported MCP protocol methods:
+    - initialize: Server initialization
+    - initialized: Initialization complete notification
+    - tools/list: List available tools
+    - tools/call: Execute tool
     """
     
     def __init__(self, tool_handler):
@@ -38,49 +38,49 @@ class JSONRPCProcessor:
         
     async def process_message(self, session_message: SessionMessage) -> Optional[SessionMessage]:
         """
-        JSON-RPC 메시지 처리 메인 라우터
-        
+        Main JSON-RPC message processing router
+
         Args:
-            session_message: 수신된 세션 메시지
-            
+            session_message: Received session message
+
         Returns:
-            Optional[SessionMessage]: 응답 메시지 (알림의 경우 None)
+            Optional[SessionMessage]: Response message (None for notifications)
         """
         message = session_message.message
         
-        # 알림 메시지 (응답 없음)
+        # Notification message (no response)
         if isinstance(message, JSONRPCNotification):
             await self._handle_notification(message)
             return None
             
-        # 요청 메시지 (응답 필요)
+        # Request message (response required)
         if isinstance(message, JSONRPCRequest):
             return await self._handle_request(message)
             
-        # 응답/에러 메시지 (클라이언트가 보낸 응답 - 일반적으로 처리 안 함)
+        # Response/error message (client response - typically not processed)
         logger.warning(f"Unexpected message type: {type(message)}")
         return None
     
     async def _handle_notification(self, notification: JSONRPCNotification) -> None:
-        """알림 메시지 처리"""
+        """Handle notification messages"""
         method = notification.method
         params = notification.params or {}
         
         if method == "initialized":
-            # 클라이언트가 초기화 완료를 통지
+            # Client notifies initialization complete
             self.initialized = True
             logger.info("Client initialization completed")
         else:
             logger.warning(f"Unknown notification method: {method}")
     
     async def _handle_request(self, request: JSONRPCRequest) -> SessionMessage:
-        """요청 메시지 처리"""
+        """Handle request messages"""
         method = request.method
         params = request.params or {}
         request_id = request.id
         
         try:
-            # MCP 프로토콜 메서드 라우팅
+            # MCP protocol method routing
             if method == "initialize":
                 result = await self._handle_initialize(params)
             elif method == "tools/list":
@@ -88,25 +88,25 @@ class JSONRPCProcessor:
             elif method == "tools/call":
                 result = await self._handle_tools_call(params)
             else:
-                # 지원하지 않는 메서드
+                # Unsupported method
                 return self._create_error_response(
                     request_id, 
                     ErrorCodes.METHOD_NOT_FOUND,
                     f"Method not found: {method}"
                 )
             
-            # 성공 응답 생성
+            # Generate success response
             return self._create_success_response(request_id, result)
             
         except ValueError as e:
-            # 파라미터 유효성 검사 실패
+            # Parameter validation failed
             return self._create_error_response(
                 request_id,
                 ErrorCodes.INVALID_PARAMS,
                 str(e)
             )
         except Exception as e:
-            # 내부 서버 에러
+            # Internal server error
             logger.error(f"Internal error in {method}: {e}")
             return self._create_error_response(
                 request_id,
@@ -116,32 +116,32 @@ class JSONRPCProcessor:
     
     async def _handle_initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        initialize 메서드 처리
-        
-        MCP 초기화 프로토콜:
-        1. 클라이언트가 프로토콜 버전과 기능을 전송
-        2. 서버가 지원 기능과 서버 정보를 응답
+        Handle initialize method
+
+        MCP initialization protocol:
+        1. Client sends protocol version and capabilities
+        2. Server responds with supported features and server info
         """
         try:
-            # 파라미터 검증
+            # Validate parameters
             init_params = InitializeParams.model_validate(params)
-            logger.info(f"📋 Initialize request from {init_params.clientInfo.name} v{init_params.clientInfo.version}")
+            logger.info(f"Initialize request from {init_params.clientInfo.name} v{init_params.clientInfo.version}")
             
-            # 프로토콜 버전 검사
+            # Check protocol version
             if not init_params.protocolVersion.startswith("2025-"):
                 logger.warning(f"Unsupported protocol version: {init_params.protocolVersion}")
             
-            # 서버 기능 정의
+            # Define server capabilities
             server_capabilities = Capabilities(
                 tools={
-                    "listChanged": False  # 도구 목록이 동적으로 변경되지 않음
+                    "listChanged": False  # Tool list does not change dynamically
                 },
-                resources={},  # 리소스 지원 안 함
-                prompts={},    # 프롬프트 지원 안 함
-                logging={}     # 로깅 지원 안 함
+                resources={},  # Resources not supported
+                prompts={},    # Prompts not supported
+                logging={}     # Logging not supported
             )
             
-            # 초기화 결과 생성
+            # Generate initialization result
             result = InitializeResult(
                 protocolVersion="2025-03-26",
                 capabilities=server_capabilities,
@@ -157,19 +157,20 @@ class JSONRPCProcessor:
     
     async def _handle_tools_list(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        tools/list 메서드 처리
-        
-        Greeum MCP 도구 목록 반환:
-        - add_memory: 메모리 추가
-        - search_memory: 메모리 검색  
-        - get_memory_stats: 메모리 통계
-        - usage_analytics: 사용 분석
+        Handle tools/list method
+
+        Returns Greeum MCP tool list:
+        - add_memory: Add memory
+        - search_memory: Search memories
+        - get_memory_stats: Memory statistics
+        - usage_analytics: Usage analysis
+        - system_doctor: System health check
         """
-        # 도구 목록 정의 (OpenAPI 스키마 형식)
+        # Define tool list (OpenAPI schema format)
         tools = [
             {
                 "name": "add_memory",
-                "description": "Add important permanent memories to long-term storage.",
+                "description": "Add a new memory to Greeum's long-term storage. Automatically checks for duplicates, validates quality, assigns to appropriate context slot using similarity-based routing, and maintains branch-aware storage for context preservation. Returns the block ID and routing information.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -189,8 +190,8 @@ class JSONRPCProcessor:
                 }
             },
             {
-                "name": "search_memory", 
-                "description": "Search existing memories using keywords or semantic similarity.",
+                "name": "search_memory",
+                "description": "Search memories using semantic similarity and DFS-based branch traversal. Prioritizes contextually related memories through slot-aware search, falls back to global search when needed. Returns relevance-ranked results with metadata including timestamps, importance scores, and branch relationships.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -211,7 +212,7 @@ class JSONRPCProcessor:
             },
             {
                 "name": "get_memory_stats",
-                "description": "Get current memory system statistics and health status.",
+                "description": "Get comprehensive memory system statistics including total blocks, active branches, slot utilization, embedding model distribution, database size, and system health metrics. Useful for monitoring system status and performance.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {}
@@ -219,9 +220,9 @@ class JSONRPCProcessor:
             },
             {
                 "name": "usage_analytics",
-                "description": "Get comprehensive usage analytics and insights.",
+                "description": "Analyze memory system usage patterns over a specified period. Provides insights on memory creation rate, search patterns, quality metrics, duplicate detection rates, and system performance trends. Supports multiple report types for different analytical perspectives.",
                 "inputSchema": {
-                    "type": "object", 
+                    "type": "object",
                     "properties": {
                         "days": {
                             "type": "integer",
@@ -238,34 +239,58 @@ class JSONRPCProcessor:
                         }
                     }
                 }
+            },
+            {
+                "name": "system_doctor",
+                "description": "Perform comprehensive system health check and maintenance. Diagnoses database integrity, embedding consistency, dependency availability, and performance metrics. Can automatically fix issues including orphaned embeddings cleanup, database fragmentation repair, index optimization, and embedding model migration. Creates automatic backups before repairs. Returns detailed health report with scores and recommendations.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "check_only": {
+                            "type": "boolean",
+                            "description": "Only run diagnostics without fixing",
+                            "default": False
+                        },
+                        "auto_fix": {
+                            "type": "boolean",
+                            "description": "Automatically fix found issues",
+                            "default": True
+                        },
+                        "include_backup": {
+                            "type": "boolean",
+                            "description": "Create backup before fixes",
+                            "default": True
+                        }
+                    }
+                }
             }
         ]
         
         result = {"tools": tools}
-        logger.info(f"📋 Listed {len(tools)} tools")
+        logger.info(f"Listed {len(tools)} tools")
         return result
     
     async def _handle_tools_call(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        tools/call 메서드 처리
-        
-        도구 실행:
-        1. 파라미터 검증
-        2. 도구 핸들러에 위임
-        3. 결과를 MCP 형식으로 래핑
+        Handle tools/call method
+
+        Tool execution:
+        1. Validate parameters
+        2. Delegate to tool handler
+        3. Wrap result in MCP format
         """
         try:
-            # 파라미터 검증
+            # Validate parameters
             tool_call = ToolCallParams.model_validate(params)
             tool_name = tool_call.name
             tool_args = tool_call.arguments or {}
             
             logger.info(f"Calling tool: {tool_name}")
             
-            # 도구 실행
+            # Execute tool
             result_text = await self.tool_handler.execute_tool(tool_name, tool_args)
             
-            # MCP 형식 결과 생성
+            # Generate MCP format result
             result = ToolResult(
                 content=[TextContent(text=result_text)],
                 isError=False
@@ -275,7 +300,7 @@ class JSONRPCProcessor:
             return result.model_dump()
             
         except ValueError as e:
-            # 도구 실행 실패 - 에러 결과 반환
+            # Execute tool 실패 - 에러 결과 반환
             error_text = f"Tool execution failed: {e}"
             result = ToolResult(
                 content=[TextContent(text=error_text)],
@@ -284,7 +309,7 @@ class JSONRPCProcessor:
             logger.error(error_text)
             return result.model_dump()
         except Exception as e:
-            # 예상치 못한 에러
+            # Unexpected error
             error_text = f"Unexpected error: {e}"
             result = ToolResult(
                 content=[TextContent(text=error_text)],
@@ -294,12 +319,12 @@ class JSONRPCProcessor:
             return result.model_dump()
     
     def _create_success_response(self, request_id: Any, result: Any) -> SessionMessage:
-        """성공 응답 생성"""
+        """Generate success response"""
         response = JSONRPCResponse(id=request_id, result=result)
         return SessionMessage(message=response)
     
     def _create_error_response(self, request_id: Any, code: int, message: str, data: Any = None) -> SessionMessage:
-        """에러 응답 생성"""
+        """Generate error response"""
         error = JSONRPCError(code=code, message=message, data=data)
         response = JSONRPCErrorResponse(id=request_id, error=error)
         return SessionMessage(message=response)

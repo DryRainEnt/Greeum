@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 Greeum Native MCP Server - Main Server Class
-FastMCP 없는 순수 네이티브 MCP 서버 구현
+Pure native MCP server implementation without FastMCP
 
-핵심 기능:
-- anyio 기반 안전한 AsyncIO 처리 (asyncio.run() 중첩 방지)
-- 완전한 Greeum 컴포넌트 초기화
-- STDIO 전송 계층과 JSON-RPC 프로토콜 통합
-- 기존 비즈니스 로직 100% 재사용
-- Claude Desktop 호환성을 위한 로그 출력 억제 지원
+Core Features:
+- Safe AsyncIO handling based on anyio (prevents asyncio.run() nesting)
+- Complete Greeum component initialization
+- STDIO transport layer and JSON-RPC protocol integration
+- 100% business logic reuse
+- Log output suppression support for Claude Desktop compatibility
 """
 
 import logging
@@ -16,7 +16,7 @@ import sys
 import os
 from typing import Optional, Dict, Any
 
-# anyio 의존성 확인
+# Check anyio dependency
 try:
     import anyio
 except ImportError:
@@ -41,11 +41,11 @@ from .protocol import JSONRPCProcessor
 from .tools import GreeumMCPTools
 from .types import SessionMessage
 
-# GREEUM_QUIET 환경변수 확인
+# Check GREEUM_QUIET environment variable
 QUIET_MODE = os.getenv('GREEUM_QUIET', '').lower() in ('true', '1', 'yes')
 
-# 로깅 설정 (stderr 전용 - STDOUT 오염 방지)
-# quiet 모드에서는 로깅 레벨을 WARNING 이상으로 설정하여 INFO 로그 억제
+# Configure logging (stderr only - prevent STDOUT pollution)
+# In quiet mode, set logging level to WARNING or higher to suppress INFO logs
 log_level = logging.WARNING if QUIET_MODE else logging.INFO
 logging.basicConfig(
     level=log_level, 

@@ -137,6 +137,53 @@ def validate():
     """Documentation and code validation"""
     pass
 
+@main.command()
+@click.option('--check', is_flag=True, help='진단만 수행')
+@click.option('--fix', is_flag=True, help='자동 복구 포함')
+@click.option('--force', is_flag=True, help='강제 복구')
+@click.option('--no-backup', is_flag=True, help='백업 생략')
+@click.option('--db-path', help='데이터베이스 경로')
+def doctor(check: bool, fix: bool, force: bool, no_backup: bool, db_path: str):
+    """System diagnostics and repair tool (체크, 마이그레이션, 정리, 최적화)"""
+    try:
+        from .doctor import GreeumDoctor
+
+        doctor_instance = GreeumDoctor(db_path)
+
+        # 백업
+        if (fix or force) and not no_backup:
+            backup_path = doctor_instance.backup_database()
+            click.echo(f"📦 백업 생성: {backup_path}")
+
+        # 진단
+        health = doctor_instance.check_health()
+        doctor_instance.print_report(health)
+
+        # 복구
+        if fix or force or (not check and doctor_instance.issues):
+            if not check and not fix and not force:
+                response = click.confirm("\n복구를 진행하시겠습니까?", default=False)
+                if not response:
+                    click.echo("복구가 취소되었습니다.")
+                    return
+
+            fixes = doctor_instance.fix_issues(force)
+            if fixes:
+                click.echo(f"\n✅ 복구 완료: {len(fixes)}개 문제 해결")
+                for fix_msg in fixes:
+                    click.echo(f"  • {fix_msg}")
+
+            # 재진단
+            click.echo("\n🔄 복구 후 재진단...")
+            health = doctor_instance.check_health()
+            click.echo(f"\n최종 상태: 점수 {health['total_score']:.0f}/100")
+
+        sys.exit(0 if health['total_score'] >= 70 else 1)
+
+    except Exception as e:
+        click.echo(f"❌ 오류 발생: {e}")
+        sys.exit(1)
+
 
 # Memory 서브명령어들
 @memory.command()
