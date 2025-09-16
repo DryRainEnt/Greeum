@@ -37,10 +37,9 @@ class DatabaseManager:
         지능형 데이터베이스 경로 감지
 
         우선순위:
-        1. ~/.greeum/memory.db (글로벌 최우선)
-        2. GREEUM_DATA_DIR 환경변수 (명시적 설정시만)
-
-        Note: 로컬 프로젝트 DB는 더 이상 사용하지 않음 (통합 관리를 위해)
+        1. 현재 작업 디렉토리의 data/memory.db (로컬 프로젝트 우선)
+        2. GREEUM_DATA_DIR 환경변수 (명시적 설정시)
+        3. ~/.greeum/memory.db (글로벌 폴백)
 
         Returns:
             str: 최적의 데이터베이스 파일 경로
@@ -62,7 +61,16 @@ class DatabaseManager:
             logger.info(f"[DB] Creating database at environment path: {sub_path}")
             return sub_path
 
-        # 2. 사용자 홈 디렉토리 (글로벌 기본값)
+        # 2. 현재 작업 디렉토리 확인 (로컬 프로젝트 우선)
+        cwd = os.getcwd()
+        local_db_path = os.path.join(cwd, 'data', 'memory.db')
+
+        # 로컬 DB가 이미 존재하거나, greeum 프로젝트 내부라면 로컬 사용
+        if os.path.exists(local_db_path) or 'greeum' in cwd.lower():
+            logger.info(f"[DB] Using local project database: {local_db_path}")
+            return local_db_path
+
+        # 3. 사용자 홈 디렉토리 (글로벌 폴백)
         home_dir = os.path.expanduser('~')
         user_db_path = os.path.join(home_dir, '.greeum', 'memory.db')
         logger.info(f"[DB] Using global user database: {user_db_path}")
