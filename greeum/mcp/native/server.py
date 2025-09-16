@@ -14,6 +14,8 @@ Core Features:
 import logging
 import sys
 import os
+import signal
+import atexit
 from typing import Optional, Dict, Any
 
 # Check anyio dependency
@@ -186,9 +188,16 @@ class GreeumNativeMCPServer:
         """서버 종료 처리"""
         try:
             if self.greeum_components:
-                # 필요한 경우 컴포넌트 정리
-                pass
-            
+                # Close database connections
+                if 'db_manager' in self.greeum_components:
+                    try:
+                        db_manager = self.greeum_components['db_manager']
+                        if hasattr(db_manager, 'conn'):
+                            db_manager.conn.close()
+                            logger.debug("Database connection closed")
+                    except Exception as e:
+                        logger.debug(f"Error closing database: {e}")
+
             logger.info("Server shutdown completed")
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
@@ -210,18 +219,38 @@ async def run_native_mcp_server() -> None:
     finally:
         await server.shutdown()
 
+def cleanup_handler(signum=None, frame=None):
+    """
+    Clean up resources on exit
+    """
+    logger.info("Cleaning up MCP server resources...")
+    try:
+        # Close database connections if any
+        import gc
+        gc.collect()
+    except Exception as e:
+        logger.debug(f"Cleanup error: {e}")
+    finally:
+        if signum:
+            sys.exit(0)
+
 def run_server_sync(log_level: str = 'quiet') -> None:
     """
     동기 래퍼 함수 (CLI에서 직접 호출 가능)
-    
+
     Args:
         log_level: 로깅 레벨 ('quiet', 'verbose', 'debug')
                   - quiet: WARNING 이상만 출력 (기본값)
                   - verbose: INFO 이상 출력
                   - debug: DEBUG 이상 모든 로그 출력
-    
+
     anyio.run() 사용으로 안전한 실행
     """
+    # Register cleanup handlers
+    signal.signal(signal.SIGTERM, cleanup_handler)
+    signal.signal(signal.SIGINT, cleanup_handler)
+    signal.signal(signal.SIGHUP, cleanup_handler)
+    atexit.register(cleanup_handler)
     # 로깅 레벨 설정
     global QUIET_MODE
     
