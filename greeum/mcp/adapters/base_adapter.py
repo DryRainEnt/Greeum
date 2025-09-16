@@ -84,10 +84,17 @@ class BaseAdapter(ABC):
             duplicate_check = self.components['duplicate_detector'].check_duplicate(content)
             if duplicate_check["is_duplicate"]:
                 similarity = duplicate_check["similarity_score"]
+
+                # Get block index from similar_memories (safe access)
+                block_index = 'unknown'
+                if duplicate_check.get('similar_memories'):
+                    first_similar = duplicate_check['similar_memories'][0]
+                    block_index = first_similar.get('block_index', 'unknown')
+
                 return f"""⚠️  **Potential Duplicate Memory Detected**
 
 **Similarity**: {similarity:.1%} with existing memory
-**Similar Memory**: Block #{duplicate_check['similar_block_index']}
+**Similar Memory**: Block #{block_index}
 
 Please search existing memories first or provide more specific content."""
 
