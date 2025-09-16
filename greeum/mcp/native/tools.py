@@ -17,6 +17,9 @@ import json
 import hashlib
 
 logger = logging.getLogger("greeum_native_tools")
+# Enable DEBUG logging temporarily
+logging.basicConfig(level=logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 
 class GreeumMCPTools:
     """
@@ -103,6 +106,19 @@ class GreeumMCPTools:
             if not self._check_components():
                 return "ERROR: Greeum components not available. Please check installation."
 
+            # DEBUG: DB status check before processing
+            try:
+                db_manager = self.components['db_manager']
+                cursor = db_manager.conn.cursor()
+                cursor.execute("BEGIN")
+                cursor.execute("SELECT COUNT(*) FROM blocks")
+                block_count = cursor.fetchone()[0]
+                cursor.execute("ROLLBACK")
+                logger.info(f"[DEBUG] DB accessible, current block count: {block_count}")
+            except Exception as db_error:
+                logger.error(f"[DEBUG] DB access error before processing: {db_error}")
+                return f"ERROR: Database access failed: {db_error}"
+
             # Check for duplicates
             duplicate_check = self.components['duplicate_detector'].check_duplicate(content)
             if duplicate_check["is_duplicate"]:
@@ -148,9 +164,14 @@ Please try again or check database status."""
             block_index = None
             if isinstance(block_result, int):
                 block_index = block_result
+                logger.info(f"[DEBUG] Extracted block_index from int: {block_index}")
             elif isinstance(block_result, dict):
                 # v3.1.1b3: BlockManager.add_block returns full block dict
                 block_index = block_result.get('block_index', block_result.get('id', 'unknown'))
+                logger.info(f"[DEBUG] Extracted block_index from dict: {block_index}")
+                logger.info(f"[DEBUG] Dict keys available: {list(block_result.keys()) if block_result else 'None'}")
+            else:
+                logger.error(f"[DEBUG] Unexpected block_result type: {type(block_result)}, value: {block_result}")
 
             # Verify save if we have an index
             if block_index and block_index != 'unknown':
@@ -221,7 +242,9 @@ This may indicate a transaction rollback or database issue."""
 **Duplicate Check**: Passed{quality_feedback}{suggestions_text}{routing_info}"""
 
         except Exception as e:
-            logger.error(f"add_memory failed: {e}")
+            import traceback
+            logger.error(f"[DEBUG] add_memory failed: {e}")
+            logger.error(f"[DEBUG] Full traceback: {traceback.format_exc()}")
             return f"ERROR: Failed to add memory: {str(e)}"
 
     def _add_memory_via_v3_core(self, content: str, importance: float = 0.5) -> Dict[str, Any]:
@@ -239,6 +262,10 @@ This may indicate a transaction rollback or database issue."""
         slot, smart_routing_info = self._auto_select_slot(stm_manager, content, result.get('embedding'))
 
         try:
+            # DEBUG: Before add_block call
+            logger.info(f"[DEBUG] Starting add_block - Content: {content[:50]}..., Slot: {slot}")
+            logger.info(f"[DEBUG] Keywords: {result.get('keywords', [])}, Tags: {result.get('tags', [])}")
+
             # Use v3 BlockManager.add_block
             block_result = block_manager.add_block(
                 context=content,
@@ -249,6 +276,9 @@ This may indicate a transaction rollback or database issue."""
                 metadata={'source': 'mcp', 'smart_routing': smart_routing_info} if smart_routing_info else {'source': 'mcp'},
                 slot=slot
             )
+
+            # DEBUG: After add_block call
+            logger.info(f"[DEBUG] add_block returned: {type(block_result)} = {block_result}")
 
             # Normalize result
             if isinstance(block_result, int):
