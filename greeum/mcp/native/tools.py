@@ -170,12 +170,18 @@ Please try again or check database status."""
                 block_index = block_result
                 logger.info(f"[DEBUG] Extracted block_index from int: {block_index}")
             elif isinstance(block_result, dict):
-                # v3.1.1b3: BlockManager.add_block returns full block dict
-                block_index = block_result.get('block_index', block_result.get('id', 'unknown'))
-                logger.info(f"[DEBUG] Extracted block_index from dict: {block_index}")
-                logger.info(f"[DEBUG] Dict keys available: {list(block_result.keys()) if block_result else 'None'}")
+                # v3.1.1rc2.dev7: _add_memory_via_v3_core returns full block dict
+                # Try multiple keys for compatibility
+                block_index = block_result.get('block_index') or block_result.get('id')
+                if block_index is None:
+                    # Log available keys for debugging
+                    logger.error(f"[DEBUG] No block_index or id in dict. Keys: {list(block_result.keys())}")
+                    block_index = 'unknown'
+                else:
+                    logger.info(f"[DEBUG] Successfully extracted block_index from dict: {block_index}")
             else:
                 logger.error(f"[DEBUG] Unexpected block_result type: {type(block_result)}, value: {block_result}")
+                block_index = 'unknown'
 
             # Verify save if we have an index
             if block_index and block_index != 'unknown':
@@ -482,11 +488,23 @@ This may indicate a transaction rollback or database issue."""
             "importance": result.get("importance", 0.5),
             "hash": hash_value,
             "prev_hash": prev_hash,
-            "slot": slot
+            "slot": slot,
+            "before": prev_hash,  # Add before node hash for parent retrieval
+            "metadata": {
+                "smart_routing": smart_routing_info
+            }
         }
 
         # DB 직접 저장
         db_manager.add_block(block_data)
+
+        # v3.1.1rc2.dev7: Verify block was saved and return with confirmed index
+        verify_cursor = db_manager.conn.cursor()
+        verify_cursor.execute("SELECT block_index FROM blocks WHERE block_index = ?", (block_index,))
+        if not verify_cursor.fetchone():
+            logger.error(f"Block {block_index} not found after save")
+            return None
+
         return block_data
 
     async def _handle_search_memory(self, arguments: Dict[str, Any]) -> str:
