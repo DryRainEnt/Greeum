@@ -149,7 +149,8 @@ Please try again or check database status."""
             if isinstance(block_result, int):
                 block_index = block_result
             elif isinstance(block_result, dict):
-                block_index = block_result.get('id', block_result.get('block_index'))
+                # v3.1.1b3: BlockManager.add_block returns full block dict
+                block_index = block_result.get('block_index', block_result.get('id', 'unknown'))
 
             # Verify save if we have an index
             if block_index and block_index != 'unknown':
@@ -184,6 +185,21 @@ This may indicate a transaction rollback or database issue."""
                     slot_info += f"\n**Branch Root**: {block_result['branch_root'][:8]}..."
                 if block_result.get('parent_block'):
                     slot_info += f"\n**Parent Block**: #{block_result['parent_block']}"
+
+                # Before node information (parent content)
+                if block_result.get('before'):
+                    try:
+                        # Get before block content by hash
+                        before_hash = block_result['before']
+                        db_manager = self.components['db_manager']
+                        cursor = db_manager.conn.cursor()
+                        cursor.execute("SELECT context FROM blocks WHERE hash = ? LIMIT 1", (before_hash,))
+                        result = cursor.fetchone()
+                        if result and result[0]:
+                            before_content = result[0][:50] + "..." if len(result[0]) > 50 else result[0]
+                            slot_info += f"\n**Before Node**: {before_content}"
+                    except Exception as e:
+                        slot_info += f"\n**Before Node**: [Error retrieving: {e}]"
 
                 # Smart routing information
                 if block_result.get('metadata', {}).get('smart_routing'):
