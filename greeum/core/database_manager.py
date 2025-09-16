@@ -455,7 +455,19 @@ class DatabaseManager:
             # Commit transaction only if we started it
             if not in_transaction:
                 self.conn.commit()
-            logger.debug(f"Block {block_index} saved successfully")
+
+            # Post-commit verification to ensure data is accessible
+            try:
+                verification_cursor = self.conn.cursor()
+                verification_cursor.execute("SELECT block_index FROM blocks WHERE block_index = ?", (block_index,))
+                if not verification_cursor.fetchone():
+                    logger.error(f"Post-commit verification failed: Block {block_index} not found after commit")
+                    return None
+            except Exception as e:
+                logger.error(f"Post-commit verification error for block {block_index}: {e}")
+                return None
+
+            logger.debug(f"Block {block_index} saved and verified successfully")
             return block_index
 
         except sqlite3.IntegrityError as e:
