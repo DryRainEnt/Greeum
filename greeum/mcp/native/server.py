@@ -120,10 +120,39 @@ class GreeumNativeMCPServer:
             
             self.initialized = True
             logger.info("Native MCP server initialization completed")
-            
+
+            # Start model pre-warming in background (non-blocking)
+            self._start_model_prewarming()
+
         except Exception as e:
             logger.error(f"Failed to initialize server: {e}")
             raise RuntimeError(f"Server initialization failed: {e}")
+
+    def _start_model_prewarming(self):
+        """
+        백그라운드에서 모델 pre-warming 시작
+
+        이 함수는 non-blocking으로 실행되어 서버 시작을 지연시키지 않음.
+        첫 번째 메모리 저장이나 검색 요청 시 모델이 이미 로드되어 있어
+        타임아웃을 방지함.
+        """
+        import threading
+
+        def prewarm_model():
+            try:
+                logger.info("Starting model pre-warming in background...")
+                from greeum.embedding_models import get_embedding
+
+                # 더미 텍스트로 모델 초기화 트리거
+                _ = get_embedding("Model pre-warming test")
+                logger.info("✅ Model pre-warming completed successfully")
+            except Exception as e:
+                logger.warning(f"Model pre-warming failed (non-critical): {e}")
+
+        # 별도 스레드에서 실행하여 서버 시작을 차단하지 않음
+        prewarm_thread = threading.Thread(target=prewarm_model, daemon=True)
+        prewarm_thread.start()
+        logger.debug("Model pre-warming thread started")
     
     async def run_stdio(self) -> None:
         """

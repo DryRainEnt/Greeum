@@ -125,37 +125,74 @@ class SimpleEmbeddingModel(EmbeddingModel):
 
 
 class SentenceTransformerModel(EmbeddingModel):
-    """Sentence-Transformers 기반 의미적 임베딩 모델"""
+    """Sentence-Transformers 기반 의미적 임베딩 모델 (Lazy Loading)"""
 
     def __init__(self, model_name: str = None):
         """
-        Sentence-Transformer 모델 초기화
+        Sentence-Transformer 모델 초기화 (Lazy Loading)
 
         Args:
             model_name: 모델 이름 (기본값: 다국어 지원 모델)
         """
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError:
-            raise ImportError(
-                "sentence-transformers가 설치되지 않았습니다.\n"
-                "다음 명령어로 설치하세요:\n"
-                "  pip install sentence-transformers\n"
-                "또는\n"
-                "  pip install greeum[full]"
-            )
-
         # 기본 모델: 다국어 지원 (한국어 포함), 384차원
         if model_name is None:
             model_name = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
 
         self.model_name = model_name
-        self.model = SentenceTransformer(model_name)
-        self.dimension = self.model.get_sentence_embedding_dimension()
-
-        # 768차원 호환성을 위한 차원 변환 필요 여부
-        self.needs_padding = (self.dimension < 768)
+        self.model = None  # Lazy loading: 실제 사용 시 초기화
+        self._dimension = None
+        self._needs_padding = None
         self.target_dimension = 768  # Greeum 표준 차원
+
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"SentenceTransformerModel initialized with lazy loading for: {model_name}")
+
+    def _ensure_model_loaded(self):
+        """모델이 로드되어 있는지 확인하고 필요 시 로드"""
+        if self.model is None:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Loading SentenceTransformer model: {self.model_name}")
+
+            try:
+                from sentence_transformers import SentenceTransformer
+            except ImportError:
+                raise ImportError(
+                    "sentence-transformers가 설치되지 않았습니다.\n"
+                    "다음 명령어로 설치하세요:\n"
+                    "  pip install sentence-transformers\n"
+                    "또는\n"
+                    "  pip install greeum[full]"
+                )
+
+            # 모델 캐시 디렉토리 설정 (빠른 로딩)
+            import os
+            cache_dir = os.path.expanduser("~/.cache/sentence_transformers")
+            os.makedirs(cache_dir, exist_ok=True)
+
+            # 모델 로드
+            self.model = SentenceTransformer(self.model_name, cache_folder=cache_dir)
+            self._dimension = self.model.get_sentence_embedding_dimension()
+
+            # 768차원 호환성을 위한 차원 변환 필요 여부
+            self._needs_padding = (self._dimension < 768)
+
+            logger.info(f"Model loaded successfully: {self.model_name} (dim: {self._dimension})")
+
+    @property
+    def dimension(self):
+        """차원 정보 (lazy loading)"""
+        if self._dimension is None:
+            self._ensure_model_loaded()
+        return self._dimension
+
+    @property
+    def needs_padding(self):
+        """패딩 필요 여부 (lazy loading)"""
+        if self._needs_padding is None:
+            self._ensure_model_loaded()
+        return self._needs_padding
 
     def encode(self, text: str) -> List[float]:
         """
@@ -167,6 +204,9 @@ class SentenceTransformerModel(EmbeddingModel):
         Returns:
             임베딩 벡터 (768차원으로 패딩됨)
         """
+        # 처음 사용 시 모델 로드
+        self._ensure_model_loaded()
+
         # 의미적 임베딩 생성
         embedding = self.model.encode(text, convert_to_numpy=True)
 
@@ -192,6 +232,9 @@ class SentenceTransformerModel(EmbeddingModel):
         Returns:
             임베딩 벡터 목록
         """
+        # 처음 사용 시 모델 로드
+        self._ensure_model_loaded()
+
         embeddings = self.model.encode(texts, convert_to_numpy=True, batch_size=32)
 
         if self.needs_padding:
@@ -230,6 +273,7 @@ class SentenceTransformerModel(EmbeddingModel):
         Returns:
             실제 임베딩 차원 수
         """
+        # lazy loading을 통해 필요 시 차원 정보 로드
         return self.dimension
 
 
