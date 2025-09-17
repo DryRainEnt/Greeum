@@ -1,3 +1,0 @@
-"""
-GreeumMCP resources package.
-""" 

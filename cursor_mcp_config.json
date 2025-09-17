@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "greeum_native": {
+      "command": "python",
+      "args": [
+        "C:\\Users\\jee1l\\git\\greeum\\greeum\\mcp\\native\\server.py"
+      ],
+      "env": {
+        "GREEUM_LOG_LEVEL": "INFO",
+        "PYTHONPATH": "C:\\Users\\jee1l\\git\\greeum"
+      }
+    }
+  }
+}

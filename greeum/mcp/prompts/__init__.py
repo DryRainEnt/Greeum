@@ -1,3 +1,0 @@
-"""
-GreeumMCP prompts package.
-""" 

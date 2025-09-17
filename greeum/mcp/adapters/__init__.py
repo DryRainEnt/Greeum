@@ -1,3 +1,0 @@
-"""
-GreeumMCP adapters package.
-""" 
