@@ -25,6 +25,8 @@ except ImportError:
     print("ERROR: anyio is required. Install with: pip install anyio>=4.5", file=sys.stderr)
     sys.exit(1)
 
+from .compat import CancelledError
+
 # Greeum core imports
 try:
     from greeum.core.block_manager import BlockManager
@@ -246,10 +248,10 @@ def run_server_sync(log_level: str = 'quiet') -> None:
 
     anyio.run() 사용으로 안전한 실행
     """
-    # Register cleanup handlers
-    signal.signal(signal.SIGTERM, cleanup_handler)
-    signal.signal(signal.SIGINT, cleanup_handler)
-    signal.signal(signal.SIGHUP, cleanup_handler)
+    # Register cleanup handlers (guard unsupported signals for cross-platform compatibility)
+    for _sig_name in ("SIGTERM", "SIGINT", "SIGHUP"):
+        if hasattr(signal, _sig_name):
+            signal.signal(getattr(signal, _sig_name), cleanup_handler)
     atexit.register(cleanup_handler)
     # 로깅 레벨 설정
     global QUIET_MODE
@@ -279,7 +281,7 @@ def run_server_sync(log_level: str = 'quiet') -> None:
     except KeyboardInterrupt:
         if not is_quiet:
             logger.info("Server stopped by user")
-    except anyio.CancelledError:
+    except CancelledError:
         # anyio TaskGroup이 KeyboardInterrupt를 CancelledError로 변환함
         if not is_quiet:
             logger.info("Server stopped by user")

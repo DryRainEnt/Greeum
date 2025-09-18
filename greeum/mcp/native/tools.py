@@ -18,12 +18,23 @@ import hashlib
 
 logger = logging.getLogger("greeum_native_tools")
 # Enable DEBUG logging temporarily with file output
-debug_handler = logging.FileHandler('/tmp/greeum_mcp_debug.log')
-debug_handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-debug_handler.setFormatter(formatter)
-logger.addHandler(debug_handler)
-logger.setLevel(logging.DEBUG)
+import os
+debug_log_path = os.path.join(os.path.expanduser('~'), 'greeum_mcp_debug.log')
+try:
+    debug_handler = logging.FileHandler(debug_log_path)
+    debug_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    debug_handler.setFormatter(formatter)
+    logger.addHandler(debug_handler)
+    logger.setLevel(logging.DEBUG)
+except (OSError, PermissionError):
+    # Fallback to console logging if file logging fails
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    logger.setLevel(logging.DEBUG)
 
 class GreeumMCPTools:
     """

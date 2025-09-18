@@ -33,8 +33,22 @@ except ImportError:
     sys.path.insert(0, parent_dir)
     from adapters.base_adapter import BaseAdapter
 
+# 명령행 인수 처리
+DEBUG_MODE = "--debug" in sys.argv
+VERBOSE_MODE = "--verbose" in sys.argv or "-v" in sys.argv
+
 # 로깅 설정 - stderr로만 출력 (stdout 오염 방지)
-logging.basicConfig(level=logging.INFO, stream=sys.stderr, format='%(levelname)s:%(name)s:%(message)s')
+if DEBUG_MODE:
+    log_level = logging.DEBUG
+    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+elif VERBOSE_MODE:
+    log_level = logging.INFO
+    log_format = '%(levelname)s:%(name)s:%(message)s'
+else:
+    log_level = logging.WARNING
+    log_format = '%(levelname)s:%(name)s:%(message)s'
+
+logging.basicConfig(level=log_level, stream=sys.stderr, format=log_format)
 logger = logging.getLogger("native_mcp")
 
 class GreaumAdapter(BaseAdapter):
@@ -322,6 +336,13 @@ class NativeMCPServer:
         logger.info("🚀 Starting Native MCP server on stdio...")
         logger.info("✅ All tools registered: add_memory, search_memory, get_memory_stats, usage_analytics")
         
+        # MCP 클라이언트를 위한 명확한 준비 신호 출력
+        print("MCP_SERVER_READY", file=sys.stderr, flush=True)
+        if DEBUG_MODE:
+            logger.debug("🔍 Debug mode enabled - detailed logging active")
+        if VERBOSE_MODE:
+            logger.info("📢 Verbose mode enabled - enhanced logging active")
+        
         try:
             while True:
                 try:
@@ -397,6 +418,14 @@ class NativeMCPServer:
 def main():
     """서버 메인 실행"""
     try:
+        # 시작 로그 출력
+        if DEBUG_MODE:
+            logger.debug("🔧 Starting Greeum MCP Server in DEBUG mode")
+        elif VERBOSE_MODE:
+            logger.info("📢 Starting Greeum MCP Server in VERBOSE mode")
+        else:
+            logger.info("🚀 Starting Greeum MCP Server")
+            
         server = NativeMCPServer()
         server.run_stdio()
     except Exception as e:

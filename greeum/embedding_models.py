@@ -250,15 +250,25 @@ class EmbeddingRegistry:
         logger = logging.getLogger(__name__)
 
         try:
-            # Sentence-Transformers 시도
-            from sentence_transformers import SentenceTransformer
+            # 1순위: Sentence-Transformers (의미 기반)
             model = SentenceTransformerModel()
             self.register_model("sentence-transformer", model, set_as_default=True)
-            logger.info("✅ SentenceTransformer 모델 자동 초기화 성공")
+            logger.info("✅ SentenceTransformer 모델 자동 초기화 성공 (의미 기반 검색 활성화)")
         except ImportError:
-            # Fallback to Simple
+            # 2순위: Simple (Fallback)
             logger.warning(
-                "WARNING: sentence-transformers not installed - using SimpleEmbeddingModel"
+                "⚠️ WARNING: sentence-transformers not installed - using SimpleEmbeddingModel\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "의미 기반 검색이 비활성화됩니다. 다음 기능들이 제대로 작동하지 않습니다:\n"
+                "  • 의미 기반 검색\n"
+                "  • 슬롯 자동 할당\n"
+                "  • 유사 메모리 그룹화\n"
+                "\n"
+                "해결 방법:\n"
+                "  pip install sentence-transformers\n"
+                "  또는\n"
+                "  pip install greeum[full]\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
             self.register_model("simple", SimpleEmbeddingModel(dimension=768), set_as_default=True)
 
@@ -433,12 +443,13 @@ def auto_init_best_model() -> str:
         return embedding_registry.default_model
 
     try:
-        # 1순위: Sentence-Transformers
+        # 1순위: Sentence-Transformers (의미 기반)
         init_sentence_transformer()
+        logger.info("✅ Sentence-Transformers 모델 초기화 성공 (의미 기반 검색 활성화)")
         return "sentence-transformer"
 
     except ImportError:
-        # 2순위: Simple (경고 표시)
+        # 2순위: Simple (Fallback)
         logger.warning(
             "⚠️  WARNING: Using SimpleEmbeddingModel (random vectors)\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -450,6 +461,8 @@ def auto_init_best_model() -> str:
             "\n"
             "해결 방법:\n"
             "  pip install sentence-transformers\n"
+            "  또는\n"
+            "  pip install greeum[full]\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
         embedding_registry.register_model(
