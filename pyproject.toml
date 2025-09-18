@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "greeum"
-version = "3.1.1rc2.dev9"
+version = "3.1.1rc3.dev3"
 description = "Context-Dependent Neural Memory System for LLMs with GraphIndex beam search, STM/LTM consolidation, and semantic tagging"
 authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -38,11 +38,14 @@ dependencies = [
     "python-dateutil>=2.8.2",
     "sentence-transformers>=2.2.0",  # Required for v3.1.1+ semantic embeddings
     "psutil>=5.9.0",  # Required for v3.1.1rc2.dev8+ orphan process cleanup
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.22.0",
 ]
 
 [project.optional-dependencies]
 test = ["pytest>=7.0", "pytest-cov", "responses>=0.23.0"]
 dev = ["black", "isort", "flake8", "ruff"]
+mcp-http = ["fastapi>=0.110.0", "uvicorn[standard]>=0.22.0"]
 full = [
     "sentence-transformers>=2.2.0",
     "openai>=0.27.0", 

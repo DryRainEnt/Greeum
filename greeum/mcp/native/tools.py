@@ -310,10 +310,16 @@ This may indicate a transaction rollback or database issue."""
                     logger.error(f"All {MAX_RETRIES} attempts failed, using fallback")
                     raise retry_error
 
-            # DEBUG: After add_block call
-            logger.info(f"[DEBUG] add_block returned: {type(block_result)} = {block_result}")
+        # Check if all retries failed with None result
+        if block_result is None:
+            logger.error("All add_block attempts returned None, using fallback")
+            return self._add_memory_fallback(content, importance, slot, smart_routing_info)
 
-            # Normalize result
+        # DEBUG: After add_block call
+        logger.info(f"[DEBUG] add_block returned: {type(block_result)} = {block_result}")
+
+        # Normalize result
+        try:
             if isinstance(block_result, int):
                 return {
                     'id': block_result,
@@ -330,9 +336,8 @@ This may indicate a transaction rollback or database issue."""
                 return block_result
             else:
                 return {'id': 'unknown', 'slot': slot}
-
         except Exception as e:
-            logger.warning(f"Core path failed after all retries, using fallback: {e}")
+            logger.warning(f"Core path normalization failed, using fallback: {e}")
             return self._add_memory_fallback(content, importance, slot, smart_routing_info)
 
     def _auto_select_slot(self, stm_manager, content: str, embedding: Optional[List[float]]):

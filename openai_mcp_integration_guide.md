@@ -46,11 +46,12 @@ curl https://api.openai.com/v1/responses \
 
 ### 서버 실행
 ```bash
-# STDIO 모드 (개발/테스트용)
-python3 greeum/mcp/production_mcp_server.py
+# STDIO 모드 (Claude Desktop 등)
+greeum mcp serve -t stdio
 
-# HTTP 모드 (프로덕션용) - 추가 구현 필요
-# uvicorn greeum.mcp.production_http_server:app --host 0.0.0.0 --port 8000
+# HTTP 모드 (Codex CLI, OpenAI Responses API 등)
+pip install greeum
+greeum mcp serve -t http --host 0.0.0.0 --port 8800
 ```
 
 ## 3. 인증 및 보안

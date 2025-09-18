@@ -159,12 +159,17 @@ class PromptsListResult(BaseModel):
 class SessionMessage(BaseModel):
     """세션 메시지 래퍼 (공식 SDK 패턴)"""
     message: Union[JSONRPCRequest, JSONRPCResponse, JSONRPCErrorResponse, JSONRPCNotification]
-    
+
     @classmethod
     def from_json(cls, json_str: str) -> "SessionMessage":
         """JSON 문자열에서 SessionMessage 생성"""
         import json
         data = json.loads(json_str)
+        return cls.from_dict(data)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SessionMessage":
+        """사전 객체에서 SessionMessage 생성"""
         
         # 메시지 타입 구분
         if "method" in data:
@@ -176,12 +181,16 @@ class SessionMessage(BaseModel):
             message = JSONRPCErrorResponse.model_validate(data)
         else:
             message = JSONRPCResponse.model_validate(data)
-            
+
         return cls(message=message)
-    
+
     def to_json(self) -> str:
         """JSON 문자열로 변환"""
         return self.message.model_dump_json()
+
+    def to_dict(self) -> Dict[str, Any]:
+        """사전 객체로 변환"""
+        return self.message.model_dump(mode="json")
 
 # =============================================================================
 # Greeum Tool Schemas

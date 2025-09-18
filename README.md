@@ -51,6 +51,13 @@ pip install greeum
 greeum mcp serve
 ```
 
+### For Codex/OpenAI MCP Clients
+```bash
+pip install greeum
+greeum mcp serve -t http --host 0.0.0.0 --port 8800
+# Register http://127.0.0.1:8800/mcp as the MCP endpoint
+```
+
 ## 📝 Usage
 
 ### Adding Memories

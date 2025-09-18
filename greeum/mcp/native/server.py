@@ -16,9 +16,8 @@ import sys
 import os
 import signal
 import atexit
-import psutil
-import subprocess
-from typing import Optional, Dict, Any
+import asyncio
+from typing import Optional, Dict, Any, Union, List
 
 # Check anyio dependency
 try:
@@ -109,7 +108,7 @@ class GreeumNativeMCPServer:
 
             # v3.1.1rc2.dev9: Initialize DFS search for smart routing
             from greeum.core.dfs_search import DFSSearchEngine
-            dfs_search = DFSSearchEngine(db_manager, stm_manager)
+            dfs_search = DFSSearchEngine(db_manager)
 
             self.greeum_components = {
                 'db_manager': db_manager,
@@ -135,7 +134,13 @@ class GreeumNativeMCPServer:
 
             # v3.1.1rc2.dev9: Start model loading AFTER connection established
             # This prevents connection timeout while still pre-loading the model
-            asyncio.create_task(self._async_model_loading())
+            try:
+                # Check if event loop is running
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._async_model_loading())
+            except RuntimeError:
+                # No running event loop, skip background loading
+                logger.debug("No event loop available for background model loading")
 
         except Exception as e:
             logger.error(f"Failed to initialize server: {e}")
@@ -267,7 +272,7 @@ class GreeumNativeMCPServer:
     async def _handle_message(self, session_message: SessionMessage) -> Optional[SessionMessage]:
         """
         메시지 처리 핸들러
-        
+
         Args:
             session_message: 수신된 세션 메시지
             
@@ -295,9 +300,9 @@ class GreeumNativeMCPServer:
                     error=error
                 )
                 return SessionMessage(message=error_response)
-            
+
             return None
-    
+
     async def shutdown(self) -> None:
         """서버 종료 처리"""
         try:
@@ -315,6 +320,30 @@ class GreeumNativeMCPServer:
             logger.info("Server shutdown completed")
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
+
+    async def handle_jsonrpc(self, payload: Union[Dict[str, Any], List[Dict[str, Any]]]) -> Union[Dict[str, Any], List[Dict[str, Any]], None]:
+        """HTTP/WS 전송을 위한 JSON-RPC 메시지 처리"""
+
+        if not self.initialized:
+            await self.initialize()
+
+        async def _process_single(message_dict: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+            session_message = SessionMessage.from_dict(message_dict)
+            response_message = await self._handle_message(session_message)
+            if response_message is None:
+                return None
+            return response_message.to_dict()
+
+        # JSON-RPC batch 처리 지원
+        if isinstance(payload, list):
+            responses: List[Dict[str, Any]] = []
+            for item in payload:
+                response = await _process_single(item)
+                if response is not None:
+                    responses.append(response)
+            return responses
+
+        return await _process_single(payload)
 
 # =============================================================================
 # CLI 진입점 함수
