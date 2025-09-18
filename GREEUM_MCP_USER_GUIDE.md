@@ -124,6 +124,32 @@ Greeum v2.2.7 **automatically detects your environment** and chooses the optimal
 
 ---
 
+## 🌐 HTTP MCP Server (Codex CLI & OpenAI)
+
+Use the built-in HTTP transport when a client requires a URL-based MCP endpoint:
+
+```bash
+pip install greeum
+greeum mcp serve -t http --host 0.0.0.0 --port 8800
+```
+
+Register the endpoint with your agent (example Codex CLI configuration):
+
+```json
+{
+  "mcpServers": {
+    "greeum": {
+      "server_url": "http://127.0.0.1:8800/mcp",
+      "allowed_tools": ["add_memory", "search_memory", "get_memory_stats", "usage_analytics"]
+    }
+  }
+}
+```
+
+The server exposes `POST /mcp` for JSON-RPC 2.0 requests and `GET /healthz` for readiness checks. Keep the port firewalled if you expose it beyond localhost, and supply authorization headers through your client when required.
+
+---
+
 ## 🛡️ Security Best Practices
 
 ### ⚠️ Important Security Considerations

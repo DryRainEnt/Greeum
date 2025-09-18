@@ -181,12 +181,18 @@ Please try again or check database status."""
                 block_index = block_result
                 logger.info(f"[DEBUG] Extracted block_index from int: {block_index}")
             elif isinstance(block_result, dict):
-                # v3.1.1b3: BlockManager.add_block returns full block dict
-                block_index = block_result.get('block_index', block_result.get('id', 'unknown'))
-                logger.info(f"[DEBUG] Extracted block_index from dict: {block_index}")
-                logger.info(f"[DEBUG] Dict keys available: {list(block_result.keys()) if block_result else 'None'}")
+                # v3.1.1rc2.dev7: _add_memory_via_v3_core returns full block dict
+                # Try multiple keys for compatibility
+                block_index = block_result.get('block_index') or block_result.get('id')
+                if block_index is None:
+                    # Log available keys for debugging
+                    logger.error(f"[DEBUG] No block_index or id in dict. Keys: {list(block_result.keys())}")
+                    block_index = 'unknown'
+                else:
+                    logger.info(f"[DEBUG] Successfully extracted block_index from dict: {block_index}")
             else:
                 logger.error(f"[DEBUG] Unexpected block_result type: {type(block_result)}, value: {block_result}")
+                block_index = 'unknown'
 
             # Verify save if we have an index
             if block_index and block_index != 'unknown':
@@ -276,26 +282,55 @@ This may indicate a transaction rollback or database issue."""
         # Select slot via smart routing
         slot, smart_routing_info = self._auto_select_slot(stm_manager, content, result.get('embedding'))
 
+        # v3.1.1rc2.dev9: Add retry logic for DB lock issues
+        MAX_RETRIES = 3
+        RETRY_DELAY = 0.5  # Start with 500ms
+
+        for attempt in range(MAX_RETRIES):
+            try:
+                # DEBUG: Before add_block call
+                if attempt > 0:
+                    logger.info(f"[DEBUG] Retry attempt {attempt + 1}/{MAX_RETRIES} for add_block")
+                else:
+                    logger.info(f"[DEBUG] Starting add_block - Content: {content[:50]}..., Slot: {slot}")
+                    logger.info(f"[DEBUG] Keywords: {result.get('keywords', [])}, Tags: {result.get('tags', [])}")
+
+                # Use v3 BlockManager.add_block
+                block_result = block_manager.add_block(
+                    context=content,
+                    keywords=result.get("keywords", []),
+                    tags=result.get("tags", []),
+                    embedding=result.get("embedding", []),
+                    importance=importance,
+                    metadata={'source': 'mcp', 'smart_routing': smart_routing_info} if smart_routing_info else {'source': 'mcp'},
+                    slot=slot
+                )
+
+                # If successful, break out of retry loop
+                if block_result is not None:
+                    break
+
+            except Exception as retry_error:
+                logger.warning(f"add_block attempt {attempt + 1} failed: {retry_error}")
+                if attempt < MAX_RETRIES - 1:
+                    # Exponential backoff
+                    import time
+                    time.sleep(RETRY_DELAY * (2 ** attempt))
+                else:
+                    # Final attempt failed, will go to fallback
+                    logger.error(f"All {MAX_RETRIES} attempts failed, using fallback")
+                    raise retry_error
+
+        # Check if all retries failed with None result
+        if block_result is None:
+            logger.error("All add_block attempts returned None, using fallback")
+            return self._add_memory_fallback(content, importance, slot, smart_routing_info)
+
+        # DEBUG: After add_block call
+        logger.info(f"[DEBUG] add_block returned: {type(block_result)} = {block_result}")
+
+        # Normalize result
         try:
-            # DEBUG: Before add_block call
-            logger.info(f"[DEBUG] Starting add_block - Content: {content[:50]}..., Slot: {slot}")
-            logger.info(f"[DEBUG] Keywords: {result.get('keywords', [])}, Tags: {result.get('tags', [])}")
-
-            # Use v3 BlockManager.add_block
-            block_result = block_manager.add_block(
-                context=content,
-                keywords=result.get("keywords", []),
-                tags=result.get("tags", []),
-                embedding=result.get("embedding", []),
-                importance=importance,
-                metadata={'source': 'mcp', 'smart_routing': smart_routing_info} if smart_routing_info else {'source': 'mcp'},
-                slot=slot
-            )
-
-            # DEBUG: After add_block call
-            logger.info(f"[DEBUG] add_block returned: {type(block_result)} = {block_result}")
-
-            # Normalize result
             if isinstance(block_result, int):
                 return {
                     'id': block_result,
@@ -312,10 +347,9 @@ This may indicate a transaction rollback or database issue."""
                 return block_result
             else:
                 return {'id': 'unknown', 'slot': slot}
-
         except Exception as e:
-            logger.warning(f"Core path failed, using fallback: {e}")
-            return self._add_memory_fallback(content, importance, slot)
+            logger.warning(f"Core path normalization failed, using fallback: {e}")
+            return self._add_memory_fallback(content, importance, slot, smart_routing_info)
 
     def _auto_select_slot(self, stm_manager, content: str, embedding: Optional[List[float]]):
         """Auto-select slot via smart routing - v3.1.0rc7 improvement"""
@@ -442,8 +476,8 @@ This may indicate a transaction rollback or database issue."""
                 return slot, {'enabled': False, 'placement': 'fallback_empty'}
         return "A", {'enabled': False, 'placement': 'fallback_default'}
 
-    def _add_memory_fallback(self, content: str, importance: float, slot: str) -> Dict[str, Any]:
-        """Fallback 메모리 저장"""
+    def _add_memory_fallback(self, content: str, importance: float, slot: str, smart_routing_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Fallback 메모리 저장 (v3.1.1rc2.dev9: smart_routing_info 파라미터 추가)"""
         from greeum.text_utils import process_user_input
         from datetime import datetime
         import json
@@ -493,11 +527,23 @@ This may indicate a transaction rollback or database issue."""
             "importance": result.get("importance", 0.5),
             "hash": hash_value,
             "prev_hash": prev_hash,
-            "slot": slot
+            "slot": slot,
+            "before": prev_hash,  # Add before node hash for parent retrieval
+            "metadata": {
+                "smart_routing": smart_routing_info if smart_routing_info else {'enabled': False, 'placement': 'fallback'}
+            }
         }
 
         # DB 직접 저장
         db_manager.add_block(block_data)
+
+        # v3.1.1rc2.dev7: Verify block was saved and return with confirmed index
+        verify_cursor = db_manager.conn.cursor()
+        verify_cursor.execute("SELECT block_index FROM blocks WHERE block_index = ?", (block_index,))
+        if not verify_cursor.fetchone():
+            logger.error(f"Block {block_index} not found after save")
+            return None
+
         return block_data
 
     async def _handle_search_memory(self, arguments: Dict[str, Any]) -> str:

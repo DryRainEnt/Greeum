@@ -312,12 +312,13 @@ def search(query: str, count: int, threshold: float, slot: str, radius: int, no_
 
 # MCP 서브명령어들
 @mcp.command()
-@click.option('--transport', '-t', default='stdio', help='Transport type (stdio/ws)')
-@click.option('--port', '-p', default=3000, help='WebSocket port (if transport=ws)')
+@click.option('--transport', '-t', default='stdio', help='Transport type (stdio/http/ws)')
+@click.option('--port', '-p', default=3000, help='Port for HTTP or WebSocket transports')
+@click.option('--host', default='127.0.0.1', show_default=True, help='Host for HTTP transport')
 @click.option('--verbose', '-v', is_flag=True, help='Enable verbose logging (INFO level)')
 @click.option('--debug', '-d', is_flag=True, help='Enable debug logging (DEBUG level)')
 @click.option('--quiet', '-q', is_flag=True, help='[DEPRECATED] Use default behavior instead')
-def serve(transport: str, port: int, verbose: bool, debug: bool, quiet: bool):
+def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quiet: bool):
     """Start MCP server for Claude Code integration"""  
     # 로깅 레벨 결정 (새로운 정책: 기본은 조용함)
     if debug:
@@ -360,6 +361,21 @@ def serve(transport: str, port: int, verbose: bool, debug: bool, quiet: bool):
                 if verbose or debug:
                     click.echo(f"MCP server error: {e}")
                 sys.exit(1)
+    elif transport == 'http':
+        try:
+            from ..mcp.native.http_server import run_http_server
+            run_http_server(host=host, port=port, log_level=log_level)
+        except RuntimeError as e:
+            if verbose or debug:
+                click.echo(str(e))
+            sys.exit(1)
+        except KeyboardInterrupt:
+            if verbose or debug:
+                click.echo("\nMCP HTTP server stopped")
+        except Exception as e:
+            if verbose or debug:
+                click.echo(f"MCP HTTP server error: {e}")
+            sys.exit(1)
     elif transport == 'websocket':
         try:
             # WebSocket transport (향후 확장)

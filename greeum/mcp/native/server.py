@@ -10,13 +10,13 @@ Core Features:
 - 100% business logic reuse
 - Log output suppression support for Claude Desktop compatibility
 """
-
 import logging
 import sys
 import os
 import signal
 import atexit
-from typing import Optional, Dict, Any
+import asyncio
+from typing import Optional, Dict, Any, Union, List
 
 # Check anyio dependency
 try:
@@ -80,17 +80,21 @@ class GreeumNativeMCPServer:
     async def initialize(self) -> None:
         """
         서버 컴포넌트 초기화
-        
+
         초기화 순서:
-        1. Greeum 컴포넌트 초기화
-        2. MCP 도구 핸들러 생성
-        3. JSON-RPC 프로토콜 프로세서 생성
+        1. 기존 좀비 프로세스 정리 (v3.1.1rc2.dev8)
+        2. Greeum 컴포넌트 초기화
+        3. MCP 도구 핸들러 생성
+        4. JSON-RPC 프로토콜 프로세서 생성
         """
         if self.initialized:
             return
-            
+
         if not GREEUM_AVAILABLE:
             raise RuntimeError("ERROR: Greeum core components not available")
+
+        # v3.1.1rc2.dev8: Clean up orphaned MCP processes before starting
+        self._cleanup_orphaned_processes()
         
         try:
             # Greeum 컴포넌트 초기화 (기존 패턴과 동일)
@@ -102,14 +106,19 @@ class GreeumNativeMCPServer:
             duplicate_detector = DuplicateDetector(db_manager)
             quality_validator = QualityValidator()
             usage_analytics = UsageAnalytics(db_manager)
-            
+
+            # v3.1.1rc2.dev9: Initialize DFS search for smart routing
+            from greeum.core.dfs_search import DFSSearchEngine
+            dfs_search = DFSSearchEngine(db_manager)
+
             self.greeum_components = {
                 'db_manager': db_manager,
                 'block_manager': block_manager,
                 'stm_manager': stm_manager,
                 'duplicate_detector': duplicate_detector,
                 'quality_validator': quality_validator,
-                'usage_analytics': usage_analytics
+                'usage_analytics': usage_analytics,
+                'dfs_search': dfs_search  # v3.1.1rc2.dev9: Add for smart routing
             }
             
             logger.info("Greeum components initialized successfully")
@@ -121,11 +130,120 @@ class GreeumNativeMCPServer:
             self.protocol_processor = JSONRPCProcessor(self.tools_handler)
             
             self.initialized = True
+            self.model_ready = False  # v3.1.1rc2.dev9: Track model loading status
             logger.info("Native MCP server initialization completed")
-            
+
+            # v3.1.1rc2.dev9: Start model loading AFTER connection established
+            # This prevents connection timeout while still pre-loading the model
+            try:
+                # Check if event loop is running
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._async_model_loading())
+            except RuntimeError:
+                # No running event loop, skip background loading
+                logger.debug("No event loop available for background model loading")
+
         except Exception as e:
             logger.error(f"Failed to initialize server: {e}")
             raise RuntimeError(f"Server initialization failed: {e}")
+
+    def _cleanup_orphaned_processes(self):
+        """
+        v3.1.1rc2.dev8: 기존 orphaned Greeum MCP 프로세스 정리
+
+        판별 기준:
+        1. 같은 명령어 패턴 (greeum mcp serve)
+        2. PPID=1 (orphaned process)
+        3. stdin/stdout/stderr가 연결 끊김
+        4. 현재 프로세스보다 오래됨
+        """
+        try:
+            import psutil
+            current_pid = os.getpid()
+            current_process = psutil.Process(current_pid)
+            current_cmdline = ' '.join(current_process.cmdline())
+
+            # greeum mcp serve 명령을 실행 중인 프로세스만 찾기
+            if 'greeum' not in current_cmdline or 'mcp' not in current_cmdline:
+                return  # Not an MCP server process, skip cleanup
+
+            cleaned = 0
+            for proc in psutil.process_iter(['pid', 'ppid', 'cmdline', 'create_time']):
+                try:
+                    # Skip current process
+                    if proc.pid == current_pid:
+                        continue
+
+                    # Check if it's a Greeum MCP process
+                    cmdline = ' '.join(proc.cmdline() or [])
+                    if 'greeum' in cmdline and 'mcp' in cmdline and 'serve' in cmdline:
+                        # Check if orphaned (PPID=1 on Unix/Linux/Mac)
+                        if proc.ppid() == 1:
+                            # Check if older than current process
+                            if proc.create_time() < current_process.create_time():
+                                logger.info(f"Terminating orphaned MCP process: PID={proc.pid}, age={current_process.create_time() - proc.create_time():.0f}s")
+                                proc.terminate()
+                                cleaned += 1
+                                # Wait a bit for graceful termination
+                                try:
+                                    proc.wait(timeout=1.0)
+                                except psutil.TimeoutExpired:
+                                    # Force kill if not terminated
+                                    logger.warning(f"Force killing stubborn process: PID={proc.pid}")
+                                    proc.kill()
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+
+            if cleaned > 0:
+                logger.info(f"Cleaned up {cleaned} orphaned MCP processes")
+
+        except ImportError:
+            logger.debug("psutil not available, skipping orphan cleanup")
+        except Exception as e:
+            logger.warning(f"Failed to cleanup orphaned processes: {e}")
+
+    async def _async_model_loading(self):
+        """
+        v3.1.1rc2.dev9: 비동기 모델 로딩
+
+        연결이 완료된 후 백그라운드에서 모델을 로드합니다.
+        이렇게 하면 초기 연결은 즉시 성공하고, 모델은 천천히 로드됩니다.
+        """
+        try:
+            logger.info("Starting async model loading in background...")
+
+            # asyncio 환경에서 별도 스레드로 동기 작업 실행
+            import asyncio
+            from greeum.embedding_models import get_embedding
+
+            # Run synchronous model loading in executor
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,  # Default executor (ThreadPoolExecutor)
+                lambda: get_embedding("Model initialization test")
+            )
+
+            self.model_ready = True
+            logger.info("✅ Model loading completed successfully")
+
+        except Exception as e:
+            logger.error(f"Model loading failed: {e}")
+            # Model loading failure is not critical for basic operations
+            # Some features may be degraded but server continues
+            self.model_ready = False
+
+    async def wait_for_model(self, timeout: float = 30.0):
+        """
+        v3.1.1rc2.dev9: 모델 로딩 대기
+
+        모델이 필요한 작업 전에 호출하여 모델 로딩을 대기합니다.
+        """
+        start_time = asyncio.get_event_loop().time()
+        while not self.model_ready:
+            if asyncio.get_event_loop().time() - start_time > timeout:
+                raise TimeoutError("Model loading timeout")
+            await asyncio.sleep(0.1)
+        return True
     
     async def run_stdio(self) -> None:
         """
@@ -155,7 +273,7 @@ class GreeumNativeMCPServer:
     async def _handle_message(self, session_message: SessionMessage) -> Optional[SessionMessage]:
         """
         메시지 처리 핸들러
-        
+
         Args:
             session_message: 수신된 세션 메시지
             
@@ -183,9 +301,9 @@ class GreeumNativeMCPServer:
                     error=error
                 )
                 return SessionMessage(message=error_response)
-            
+
             return None
-    
+
     async def shutdown(self) -> None:
         """서버 종료 처리"""
         try:
@@ -203,6 +321,30 @@ class GreeumNativeMCPServer:
             logger.info("Server shutdown completed")
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
+
+    async def handle_jsonrpc(self, payload: Union[Dict[str, Any], List[Dict[str, Any]]]) -> Union[Dict[str, Any], List[Dict[str, Any]], None]:
+        """HTTP/WS 전송을 위한 JSON-RPC 메시지 처리"""
+
+        if not self.initialized:
+            await self.initialize()
+
+        async def _process_single(message_dict: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+            session_message = SessionMessage.from_dict(message_dict)
+            response_message = await self._handle_message(session_message)
+            if response_message is None:
+                return None
+            return response_message.to_dict()
+
+        # JSON-RPC batch 처리 지원
+        if isinstance(payload, list):
+            responses: List[Dict[str, Any]] = []
+            for item in payload:
+                response = await _process_single(item)
+                if response is not None:
+                    responses.append(response)
+            return responses
+
+        return await _process_single(payload)
 
 # =============================================================================
 # CLI 진입점 함수

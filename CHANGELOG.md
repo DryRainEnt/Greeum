@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## [3.1.1rc3.dev3] - 2025-01-16
+
+### Fixed
+- Added missing `import asyncio` in the native MCP server so the HTTP transport initializes without crashing.
+
+## [3.1.1rc3.dev2] - 2025-01-16
+
+### Added
+- Bundled HTTP MCP transport dependencies (FastAPI and uvicorn) into the core package so `pip install greeum` enables URL-based MCP servers immediately.
+- Enabled `greeum mcp serve -t http` as an out-of-the-box option for Codex, Gemini, and OpenAI clients.
+
+### Changed
+- Updated documentation and onboarding guides to reflect the built-in HTTP MCP server flow.
+
 ## [3.1.0rc3.dev2] - 2025-01-16
 
 ### Fixed
