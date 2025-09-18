@@ -12,14 +12,21 @@ Greeum Native MCP Server - STDIO Transport Layer
 
 import sys
 import logging
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Optional, TYPE_CHECKING, Any
 from io import TextIOWrapper
 
 try:
     import anyio
-    from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
 except ImportError:
     raise ImportError("anyio is required. Install with: pip install anyio>=4.5")
+
+from .compat import CancelledError, EndOfStream
+
+if TYPE_CHECKING:  # pragma: no cover - type hints only
+    from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
+else:  # 런타임 호환성을 위해 지연 로딩
+    MemoryObjectSendStream = Any  # type: ignore
+    MemoryObjectReceiveStream = Any  # type: ignore
 
 from .types import SessionMessage
 
@@ -98,7 +105,7 @@ class STDIOTransport:
                     logger.error(f"Failed to parse message: {e}")
                     logger.debug(f"Raw message: {line}")
                     
-        except anyio.EndOfStream:
+        except EndOfStream:
             logger.info("📥 STDIN closed")
         except Exception as e:
             logger.error(f"STDIN reader error: {e}")
@@ -129,7 +136,7 @@ class STDIOTransport:
                 except Exception as e:
                     logger.error(f"Failed to write message: {e}")
                     
-        except anyio.EndOfStream:
+        except EndOfStream:
             logger.info("📤 STDOUT closed")
         except Exception as e:
             logger.error(f"[ERROR] STDOUT writer error: {e}")
@@ -201,7 +208,7 @@ class STDIOServer:
             # KeyboardInterrupt를 조용히 처리 (상위로 전파하지 않음)
             logger.info("[PROCESS] Graceful shutdown initiated")
             raise
-        except anyio.CancelledError:
+        except CancelledError:
             # anyio TaskGroup 취소를 조용히 처리
             logger.info("[PROCESS] Tasks cancelled for shutdown")
             raise
@@ -220,7 +227,7 @@ class STDIOServer:
                 if response:
                     await self.transport.send_message(response)
                     
-        except anyio.EndOfStream:
+        except EndOfStream:
             logger.info("🔚 Message processor ended")
         except Exception as e:
             logger.error(f"[ERROR] Message processor error: {e}")
