@@ -1,6 +1,122 @@
 from abc import ABC, abstractmethod
-import numpy as np
+import logging
+import time
+import threading
+from dataclasses import dataclass
+from enum import Enum
 from typing import List, Dict, Optional, Union, Any
+
+import numpy as np
+
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class EmbeddingConfig:
+    """임베딩 모델 동작을 제어하는 구성 값"""
+
+    cache_size: int = 1000
+    enable_caching: bool = True
+    batch_size: int = 32
+    performance_monitoring: bool = True
+
+
+class EmbeddingQuality(Enum):
+    """임베딩 품질 레벨"""
+
+    EXCELLENT = "excellent"
+    GOOD = "good"
+    FAIR = "fair"
+    POOR = "poor"
+
+
+class PerformanceMonitor:
+    """임베딩 인코딩 속도/빈도 측정을 담당"""
+
+    def __init__(self, enabled: bool = True) -> None:
+        self.enabled = enabled
+        self.lock = threading.RLock()
+        self.stats: Dict[str, Union[int, float]] = {
+            "total_encodings": 0,
+            "total_time": 0.0,
+            "cache_hits": 0,
+            "cache_misses": 0,
+        }
+
+    def record_encoding(self, duration: float) -> None:
+        if not self.enabled:
+            return
+        with self.lock:
+            self.stats["total_encodings"] += 1
+            self.stats["total_time"] += duration
+
+    def record_cache(self, hit: bool) -> None:
+        if not self.enabled:
+            return
+        with self.lock:
+            key = "cache_hits" if hit else "cache_misses"
+            self.stats[key] += 1
+
+    def as_dict(self) -> Dict[str, Union[int, float]]:
+        if not self.enabled:
+            return {}
+        with self.lock:
+            stats = dict(self.stats)
+            if stats["total_encodings"]:
+                stats["avg_encoding_time"] = stats["total_time"] / stats["total_encodings"]
+            else:
+                stats["avg_encoding_time"] = 0.0
+            total_cache = stats["cache_hits"] + stats["cache_misses"]
+            stats["cache_hit_rate"] = (
+                stats["cache_hits"] / total_cache if total_cache else 0.0
+            )
+            return stats
+
+
+class LRUEmbeddingCache:
+    """간단한 LRU 캐시 구현 (thread-safe)"""
+
+    def __init__(self, max_size: int = 1000) -> None:
+        self.max_size = max(0, max_size)
+        self._entries: Dict[str, List[float]] = {}
+        self._order: List[str] = []
+        self.lock = threading.RLock()
+
+    def get(self, key: str) -> Optional[List[float]]:
+        if self.max_size == 0:
+            return None
+        with self.lock:
+            if key not in self._entries:
+                return None
+            # 최근 사용 갱신
+            self._order.remove(key)
+            self._order.append(key)
+            return self._entries[key][:]
+
+    def put(self, key: str, value: List[float]) -> None:
+        if self.max_size == 0:
+            return
+        with self.lock:
+            if key in self._entries:
+                self._order.remove(key)
+            elif len(self._order) >= self.max_size:
+                oldest = self._order.pop(0)
+                self._entries.pop(oldest, None)
+            self._entries[key] = value[:]
+            self._order.append(key)
+
+    def clear(self) -> None:
+        with self.lock:
+            self._entries.clear()
+            self._order.clear()
+
+    def stats(self) -> Dict[str, int]:
+        with self.lock:
+            return {
+                "size": len(self._order),
+                "max_size": self.max_size,
+            }
 
 class EmbeddingModel(ABC):
     """임베딩 모델 추상 클래스"""
@@ -75,45 +191,63 @@ class EmbeddingModel(ABC):
 
 class SimpleEmbeddingModel(EmbeddingModel):
     """간단한 임베딩 모델 (개발용)"""
-    
-    def __init__(self, dimension: int = 128):
-        """
-        간단한 임베딩 모델 초기화
-        
-        Args:
-            dimension: 임베딩 차원
-        """
+
+    def __init__(self, dimension: int = 128, config: Optional[EmbeddingConfig] = None):
+        """간단한 임베딩 모델 초기화."""
+
         self.dimension = dimension
-    
-    def encode(self, text: str) -> List[float]:
-        """
-        텍스트를 간단한 해싱 기반 벡터로 인코딩
-        
-        Args:
-            text: 인코딩할 텍스트
-            
-        Returns:
-            임베딩 벡터
-        """
-        # 일관된 시드 생성 (텍스트 길이와 문자 기반)
+        self.config = config or EmbeddingConfig()
+        self._cache = LRUEmbeddingCache(self.config.cache_size) if self.config.enable_caching else None
+        self._monitor = PerformanceMonitor(self.config.performance_monitoring)
+
+    def _encode_without_cache(self, text: str) -> List[float]:
         seed = len(text)
-        
-        # 각 문자의 유니코드 값 합산
         for char in text:
             seed += ord(char)
-        
-        # 시드 설정
         np.random.seed(seed % 10000)
-        
-        # 임베딩 생성
         embedding = np.random.normal(0, 1, self.dimension)
-        
-        # 정규화
         norm = np.linalg.norm(embedding)
         if norm > 0:
             embedding = embedding / norm
-            
         return embedding.tolist()
+
+    def encode(self, text: str) -> List[float]:
+        start = time.perf_counter()
+        if self._cache:
+            cached = self._cache.get(text)
+            if cached is not None:
+                self._monitor.record_cache(True)
+                self._monitor.record_encoding(time.perf_counter() - start)
+                return cached
+        self._monitor.record_cache(False)
+        vector = self._encode_without_cache(text)
+        if self._cache:
+            self._cache.put(text, vector)
+        self._monitor.record_encoding(time.perf_counter() - start)
+        return vector
+
+    def batch_encode(self, texts: List[str]) -> List[List[float]]:
+        embeddings: List[List[float]] = []
+        batch_start = 0
+        batch_size = max(1, self.config.batch_size)
+        while batch_start < len(texts):
+            batch = texts[batch_start : batch_start + batch_size]
+            for text in batch:
+                embeddings.append(self.encode(text))
+            batch_start += batch_size
+        return embeddings
+
+    def clear_cache(self) -> None:
+        if self._cache:
+            self._cache.clear()
+
+    def get_performance_stats(self) -> Dict[str, Any]:
+        stats = self._monitor.as_dict()
+        if self._cache:
+            stats["cache"] = self._cache.stats()
+        stats["dimension"] = self.dimension
+        stats["model"] = self.get_model_name()
+        return stats
     
     def get_dimension(self) -> int:
         """임베딩 차원 반환"""
@@ -127,7 +261,7 @@ class SimpleEmbeddingModel(EmbeddingModel):
 class SentenceTransformerModel(EmbeddingModel):
     """Sentence-Transformers 기반 의미적 임베딩 모델 (Lazy Loading)"""
 
-    def __init__(self, model_name: str = None):
+    def __init__(self, model_name: str = None, config: Optional[EmbeddingConfig] = None):
         """
         Sentence-Transformer 모델 초기화 (Lazy Loading)
 
@@ -143,17 +277,15 @@ class SentenceTransformerModel(EmbeddingModel):
         self._dimension = None
         self._needs_padding = None
         self.target_dimension = 768  # Greeum 표준 차원
-
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.debug(f"SentenceTransformerModel initialized with lazy loading for: {model_name}")
+        self.config = config or EmbeddingConfig()
+        self._cache = LRUEmbeddingCache(self.config.cache_size) if self.config.enable_caching else None
+        self._monitor = PerformanceMonitor(self.config.performance_monitoring)
+        logger.debug("SentenceTransformerModel initialized with lazy loading for: %s", model_name)
 
     def _ensure_model_loaded(self):
         """모델이 로드되어 있는지 확인하고 필요 시 로드"""
         if self.model is None:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.info(f"Loading SentenceTransformer model: {self.model_name}")
+            logger.info("Loading SentenceTransformer model: %s", self.model_name)
 
             try:
                 from sentence_transformers import SentenceTransformer
@@ -178,7 +310,7 @@ class SentenceTransformerModel(EmbeddingModel):
             # 768차원 호환성을 위한 차원 변환 필요 여부
             self._needs_padding = (self._dimension < 768)
 
-            logger.info(f"Model loaded successfully: {self.model_name} (dim: {self._dimension})")
+            logger.info("Model loaded successfully: %s (dim: %s)", self.model_name, self._dimension)
 
     @property
     def dimension(self):
@@ -204,49 +336,64 @@ class SentenceTransformerModel(EmbeddingModel):
         Returns:
             임베딩 벡터 (768차원으로 패딩됨)
         """
-        # 처음 사용 시 모델 로드
-        self._ensure_model_loaded()
+        start = time.perf_counter()
+        cache_key = text
+        if self._cache:
+            cached = self._cache.get(cache_key)
+            if cached is not None:
+                self._monitor.record_cache(True)
+                self._monitor.record_encoding(time.perf_counter() - start)
+                return cached
 
-        # 의미적 임베딩 생성
+        self._monitor.record_cache(False)
+
+        self._ensure_model_loaded()
         embedding = self.model.encode(text, convert_to_numpy=True)
 
-        # 차원 조정 (384 -> 768)
         if self.needs_padding:
-            # Zero padding to maintain compatibility
             padded = np.zeros(self.target_dimension)
-            padded[:self.dimension] = embedding
-            return padded.tolist()
+            padded[: self.dimension] = embedding
+            embedding = padded
         elif len(embedding) > self.target_dimension:
-            # Truncate if needed
-            return embedding[:self.target_dimension].tolist()
-        else:
-            return embedding.tolist()
+            embedding = embedding[: self.target_dimension]
+
+        embedding = np.asarray(embedding, dtype=float)
+        norm = np.linalg.norm(embedding)
+        if norm > 0:
+            embedding = embedding / norm
+        embedding_list = embedding.tolist()
+
+        if self._cache:
+            self._cache.put(cache_key, embedding_list)
+        self._monitor.record_encoding(time.perf_counter() - start)
+        return embedding_list
 
     def batch_encode(self, texts: List[str]) -> List[List[float]]:
-        """
-        텍스트 배치를 벡터로 인코딩 (성능 최적화)
+        """배치 인코딩은 encode를 반복 호출하여 캐시/통계와 일관성을 유지한다."""
 
-        Args:
-            texts: 인코딩할 텍스트 목록
+        embeddings: List[List[float]] = []
+        batch_start = 0
+        batch_size = max(1, self.config.batch_size)
 
-        Returns:
-            임베딩 벡터 목록
-        """
-        # 처음 사용 시 모델 로드
-        self._ensure_model_loaded()
+        while batch_start < len(texts):
+            batch = texts[batch_start : batch_start + batch_size]
+            for text in batch:
+                embeddings.append(self.encode(text))
+            batch_start += batch_size
 
-        embeddings = self.model.encode(texts, convert_to_numpy=True, batch_size=32)
+        return embeddings
 
-        if self.needs_padding:
-            # Batch padding
-            padded_embeddings = []
-            for emb in embeddings:
-                padded = np.zeros(self.target_dimension)
-                padded[:self.dimension] = emb
-                padded_embeddings.append(padded.tolist())
-            return padded_embeddings
-        else:
-            return embeddings.tolist()
+    def clear_cache(self) -> None:
+        if self._cache:
+            self._cache.clear()
+
+    def get_performance_stats(self) -> Dict[str, Any]:
+        stats = self._monitor.as_dict()
+        if self._cache:
+            stats["cache"] = self._cache.stats()
+        stats["dimension"] = self.target_dimension
+        stats["model"] = self.get_model_name()
+        return stats
 
     def get_dimension(self) -> int:
         """
@@ -290,9 +437,6 @@ class EmbeddingRegistry:
 
     def _auto_init(self):
         """레지스트리 초기화 시 최적 모델 자동 선택"""
-        import logging
-        logger = logging.getLogger(__name__)
-
         try:
             # 1순위: Sentence-Transformers (의미 기반)
             model = SentenceTransformerModel()
@@ -319,14 +463,15 @@ class EmbeddingRegistry:
     def register_model(self, name: str, model: EmbeddingModel, set_as_default: bool = False) -> None:
         """
         임베딩 모델 등록
-        
+
         Args:
             name: 모델 이름
             model: 임베딩 모델 인스턴스
             set_as_default: 기본 모델로 설정할지 여부
         """
         self.models[name] = model
-        
+        logger.debug("Registered embedding model '%s' (%s)", name, model.get_model_name())
+
         if set_as_default or self.default_model is None:
             self.default_model = name
     
@@ -366,16 +511,27 @@ class EmbeddingRegistry:
     def encode(self, text: str, model_name: Optional[str] = None) -> List[float]:
         """
         지정한 모델로 텍스트 인코딩
-        
+
         Args:
             text: 인코딩할 텍스트
             model_name: 사용할 모델 이름 (없으면 기본 모델)
-            
+
         Returns:
             임베딩 벡터
         """
         model = self.get_model(model_name)
         return model.encode(text)
+
+    def clear_caches(self) -> None:
+        for model in self.models.values():
+            if hasattr(model, "clear_cache"):
+                model.clear_cache()
+
+    def stats(self) -> Dict[str, Dict[str, Any]]:
+        return {
+            name: model.get_performance_stats() if hasattr(model, "get_performance_stats") else {}
+            for name, model in self.models.items()
+        }
 
 
 # 전역 레지스트리 인스턴스 생성
@@ -398,13 +554,25 @@ def get_embedding(text: str, model_name: Optional[str] = None) -> List[float]:
 def register_embedding_model(name: str, model: EmbeddingModel, set_as_default: bool = False) -> None:
     """
     임베딩 모델 등록
-    
+
     Args:
         name: 모델 이름
         model: 임베딩 모델 인스턴스
         set_as_default: 기본 모델로 설정할지 여부
     """
     embedding_registry.register_model(name, model, set_as_default)
+
+
+def clear_embedding_caches() -> None:
+    """등록된 모든 임베딩 모델 캐시 초기화"""
+
+    embedding_registry.clear_caches()
+
+
+def get_embedding_stats() -> Dict[str, Dict[str, Any]]:
+    """모델별 성능 통계 조회"""
+
+    return embedding_registry.stats()
 
 
 def init_sentence_transformer(model_name: str = None, set_as_default: bool = True) -> SentenceTransformerModel:
@@ -421,9 +589,6 @@ def init_sentence_transformer(model_name: str = None, set_as_default: bool = Tru
     Raises:
         ImportError: sentence-transformers가 설치되지 않은 경우
     """
-    import logging
-    logger = logging.getLogger(__name__)
-
     try:
         # 모델 생성
         model = SentenceTransformerModel(model_name)
@@ -444,8 +609,9 @@ def init_sentence_transformer(model_name: str = None, set_as_default: bool = Tru
             )
 
         logger.info(
-            f"SentenceTransformer 모델 초기화 성공: {model.get_model_name()} "
-            f"(실제: {actual_dim}D, 패딩: 768D)"
+            "SentenceTransformer 모델 초기화 성공: %s (실제: %sD, 패딩: 768D)",
+            model.get_model_name(),
+            actual_dim,
         )
 
         return model
@@ -478,9 +644,6 @@ def auto_init_best_model() -> str:
     Returns:
         초기화된 모델 타입 ("sentence-transformer" | "simple")
     """
-    import logging
-    logger = logging.getLogger(__name__)
-
     # 이미 모델이 등록되어 있으면 스킵
     if embedding_registry.default_model:
         logger.debug(f"이미 기본 모델이 설정됨: {embedding_registry.default_model}")

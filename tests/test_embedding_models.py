@@ -17,14 +17,17 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from tests.base_test_case import BaseGreeumTestCase
 from greeum.embedding_models import (
-    EmbeddingModel, 
-    SimpleEmbeddingModel, 
+    EmbeddingModel,
+    SimpleEmbeddingModel,
     SentenceTransformerModel,
     EmbeddingRegistry,
+    EmbeddingConfig,
     get_embedding,
     register_embedding_model,
     init_sentence_transformer,
-    auto_init_best_model
+    auto_init_best_model,
+    get_embedding_stats,
+    clear_embedding_caches,
 )
 
 
@@ -160,6 +163,41 @@ class TestEmbeddingModels(BaseGreeumTestCase):
         special_text = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
         special_embedding = self.simple_model.encode(special_text)
         self.assertEqual(len(special_embedding), 128, "Special characters should produce valid embedding")
+
+    def test_embedding_config_and_stats(self):
+        """임베딩 구성 및 통계 수집이 동작하는지 확인"""
+        config = EmbeddingConfig(cache_size=2, batch_size=2)
+        model = SimpleEmbeddingModel(dimension=32, config=config)
+
+        model.encode("cache-test")
+        model.encode("cache-test")
+
+        stats = model.get_performance_stats()
+        self.assertIn("cache", stats)
+        self.assertGreaterEqual(stats["cache"]["max_size"], 2)
+        self.assertGreaterEqual(stats.get("total_encodings", 0), 2)
+
+    def test_global_stats_helpers(self):
+        """전역 캐시/통계 헬퍼 함수 동작 확인"""
+        clear_embedding_caches()
+        stats_before = get_embedding_stats()
+        default_model_name = next(iter(stats_before))
+
+        cache_info = stats_before[default_model_name].get("cache")
+        if cache_info:
+            self.assertEqual(cache_info.get("size", 0), 0)
+
+        get_embedding("global-cache-test")
+        get_embedding("global-cache-test")
+
+        stats_after = get_embedding_stats()[default_model_name]
+        self.assertGreaterEqual(stats_after.get("total_encodings", 0), 2)
+
+        clear_embedding_caches()
+        stats_cleared = get_embedding_stats()[default_model_name]
+        cache_info = stats_cleared.get("cache")
+        if cache_info:
+            self.assertEqual(cache_info.get("size", 0), 0)
     
     @unittest.skipIf(True, "Sentence-Transformers not available in test environment")
     def test_sentence_transformer_consistency(self):
