@@ -16,6 +16,8 @@ import sys
 import os
 import signal
 import atexit
+import psutil
+import subprocess
 from typing import Optional, Dict, Any
 
 # Check anyio dependency
@@ -78,17 +80,21 @@ class GreeumNativeMCPServer:
     async def initialize(self) -> None:
         """
         서버 컴포넌트 초기화
-        
+
         초기화 순서:
-        1. Greeum 컴포넌트 초기화
-        2. MCP 도구 핸들러 생성
-        3. JSON-RPC 프로토콜 프로세서 생성
+        1. 기존 좀비 프로세스 정리 (v3.1.1rc2.dev8)
+        2. Greeum 컴포넌트 초기화
+        3. MCP 도구 핸들러 생성
+        4. JSON-RPC 프로토콜 프로세서 생성
         """
         if self.initialized:
             return
-            
+
         if not GREEUM_AVAILABLE:
             raise RuntimeError("ERROR: Greeum core components not available")
+
+        # v3.1.1rc2.dev8: Clean up orphaned MCP processes before starting
+        self._cleanup_orphaned_processes()
         
         try:
             # Greeum 컴포넌트 초기화 (기존 패턴과 동일)
@@ -127,6 +133,61 @@ class GreeumNativeMCPServer:
         except Exception as e:
             logger.error(f"Failed to initialize server: {e}")
             raise RuntimeError(f"Server initialization failed: {e}")
+
+    def _cleanup_orphaned_processes(self):
+        """
+        v3.1.1rc2.dev8: 기존 orphaned Greeum MCP 프로세스 정리
+
+        판별 기준:
+        1. 같은 명령어 패턴 (greeum mcp serve)
+        2. PPID=1 (orphaned process)
+        3. stdin/stdout/stderr가 연결 끊김
+        4. 현재 프로세스보다 오래됨
+        """
+        try:
+            import psutil
+            current_pid = os.getpid()
+            current_process = psutil.Process(current_pid)
+            current_cmdline = ' '.join(current_process.cmdline())
+
+            # greeum mcp serve 명령을 실행 중인 프로세스만 찾기
+            if 'greeum' not in current_cmdline or 'mcp' not in current_cmdline:
+                return  # Not an MCP server process, skip cleanup
+
+            cleaned = 0
+            for proc in psutil.process_iter(['pid', 'ppid', 'cmdline', 'create_time']):
+                try:
+                    # Skip current process
+                    if proc.pid == current_pid:
+                        continue
+
+                    # Check if it's a Greeum MCP process
+                    cmdline = ' '.join(proc.cmdline() or [])
+                    if 'greeum' in cmdline and 'mcp' in cmdline and 'serve' in cmdline:
+                        # Check if orphaned (PPID=1 on Unix/Linux/Mac)
+                        if proc.ppid() == 1:
+                            # Check if older than current process
+                            if proc.create_time() < current_process.create_time():
+                                logger.info(f"Terminating orphaned MCP process: PID={proc.pid}, age={current_process.create_time() - proc.create_time():.0f}s")
+                                proc.terminate()
+                                cleaned += 1
+                                # Wait a bit for graceful termination
+                                try:
+                                    proc.wait(timeout=1.0)
+                                except psutil.TimeoutExpired:
+                                    # Force kill if not terminated
+                                    logger.warning(f"Force killing stubborn process: PID={proc.pid}")
+                                    proc.kill()
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+
+            if cleaned > 0:
+                logger.info(f"Cleaned up {cleaned} orphaned MCP processes")
+
+        except ImportError:
+            logger.debug("psutil not available, skipping orphan cleanup")
+        except Exception as e:
+            logger.warning(f"Failed to cleanup orphaned processes: {e}")
 
     def _start_model_prewarming(self):
         """
