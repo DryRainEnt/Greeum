@@ -106,14 +106,19 @@ class GreeumNativeMCPServer:
             duplicate_detector = DuplicateDetector(db_manager)
             quality_validator = QualityValidator()
             usage_analytics = UsageAnalytics(db_manager)
-            
+
+            # v3.1.1rc2.dev9: Initialize DFS search for smart routing
+            from greeum.core.dfs_search import DFSSearchEngine
+            dfs_search = DFSSearchEngine(db_manager, stm_manager)
+
             self.greeum_components = {
                 'db_manager': db_manager,
                 'block_manager': block_manager,
                 'stm_manager': stm_manager,
                 'duplicate_detector': duplicate_detector,
                 'quality_validator': quality_validator,
-                'usage_analytics': usage_analytics
+                'usage_analytics': usage_analytics,
+                'dfs_search': dfs_search  # v3.1.1rc2.dev9: Add for smart routing
             }
             
             logger.info("Greeum components initialized successfully")
@@ -125,10 +130,12 @@ class GreeumNativeMCPServer:
             self.protocol_processor = JSONRPCProcessor(self.tools_handler)
             
             self.initialized = True
+            self.model_ready = False  # v3.1.1rc2.dev9: Track model loading status
             logger.info("Native MCP server initialization completed")
 
-            # Start model pre-warming in background (non-blocking)
-            self._start_model_prewarming()
+            # v3.1.1rc2.dev9: Start model loading AFTER connection established
+            # This prevents connection timeout while still pre-loading the model
+            asyncio.create_task(self._async_model_loading())
 
         except Exception as e:
             logger.error(f"Failed to initialize server: {e}")
@@ -189,31 +196,48 @@ class GreeumNativeMCPServer:
         except Exception as e:
             logger.warning(f"Failed to cleanup orphaned processes: {e}")
 
-    def _start_model_prewarming(self):
+    async def _async_model_loading(self):
         """
-        백그라운드에서 모델 pre-warming 시작
+        v3.1.1rc2.dev9: 비동기 모델 로딩
 
-        이 함수는 non-blocking으로 실행되어 서버 시작을 지연시키지 않음.
-        첫 번째 메모리 저장이나 검색 요청 시 모델이 이미 로드되어 있어
-        타임아웃을 방지함.
+        연결이 완료된 후 백그라운드에서 모델을 로드합니다.
+        이렇게 하면 초기 연결은 즉시 성공하고, 모델은 천천히 로드됩니다.
         """
-        import threading
+        try:
+            logger.info("Starting async model loading in background...")
 
-        def prewarm_model():
-            try:
-                logger.info("Starting model pre-warming in background...")
-                from greeum.embedding_models import get_embedding
+            # asyncio 환경에서 별도 스레드로 동기 작업 실행
+            import asyncio
+            from greeum.embedding_models import get_embedding
 
-                # 더미 텍스트로 모델 초기화 트리거
-                _ = get_embedding("Model pre-warming test")
-                logger.info("✅ Model pre-warming completed successfully")
-            except Exception as e:
-                logger.warning(f"Model pre-warming failed (non-critical): {e}")
+            # Run synchronous model loading in executor
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,  # Default executor (ThreadPoolExecutor)
+                lambda: get_embedding("Model initialization test")
+            )
 
-        # 별도 스레드에서 실행하여 서버 시작을 차단하지 않음
-        prewarm_thread = threading.Thread(target=prewarm_model, daemon=True)
-        prewarm_thread.start()
-        logger.debug("Model pre-warming thread started")
+            self.model_ready = True
+            logger.info("✅ Model loading completed successfully")
+
+        except Exception as e:
+            logger.error(f"Model loading failed: {e}")
+            # Model loading failure is not critical for basic operations
+            # Some features may be degraded but server continues
+            self.model_ready = False
+
+    async def wait_for_model(self, timeout: float = 30.0):
+        """
+        v3.1.1rc2.dev9: 모델 로딩 대기
+
+        모델이 필요한 작업 전에 호출하여 모델 로딩을 대기합니다.
+        """
+        start_time = asyncio.get_event_loop().time()
+        while not self.model_ready:
+            if asyncio.get_event_loop().time() - start_time > timeout:
+                raise TimeoutError("Model loading timeout")
+            await asyncio.sleep(0.1)
+        return True
     
     async def run_stdio(self) -> None:
         """
