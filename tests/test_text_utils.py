@@ -3,6 +3,7 @@
 """
 
 import unittest
+import pytest
 import numpy as np
 
 from tests.base_test_case import BaseGreeumTestCase
@@ -13,9 +14,11 @@ from greeum.text_utils import (
     compute_text_importance
 )
 
+@pytest.mark.fast
 class TestConvertNumpyTypes(BaseGreeumTestCase):
     """convert_numpy_types 함수 테스트"""
     
+    @pytest.mark.fast
     def test_convert_numpy_scalar_types(self):
         """numpy 스칼라 타입 변환 테스트"""
         # Numpy 정수형
