@@ -26,6 +26,7 @@ except ImportError:
     sys.exit(1)
 
 from .compat import CancelledError
+from greeum.mcp.environment_detector import choose_adapter
 
 # Greeum core imports
 try:
@@ -378,7 +379,7 @@ def cleanup_handler(signum=None, frame=None):
         if signum:
             sys.exit(0)
 
-def run_server_sync(log_level: str = 'quiet') -> None:
+def run_server_sync(log_level: str = 'quiet', detection: Optional[Dict[str, Any]] = None) -> None:
     """
     동기 래퍼 함수 (CLI에서 직접 호출 가능)
 
@@ -390,6 +391,40 @@ def run_server_sync(log_level: str = 'quiet') -> None:
 
     anyio.run() 사용으로 안전한 실행
     """
+    detection_summary = dict(detection or choose_adapter())
+    runtime = detection_summary.get("runtime", "unknown")
+    adapter_choice = detection_summary.get("adapter", "jsonrpc")
+    adapter_label = "FastMCPAdapter" if adapter_choice == "fastmcp" else "JSONRPCAdapter"
+    fallback_warning: Optional[str] = None
+    runner = run_native_mcp_server
+
+    if adapter_choice == "fastmcp":
+        try:
+            from greeum.mcp.adapters.fastmcp_adapter import FastMCPAdapter
+        except ImportError as exc:
+            fallback_warning = (
+                f"FastMCP adapter requested for runtime '{runtime}' but unavailable: {exc}. "
+                "Falling back to JSONRPCAdapter"
+            )
+            adapter_choice = "jsonrpc"
+            adapter_label = "JSONRPCAdapter"
+            detection_summary["adapter"] = "jsonrpc"
+        else:
+
+            async def _run_fastmcp_adapter() -> None:
+                adapter = FastMCPAdapter()
+                await adapter.run()
+
+            runner = _run_fastmcp_adapter
+
+    runtime_label = runtime.upper() if runtime != "unknown" else "UNKNOWN"
+    if runtime == "unknown":
+        logger.info("Runtime detection returned UNKNOWN -> using %s", adapter_label)
+    else:
+        logger.info("Detected %s runtime -> using %s", runtime_label, adapter_label)
+    if fallback_warning:
+        logger.warning(fallback_warning)
+
     # Register cleanup handlers (guard unsupported signals for cross-platform compatibility)
     for _sig_name in ("SIGTERM", "SIGINT", "SIGHUP"):
         if hasattr(signal, _sig_name):
@@ -416,10 +451,14 @@ def run_server_sync(log_level: str = 'quiet') -> None:
     # 로깅 레벨 적용
     logging.getLogger().setLevel(target_level)
     logger.setLevel(target_level)
-    
+
+    if target_level <= logging.DEBUG:
+        for key, value in detection_summary.get("details", {}).items():
+            logger.debug("env.%s=%s", key, value or "<empty>")
+
     try:
         # anyio.run() 사용 - asyncio.run() 대신
-        anyio.run(run_native_mcp_server)
+        anyio.run(runner)
     except KeyboardInterrupt:
         if not is_quiet:
             logger.info("Server stopped by user")

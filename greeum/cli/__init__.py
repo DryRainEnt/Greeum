@@ -339,10 +339,24 @@ def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quie
             click.echo("⚠️  Warning: --quiet is deprecated. Default behavior is now quiet.")
     
     if transport == 'stdio':
+        from greeum.mcp.environment_detector import choose_adapter
+        detection_summary = choose_adapter()
+
+        if verbose or debug:
+            runtime_label = detection_summary["runtime"].upper() if detection_summary["runtime"] != "unknown" else "UNKNOWN"
+            adapter_label = "FastMCPAdapter" if detection_summary["adapter"] == "fastmcp" else "JSONRPCAdapter"
+            click.echo(f"[NOTE] Runtime detection: {runtime_label} -> {adapter_label} (candidate)")
+
+        if debug:
+            details = detection_summary.get("details", {})
+            for key, value in details.items():
+                pretty_value = value if value else "(empty)"
+                click.echo(f"    {key}: {pretty_value}")
+
         try:
             # Native MCP Server 사용 (FastMCP 완전 배제, anyio 기반 안전한 실행)
             from ..mcp.native import run_server_sync
-            run_server_sync(log_level=log_level)
+            run_server_sync(log_level=log_level, detection=detection_summary)
         except ImportError as e:
             if verbose or debug:
                 click.echo(f"Native MCP server import failed: {e}")
