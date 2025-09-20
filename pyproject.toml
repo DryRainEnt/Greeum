@@ -43,7 +43,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=7.0", "pytest-cov", "responses>=0.23.0"]
+test = ["pytest>=7.0", "pytest-cov", "pytest-xdist>=3.0", "responses>=0.23.0"]
 dev = ["black", "isort", "flake8", "ruff"]
 mcp-http = ["fastapi>=0.110.0", "uvicorn[standard]>=0.22.0"]
 full = [
@@ -75,6 +75,36 @@ extend-ignore = [
     "E722", # bare except
     "F811"  # redefinition of variable
 ]
+
+[tool.pytest.ini_options]
+# 테스트 성능 최적화 설정
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# 마커 설정
+markers = [
+    "fast: 빠른 단위 테스트 (< 1초)",
+    "slow: 시간이 오래 걸리는 테스트 (1-10초)",
+    "integration: 통합 테스트",
+    "performance: 성능 테스트 (> 10초)",
+    "database: 데이터베이스 테스트",
+    "mcp: MCP 관련 테스트",
+    "embedding: 임베딩 모델 테스트"
+]
+
+# 기본 옵션
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--tb=short",
+    "--durations=10"
+]
+
+# 병렬 실행 설정 (기본값)
+# pytest -n auto 로 실행 시 자동 병렬화
 
 [project.scripts]
 greeum = "greeum.cli:main"
