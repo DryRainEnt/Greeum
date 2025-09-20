@@ -26,6 +26,7 @@ except ImportError:
     sys.exit(1)
 
 from .compat import CancelledError
+from greeum.mcp.environment_detector import choose_adapter
 
 # Greeum core imports
 try:
@@ -378,7 +379,7 @@ def cleanup_handler(signum=None, frame=None):
         if signum:
             sys.exit(0)
 
-def run_server_sync(log_level: str = 'quiet') -> None:
+def run_server_sync(log_level: str = 'quiet', detection: Optional[Dict[str, Any]] = None) -> None:
     """
     동기 래퍼 함수 (CLI에서 직접 호출 가능)
 
@@ -390,6 +391,27 @@ def run_server_sync(log_level: str = 'quiet') -> None:
 
     anyio.run() 사용으로 안전한 실행
     """
+    # 환경 감지 정보는 디버깅/로깅 목적으로만 사용
+    detection_summary = dict(detection or choose_adapter())
+    runtime = detection_summary.get("runtime", "unknown")
+    
+    # 항상 native JSONRPCAdapter 사용 (STDIO 타임아웃 문제 방지)
+    runner = run_native_mcp_server
+    
+    # 실제 사용하는 어댑터와 디버그 정보 일치시키기 위해 요약 정규화
+    detection_summary["adapter"] = "jsonrpc"
+    
+    # 디버깅/로깅 목적으로만 환경 정보 출력
+    if log_level == 'debug':
+        runtime_label = runtime.upper() if runtime != "unknown" else "UNKNOWN"
+        logger.debug("Environment detection: %s runtime detected", runtime_label)
+        logger.debug("Using native JSONRPCAdapter (STDIO transport)")
+        
+        # 환경 세부 정보 출력
+        details = detection_summary.get("details", {})
+        for key, value in details.items():
+            logger.debug("env.%s=%s", key, value or "<empty>")
+
     # Register cleanup handlers (guard unsupported signals for cross-platform compatibility)
     for _sig_name in ("SIGTERM", "SIGINT", "SIGHUP"):
         if hasattr(signal, _sig_name):
@@ -416,10 +438,14 @@ def run_server_sync(log_level: str = 'quiet') -> None:
     # 로깅 레벨 적용
     logging.getLogger().setLevel(target_level)
     logger.setLevel(target_level)
-    
+
+    if target_level <= logging.DEBUG:
+        for key, value in detection_summary.get("details", {}).items():
+            logger.debug("env.%s=%s", key, value or "<empty>")
+
     try:
         # anyio.run() 사용 - asyncio.run() 대신
-        anyio.run(run_native_mcp_server)
+        anyio.run(runner)
     except KeyboardInterrupt:
         if not is_quiet:
             logger.info("Server stopped by user")
