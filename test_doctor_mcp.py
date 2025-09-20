@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test script for MCP system_doctor tool
 """
@@ -20,7 +21,7 @@ from greeum.core.quality_validator import QualityValidator
 from greeum.core.duplicate_detector import DuplicateDetector
 
 
-async def test_system_doctor():
+async def _run_system_doctor_checks():
     """Test the system_doctor MCP tool"""
 
     # Initialize components
@@ -79,5 +80,9 @@ async def test_system_doctor():
     print("✅ MCP system_doctor tool test completed!")
 
 
+def test_system_doctor():
+    asyncio.run(_run_system_doctor_checks())
+
+
 if __name__ == "__main__":
-    asyncio.run(test_system_doctor())
+    asyncio.run(_run_system_doctor_checks())
