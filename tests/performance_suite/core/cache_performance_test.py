@@ -4,6 +4,7 @@ Phase 1 캐시 성능 테스트
 234ms → 50ms (5배 개선) 목표 검증
 """
 
+import pytest
 import time
 import sys
 import os
@@ -15,6 +16,7 @@ sys.path.insert(0, os.path.abspath('../../..'))
 from greeum.core.cache_manager import CacheManager
 from greeum.embedding_models import get_embedding
 
+@pytest.mark.performance
 def test_cache_performance():
     """캐시 성능 개선 테스트"""
     print("🧪 Phase 1 캐시 성능 테스트 시작")

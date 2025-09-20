@@ -2,6 +2,7 @@
 텍스트 유틸리티 함수 테스트
 """
 
+import pytest
 import unittest
 import numpy as np
 
@@ -13,6 +14,8 @@ from greeum.text_utils import (
     compute_text_importance
 )
 
+@pytest.mark.fast
+@pytest.mark.unit
 class TestConvertNumpyTypes(BaseGreeumTestCase):
     """convert_numpy_types 함수 테스트"""
     

@@ -13,6 +13,7 @@ ThreadSafeDatabaseManager와 호환성 래퍼의 thread-safe 기능을 검증합
 Progressive Replacement Plan Phase 2의 핵심 검증 시스템입니다.
 """
 
+import pytest
 import unittest
 import os
 import threading
@@ -28,6 +29,8 @@ from greeum.core.thread_safe_db import ThreadSafeDatabaseManager
 from greeum.core.database_manager_v2 import DatabaseManager
 
 
+@pytest.mark.slow
+@pytest.mark.database
 class TestThreadSafeDatabaseManager(BaseGreeumTestCase):
     """ThreadSafeDatabaseManager 기본 thread-safe 기능 테스트"""
     
