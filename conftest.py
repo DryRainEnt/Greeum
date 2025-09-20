@@ -1,6 +1,5 @@
 """
 Greeum 프로젝트 테스트 설정 및 픽스처
-테스트 성능 최적화를 위한 공통 설정
 """
 
 import pytest
@@ -115,39 +114,3 @@ def performance_timer():
     
     return PerformanceTimer()
 
-# 테스트 분류 헬퍼 함수들
-def is_fast_test(test_func) -> bool:
-    """빠른 테스트인지 판단"""
-    # 함수명이나 docstring에서 단서 찾기
-    func_name = test_func.__name__.lower()
-    docstring = (test_func.__doc__ or "").lower()
-    
-    fast_indicators = ['unit', 'simple', 'basic', 'mock', 'fast']
-    slow_indicators = ['integration', 'performance', 'e2e', 'slow', 'heavy']
-    
-    # 명시적으로 slow로 표시된 경우
-    if any(indicator in func_name or indicator in docstring for indicator in slow_indicators):
-        return False
-    
-    # fast로 표시된 경우
-    if any(indicator in func_name or indicator in docstring for indicator in fast_indicators):
-        return True
-    
-    # 기본값: 단위 테스트는 fast로 간주
-    return 'test_' in func_name and 'integration' not in func_name
-
-def is_performance_test(test_func) -> bool:
-    """성능 테스트인지 판단"""
-    func_name = test_func.__name__.lower()
-    docstring = (test_func.__doc__ or "").lower()
-    
-    performance_indicators = ['performance', 'benchmark', 'speed', 'timing', 'load']
-    return any(indicator in func_name or indicator in docstring for indicator in performance_indicators)
-
-def is_integration_test(test_func) -> bool:
-    """통합 테스트인지 판단"""
-    func_name = test_func.__name__.lower()
-    docstring = (test_func.__doc__ or "").lower()
-    
-    integration_indicators = ['integration', 'e2e', 'end_to_end', 'workflow', 'complete']
-    return any(indicator in func_name or indicator in docstring for indicator in integration_indicators)

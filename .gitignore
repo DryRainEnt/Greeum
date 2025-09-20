@@ -76,6 +76,9 @@ final_*.py
 big_o_*.py
 *_test_results_*.json
 
+# 테스트 결과 디렉토리
+test_results/
+
 # 임시 가상환경들
 venv*/
 test-env/
