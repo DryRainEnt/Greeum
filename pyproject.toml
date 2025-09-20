@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "greeum"
-version = "3.1.1rc3.dev3"
+version = "3.1.1rc4.dev1"
 description = "Context-Dependent Neural Memory System for LLMs with GraphIndex beam search, STM/LTM consolidation, and semantic tagging"
 authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -60,7 +60,7 @@ full = [
 include = ["greeum*"]
 
 [tool.setuptools.package-data]
-"greeum" = ["py.typed"]
+"greeum" = ["py.typed", "automation/workflow_guide.md"]
 
 [tool.ruff]
 line-length = 120
@@ -78,3 +78,5 @@ extend-ignore = [
 
 [project.scripts]
 greeum = "greeum.cli:main"
+greeum-workflow = "greeum.automation.workflow:workflow"
+greeum-digest = "greeum.automation.digest:digest"
