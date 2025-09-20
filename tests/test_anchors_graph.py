@@ -22,8 +22,14 @@ import json
 import sys
 from datetime import datetime
 
+import pytest
+import importlib.util
+
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+if importlib.util.find_spec('sentence_transformers') is None:
+    pytest.skip('Anchor/graph tests require sentence-transformers dependency', allow_module_level=True)
 
 from greeum.anchors import AnchorManager
 from greeum.graph import GraphIndex
@@ -278,7 +284,9 @@ class TestIntegratedSystem(BaseGreeumTestCase):
     def setUp(self):
         """Set up integrated test environment."""
         super().setUp()
-        self.search_engine = SearchEngine()
+        self.db_manager = DatabaseManager()
+        self.block_manager = BlockManager(self.db_manager)
+        self.search_engine = SearchEngine(block_manager=self.block_manager)
     
     def test_localized_vs_global_search_performance(self):
         """Test performance comparison between localized and global search."""
@@ -366,7 +374,9 @@ class TestPerformanceRegression(BaseGreeumTestCase):
     def setUp(self):
         """Set up performance test environment.""" 
         super().setUp()
-        self.search_engine = SearchEngine()
+        self.db_manager = DatabaseManager()
+        self.block_manager = BlockManager(self.db_manager)
+        self.search_engine = SearchEngine(block_manager=self.block_manager)
     
     def test_search_performance_regression(self):
         """Test that anchor-enhanced search doesn't degrade baseline performance."""

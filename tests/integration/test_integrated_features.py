@@ -79,7 +79,7 @@ def test_integrated_features():
     
     # 3. CLI 명령어 시뮬레이션 (앵커 검색)
     print("\n3. CLI 앵커 검색 테스트 (--slot A --radius 2)")
-    results = block_manager.search_with_slots(
+    search_payload = block_manager.search_with_slots(
         "프로젝트",
         limit=5,
         use_slots=True,
@@ -88,8 +88,16 @@ def test_integrated_features():
         fallback=True
     )
     
+    results = search_payload.get('items', [])
+    search_meta = search_payload.get('meta', {})
     print(f"   결과: {len(results)}개")
-    graph_used = any(r.get('graph_used') for r in results)
+    graph_used = (
+        search_meta.get('search_type') == 'graph'
+        or any(
+            result.get('_meta', search_meta).get('search_type') == 'graph'
+            for result in results
+        )
+    )
     print(f"   그래프 검색: {'✅' if graph_used else '❌'}")
     
     # 4. STM 승격 테스트

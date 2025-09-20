@@ -1,9 +1,18 @@
+import pytest
+import sentence_transformers
+
+if getattr(sentence_transformers.SentenceTransformer, 'is_stub', False):
+    pytest.skip('SentenceTransformer backend unavailable; skipping memory evolution tests', allow_module_level=True)
+
 from greeum.memory_evolution import MemoryEvolutionManager
 from greeum.core.block_manager import BlockManager
 
 
 def test_summarize_blocks():
-    bm = BlockManager(use_faiss=False)
+    from greeum.core.database_manager import DatabaseManager
+
+    db_manager = DatabaseManager()
+    bm = BlockManager(db_manager)
     me = MemoryEvolutionManager(bm.db_manager)
 
     # add two blocks

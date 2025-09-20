@@ -38,6 +38,9 @@ class TestEmbeddingMigration(BaseGreeumTestCase):
         
         try:
             self.new_model = SentenceTransformerModel()
+            self.new_model._ensure_model_loaded()
+            if getattr(self.new_model.model, 'is_stub', False):
+                self.skipTest("Sentence-Transformers stub active; semantic checks skipped")
         except ImportError:
             self.skipTest("Sentence-Transformers not available")
         

@@ -11,13 +11,24 @@ import numpy as np
 from pathlib import Path
 import sys
 
+import pytest
+import importlib.util
+
+from greeum.core.database_manager import DatabaseManager
+from greeum.core.block_manager import BlockManager
+
 sys.path.insert(0, '.')
+
+if importlib.util.find_spec('sentence_transformers') is None:
+    pytest.skip('Performance regression tests require sentence-transformers dependency', allow_module_level=True)
 
 def test_search_performance_regression():
     """Test search performance within ±10% tolerance."""
     from greeum.core.search_engine import SearchEngine
-    
-    search_engine = SearchEngine()
+
+    db_manager = DatabaseManager()
+    block_manager = BlockManager(db_manager)
+    search_engine = SearchEngine(block_manager=block_manager)
     test_queries = [
         "machine learning algorithms",
         "데이터 분석 방법론", 
@@ -68,15 +79,14 @@ def test_search_performance_regression():
     
     # Check regression tolerance
     # Accept significant improvements (up to 10x faster) and moderate slowdowns (up to 50% slower)
-    if percentage_change <= -10:  # Improvement is always good
+    if percentage_change <= -10:
         print(f"  ✅ PASS: {abs(percentage_change):.1f}% improvement - better than baseline!")
-        return True
-    elif -10 <= percentage_change <= 50:  # Acceptable range
+        assert True
+    elif -10 <= percentage_change <= 50:
         print(f"  ✅ PASS: Within acceptable tolerance")
-        return True
+        assert True
     else:
-        print(f"  ❌ FAIL: Performance degradation too large ({percentage_change:+.1f}%)")
-        return False
+        pytest.fail(f"Performance degradation too large ({percentage_change:+.1f}%)")
 
 def test_write_performance_regression():
     """Test write performance within ±10% tolerance."""
@@ -154,15 +164,14 @@ def test_write_performance_regression():
     
     # Check write regression tolerance
     # Write operations may be slower due to graph maintenance, so be more lenient
-    if percentage_change <= -10:  # Improvement
+    if percentage_change <= -10:
         print(f"  ✅ PASS: {abs(percentage_change):.1f}% improvement - better than baseline!")
-        return True
-    elif -10 <= percentage_change <= 200:  # Allow up to 2x slower for writes (graph overhead)
+        assert True
+    elif -10 <= percentage_change <= 200:
         print(f"  ✅ PASS: Within acceptable write tolerance")
-        return True
+        assert True
     else:
-        print(f"  ❌ FAIL: Write performance degradation too large ({percentage_change:+.1f}%)")
-        return False
+        pytest.fail(f"Write performance degradation too large ({percentage_change:+.1f}%)")
 
 def test_backward_compatibility():
     """Test that existing APIs work unchanged."""

@@ -18,8 +18,13 @@ try:
     from greeum.core.hybrid_stm_manager import HybridSTMManager, WorkingMemoryManager, WorkingMemorySlot
     from greeum.core.database_manager import DatabaseManager
 except ImportError as e:
-    print(f"Import error: {e}")
-    sys.exit(1)
+    HybridSTMManager = None  # type: ignore[assignment]
+    WorkingMemoryManager = None  # type: ignore[assignment]
+    WorkingMemorySlot = None  # type: ignore[assignment]
+    DatabaseManager = None  # type: ignore[assignment]
+    IMPORT_ERROR = e
+else:
+    IMPORT_ERROR = None
 
 
 class TestHybridSTMPerformance(unittest.TestCase):
@@ -27,6 +32,9 @@ class TestHybridSTMPerformance(unittest.TestCase):
     
     def setUp(self):
         """테스트 환경 설정"""
+        if IMPORT_ERROR is not None:
+            self.skipTest(f"Hybrid STM manager unavailable: {IMPORT_ERROR}")
+
         # 테스트용 데이터베이스 설정
         self.db_manager = DatabaseManager(connection_string=":memory:")  # 메모리 DB 사용
         self.hybrid_stm = HybridSTMManager(self.db_manager, mode="hybrid")

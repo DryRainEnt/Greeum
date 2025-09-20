@@ -56,6 +56,7 @@ class TestMemoryClient(BaseGreeumTestCase):
         mock_error_response.json.return_value = {"error": "Server error"}
         mock_error_response.status_code = 503
         mock_error_response.raise_for_status.side_effect = requests.exceptions.HTTPError("503 Server Error")
+        mock_error_response.headers = {'Retry-After': '0.01'}
         
         # 두 번째 응답 (성공)
         mock_success_response = Mock()
@@ -150,10 +151,12 @@ class TestMemoryClient(BaseGreeumTestCase):
         # 요청 데이터 검증
         mock_post.assert_called_once()
         call_args = mock_post.call_args
-        self.assertIn("json", call_args.kwargs)
-        request_data = call_args.kwargs["json"]
-        self.assertEqual(request_data["context"], "Test memory")
-        self.assertEqual(request_data["importance"], 0.7)
+        self.assertIn("data", call_args.kwargs)
+        payload = json.loads(call_args.kwargs["data"])
+        self.assertEqual(payload["context"], "Test memory")
+        self.assertEqual(payload["importance"], 0.7)
+        headers = call_args.kwargs.get("headers", {})
+        self.assertEqual(headers.get("Content-Type"), 'application/json')
 
 
 class TestSimplifiedMemoryClient(BaseGreeumTestCase):

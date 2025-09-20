@@ -12,8 +12,14 @@ from typing import List, Dict, Any
 import os
 import sys
 
+import pytest
+import sentence_transformers
+
 # 프로젝트 루트를 path에 추가
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+if getattr(sentence_transformers.SentenceTransformer, 'is_stub', False):
+    pytest.skip('SentenceTransformer backend unavailable; skipping embedding model tests', allow_module_level=True)
 
 from tests.base_test_case import BaseGreeumTestCase
 from greeum.embedding_models import (

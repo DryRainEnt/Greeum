@@ -63,9 +63,11 @@ def setup_test_network():
     return None
 
 def test_anchor_search_with_links():
+    
     """링크가 있는 앵커 기반 검색 테스트"""
     
-    print("\n" + "=" * 60)
+    print()
+    print("=" * 60)
     print("앵커 기반 국소 탐색 효과 검증 (링크 포함)")
     print("=" * 60)
     
@@ -82,20 +84,19 @@ def test_anchor_search_with_links():
         return
     
     # 3. 슬롯 A에 앵커 설정
-    print(f"\n✅ 슬롯 A에 앵커 설정: 블록 #{anchor_id}")
+    print()
+    print(f"✅ 슬롯 A에 앵커 설정: 블록 #{anchor_id}")
     
-    # MemorySlot 객체 생성
     anchor_slot = MemorySlot(
         content=f"Anchor for block #{anchor_id}",
         timestamp=datetime.utcnow(),
         slot_type=SlotType.ANCHOR,
         ltm_anchor_block=anchor_id,
         search_radius=2,
-        importance_score=0.9
+        importance_score=0.9,
     )
     slots.slots['A'] = anchor_slot
     
-    # 설정 확인
     slot_a = slots.get_slot('A')
     if slot_a:
         print(f"   앵커 블록: {slot_a.ltm_anchor_block}")
@@ -105,91 +106,108 @@ def test_anchor_search_with_links():
     # 4. 검색 쿼리 준비
     test_query = "프로젝트"
     
-    print("\n" + "=" * 60)
+    print()
+    print("=" * 60)
     print(f"검색어: '{test_query}'")
     print("=" * 60)
     
     # 5. A: 표준 검색 (앵커 없이)
-    print("\n📊 A. 표준 검색 (앵커 없음)")
+    print()
+    print("📊 A. 표준 검색 (앵커 없음)")
     print("-" * 40)
     
     start_time = time.time()
-    standard_results = block_manager.search_with_slots(
-        test_query, 
+    standard_payload = block_manager.search_with_slots(
+        test_query,
         limit=5,
-        use_slots=False
+        use_slots=False,
     )
     standard_time = (time.time() - start_time) * 1000
+    
+    standard_results = standard_payload.get('items', [])
+    standard_meta = standard_payload.get('meta', {})
     
     print(f"⏱️  응답 시간: {standard_time:.2f}ms")
     print(f"📋 결과 수: {len(standard_results)}")
     
     for i, result in enumerate(standard_results[:3], 1):
-        print(f"\n  {i}. 블록 #{result.get('block_index', 'N/A')}")
+        result_meta = result.get('_meta', standard_meta)
+        print()
+        print(f"  {i}. 블록 #{result.get('block_index', 'N/A')}")
         print(f"     내용: {result.get('context', '')[:50]}...")
-        print(f"     타입: {result.get('search_type', 'standard')}")
+        print(f"     타입: {result_meta.get('search_type', 'standard')}")
     
     # 6. B: 앵커 기반 국소 검색
-    print("\n\n📊 B. 앵커 기반 국소 검색 (슬롯 A, 반경 2)")
+    print()
+    print()
+    print("📊 B. 앵커 기반 국소 검색 (슬롯 A, 반경 2)")
     print("-" * 40)
     
     start_time = time.time()
-    anchor_results = block_manager.search_with_slots(
+    anchor_payload = block_manager.search_with_slots(
         test_query,
         limit=5,
         use_slots=True,
         slot='A',
-        radius=2,
-        fallback=True
+        depth=3,
+        fallback=True,
     )
     anchor_time = (time.time() - start_time) * 1000
+    
+    anchor_results = anchor_payload.get('items', [])
+    anchor_meta = anchor_payload.get('meta', {})
     
     print(f"⏱️  응답 시간: {anchor_time:.2f}ms")
     print(f"📋 결과 수: {len(anchor_results)}")
     
-    graph_used = False
-    fallback_used = False
     hop_distances = []
+    graph_used = bool(anchor_meta.get('search_type') == 'graph')
+    fallback_used = bool(anchor_meta.get('fallback_used'))
     
     for i, result in enumerate(anchor_results[:3], 1):
-        print(f"\n  {i}. 블록 #{result.get('block_index', 'N/A')}")
+        result_meta = result.get('_meta', anchor_meta)
+        print()
+        print(f"  {i}. 블록 #{result.get('block_index', 'N/A')}")
         print(f"     내용: {result.get('context', '')[:50]}...")
-        print(f"     타입: {result.get('search_type', 'standard')}")
-        
-        if result.get('hop_distance') is not None:
-            print(f"     거리: {result['hop_distance']} hop")
-            hop_distances.append(result['hop_distance'])
-        
-        if result.get('graph_used'):
+        print(f"     타입: {result_meta.get('search_type', 'standard')}")
+    
+        hop_distance = result_meta.get('hop_distance')
+        if hop_distance is not None:
+            print(f"     거리: {hop_distance} hop")
+            hop_distances.append(hop_distance)
+    
+        if result_meta.get('search_type') == 'graph':
             graph_used = True
-        if result.get('fallback_used'):
+        if result_meta.get('fallback_used'):
             fallback_used = True
     
     # 7. 결과 분석
-    print("\n\n" + "=" * 60)
+    print()
+    print()
+    print("=" * 60)
     print("📈 분석 결과")
     print("=" * 60)
     
-    if anchor_time > 0:
-        speedup = standard_time / anchor_time
-    else:
-        speedup = 0
-        
-    print(f"\n⚡ 속도 비교:")
+    speedup = standard_time / anchor_time if anchor_time > 0 else 0
+    print()
+    print("⚡ 속도 비교:")
     print(f"   - 표준: {standard_time:.2f}ms")
     print(f"   - 앵커: {anchor_time:.2f}ms")
     print(f"   - 개선: {speedup:.2f}x")
     
     if hop_distances:
         avg_hops = sum(hop_distances) / len(hop_distances)
-        print(f"\n🎯 평균 홉 거리: {avg_hops:.1f}")
+        print()
+        print(f"🎯 평균 홉 거리: {avg_hops:.1f}")
     
-    print(f"\n🔍 검색 메타데이터:")
+    print()
+    print("🔍 검색 메타데이터:")
     print(f"   - 그래프 사용: {'✅' if graph_used else '❌'}")
     print(f"   - Fallback 사용: {'✅' if fallback_used else '❌'}")
     
     # 8. 슬롯 상태 확인
-    print(f"\n📌 현재 슬롯 상태:")
+    print()
+    print("📌 현재 슬롯 상태:")
     for slot_name in ['A', 'B', 'C']:
         slot = slots.get_slot(slot_name)
         if slot:
@@ -198,7 +216,9 @@ def test_anchor_search_with_links():
             print(f"   슬롯 {slot_name}: 비어있음")
     
     # 9. 권장사항
-    print("\n\n💡 권장사항:")
+    print()
+    print()
+    print("💡 권장사항:")
     if speedup > 1.5:
         print("   ✅ 앵커 기반 검색이 효과적입니다!")
     else:
@@ -209,7 +229,9 @@ def test_anchor_search_with_links():
     else:
         print("   ⚠️  그래프 검색이 작동하지 않았습니다.")
     
-    print("\n" + "=" * 60)
+    print()
+    print("=" * 60)
+    
 
 if __name__ == "__main__":
     test_anchor_search_with_links()

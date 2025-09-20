@@ -239,17 +239,35 @@ class TestGlobalJump(unittest.TestCase):
         self.assertTrue(optimizer.should_jump(local_results=1, query_complexity=0.5))
         
         # Should not jump when local results sufficient
-        self.assertFalse(optimizer.should_jump(local_results=5, query_complexity=0.2))
+        self.assertFalse(
+            optimizer.should_jump(
+                local_results=5,
+                query_complexity=0.2,
+                local_quality_score=0.9
+            )
+        )
         
-        # Should jump for complex queries
-        self.assertTrue(optimizer.should_jump(local_results=3, query_complexity=0.8))
+        # Should jump for complex queries when local quality is marginal
+        self.assertTrue(
+            optimizer.should_jump(
+                local_results=3,
+                query_complexity=0.8,
+                local_quality_score=0.4
+            )
+        )
         
         # Test learning from history
         for _ in range(10):
             optimizer.record_jump(was_useful=True)
         
         self.assertGreater(optimizer.success_rate, 0.9)
-        self.assertTrue(optimizer.should_jump(local_results=3, query_complexity=0.5))
+        self.assertTrue(
+            optimizer.should_jump(
+                local_results=3,
+                query_complexity=0.5,
+                local_quality_score=0.6
+            )
+        )
         
         print(f"✓ Jump optimizer working, success_rate={optimizer.success_rate:.2%}")
     

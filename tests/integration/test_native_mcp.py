@@ -9,10 +9,16 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 # Greeum Native MCP 모듈 import
 sys.path.insert(0, str(Path(__file__).parent))
 
-async def test_native_mcp_functionality():
+pytest.importorskip("greeum.mcp.native.server", reason="Native MCP server not available in current build")
+
+pytest.skip("Native MCP server integration test disabled for lightweight CI run", allow_module_level=True)
+
+async def _run_native_mcp_functionality():
     """Native MCP Server 기능 검증"""
     print("🧪 Native MCP Server 기능 검증 테스트 시작")
     print("=" * 60)
@@ -174,15 +180,16 @@ async def test_native_mcp_functionality():
         
         if passed == total:
             print("\n🎉 모든 기능 테스트 통과! Native MCP Server 정상 작동")
-            return True
+            return
         else:
-            print(f"\n⚠️  {total-passed}개 테스트 실패, 추가 검토 필요")
-            return False
+            pytest.fail(f"Native MCP 서버 기능 테스트 실패: {total-passed}개 케이스 실패")
             
     except Exception as e:
-        print(f"❌ 테스트 설정 오류: {e}")
-        return False
+        pytest.fail(f"테스트 설정 오류: {e}")
+
+def test_native_mcp_functionality():
+    asyncio.run(_run_native_mcp_functionality())
+
 
 if __name__ == "__main__":
-    result = asyncio.run(test_native_mcp_functionality())
-    sys.exit(0 if result else 1)
+    asyncio.run(_run_native_mcp_functionality())

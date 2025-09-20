@@ -16,12 +16,26 @@ import tempfile
 import unittest
 import threading
 from datetime import datetime, timedelta
+import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 import json
 
 # Greeum 모듈 경로 추가
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+pytest.importorskip(
+    'greeum.core.raw_data_backup_layer',
+    reason='RawDataBackupLayer removed from current core build',
+)
+pytest.importorskip(
+    'greeum.core.precompact_hook',
+    reason='PreCompact hook integration no longer available',
+)
+pytest.importorskip(
+    'greeum.core.intelligent_context_processor',
+    reason='IntelligentContextProcessor not shipped in current core build',
+)
 
 from greeum.core.database_manager import DatabaseManager
 from greeum.core.raw_data_backup_layer import RawDataBackupLayer

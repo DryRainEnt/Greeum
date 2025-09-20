@@ -12,12 +12,22 @@ import time
 import json
 import traceback
 import hashlib
+import pytest
 from datetime import datetime
 from typing import Dict, List, Any, Set, Tuple
 
 # 프로젝트 루트 디렉토리를 Python 경로에 추가
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 sys.path.insert(0, project_root)
+
+pytest.importorskip(
+    'greeum.core.hybrid_stm_manager',
+    reason='Hybrid STM manager no longer shipped with core runtime',
+)
+pytest.importorskip(
+    'greeum.core.phase_three_coordinator',
+    reason='Phase three coordinator not available in trimmed runtime',
+)
 
 from greeum import BlockManager, STMManager, CacheManager, DatabaseManager
 from greeum.core.hybrid_stm_manager import HybridSTMManager

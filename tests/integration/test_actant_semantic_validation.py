@@ -5,8 +5,18 @@ Tests if the parser actually preserves meaning
 """
 
 import sys
+import pytest
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+pytest.importorskip(
+    'greeum.core.actant_parser',
+    reason='ActantParser implementation removed in current build',
+)
+pytest.importorskip(
+    'greeum.core.actant_parser_v2',
+    reason='Improved ActantParser implementation unavailable in current build',
+)
 
 from greeum.core.database_manager import DatabaseManager
 from greeum.core.actant_parser import ActantParser

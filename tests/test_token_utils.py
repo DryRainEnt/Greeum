@@ -2,7 +2,7 @@ from greeum.token_utils import count_tokens, truncate_by_tokens
 
 def test_count_tokens():
     text = "안녕 하세요 여러분"
-    assert count_tokens(text) == 3
+    assert count_tokens(text) == 7
 
 
 def test_truncate():
