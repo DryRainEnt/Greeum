@@ -4,6 +4,7 @@ Native MCP Server 기능 검증 테스트
 실제 JSON-RPC 메시지로 MCP 도구 기능 테스트
 """
 
+import pytest
 import asyncio
 import json
 import sys
@@ -12,6 +13,9 @@ from pathlib import Path
 # Greeum Native MCP 모듈 import
 sys.path.insert(0, str(Path(__file__).parent))
 
+@pytest.mark.slow
+@pytest.mark.mcp
+@pytest.mark.integration
 async def test_native_mcp_functionality():
     """Native MCP Server 기능 검증"""
     print("🧪 Native MCP Server 기능 검증 테스트 시작")

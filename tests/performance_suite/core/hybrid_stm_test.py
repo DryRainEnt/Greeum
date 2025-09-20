@@ -4,6 +4,7 @@ Hybrid STM 시스템 테스트 - Phase 2 성능 검증
 Working Memory와 Legacy STM 통합 테스트
 """
 
+import pytest
 import time
 import unittest
 import os
@@ -17,11 +18,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 try:
     from greeum.core.hybrid_stm_manager import HybridSTMManager, WorkingMemoryManager, WorkingMemorySlot
     from greeum.core.database_manager import DatabaseManager
+    HYBRID_STM_AVAILABLE = True
 except ImportError as e:
     print(f"Import error: {e}")
-    sys.exit(1)
+    HYBRID_STM_AVAILABLE = False
 
 
+@pytest.mark.performance
+@pytest.mark.skipif(not HYBRID_STM_AVAILABLE, reason="Hybrid STM module not available")
 class TestHybridSTMPerformance(unittest.TestCase):
     """Hybrid STM 시스템 성능 테스트"""
     

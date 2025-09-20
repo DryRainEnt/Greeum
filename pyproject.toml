@@ -43,7 +43,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=7.0", "pytest-cov", "responses>=0.23.0"]
+test = ["pytest>=7.0", "pytest-cov", "pytest-asyncio", "responses>=0.23.0"]
 dev = ["black", "isort", "flake8", "ruff"]
 mcp-http = ["fastapi>=0.110.0", "uvicorn[standard]>=0.22.0"]
 full = [
@@ -74,6 +74,40 @@ extend-ignore = [
     "E402", # module level import not at top
     "E722", # bare except
     "F811"  # redefinition of variable
+]
+
+[tool.pytest.ini_options]
+# pytest 설정 (pytest.ini와 중복되지만 pyproject.toml 우선)
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+markers = [
+    "fast: 빠른 단위 테스트 (1초 미만)",
+    "slow: 느린 통합 테스트 (1초 이상)",
+    "performance: 성능 측정/벤치마크 테스트",
+    "database: 데이터베이스 의존적 테스트",
+    "mcp: MCP 서버/클라이언트 테스트",
+    "integration: 통합 테스트",
+    "unit: 순수 단위 테스트"
+]
+
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings",
+    "--color=yes"
+]
+
+durations = 10
+minversion = "7.0"
+
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::UserWarning:sqlalchemy.*"
 ]
 
 [project.scripts]

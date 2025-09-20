@@ -2,6 +2,7 @@
 API 클라이언트 테스트
 """
 
+import pytest
 import unittest
 import json
 from unittest.mock import patch, MagicMock, Mock
@@ -14,6 +15,8 @@ from greeum.client import (
     ClientError, ConnectionFailedError, RequestTimeoutError, APIError
 )
 
+@pytest.mark.fast
+@pytest.mark.unit
 class TestMemoryClient(BaseGreeumTestCase):
     """MemoryClient 테스트 클래스"""
     

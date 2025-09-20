@@ -6,6 +6,7 @@ Greeum v2.0.5 실용적 성능 측정 시스템
 충분한 샘플로 통계적 신뢰도를 확보하면서도 합리적인 실행 시간을 유지합니다.
 """
 
+import pytest
 import os
 import sys
 import json

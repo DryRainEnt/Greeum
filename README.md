@@ -32,6 +32,42 @@ That's it. Your AI now remembers.
 🔄 **Works with any AI** - GPT, Claude, or your custom model
 🛡️ **Your data stays yours** - Local storage, no cloud required
 
+## 🧪 Testing
+
+### Quick Test Execution
+```bash
+# Fast tests only (for development)
+pytest -m "fast"
+
+# All tests
+pytest
+
+# Specific test categories
+pytest -m "performance"  # Performance tests
+pytest -m "database"     # Database tests
+pytest -m "mcp"          # MCP server tests
+```
+
+### Using tox
+```bash
+# Fast tests
+tox -e fast
+
+# All test categories
+tox -e fast,slow,performance,integration
+```
+
+### Test Markers
+- `@pytest.mark.fast` - Quick unit tests (< 1s)
+- `@pytest.mark.slow` - Integration tests (> 1s)
+- `@pytest.mark.performance` - Performance benchmarks
+- `@pytest.mark.database` - Database-dependent tests
+- `@pytest.mark.mcp` - MCP server/client tests
+- `@pytest.mark.integration` - Integration tests
+- `@pytest.mark.unit` - Pure unit tests
+
+See [pytest markers guide](docs/pytest-markers-guide.md) for detailed usage.
+
 ## 🔧 Installation
 
 ### Basic Setup
