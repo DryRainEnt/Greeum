@@ -342,12 +342,12 @@ def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quie
         from greeum.mcp.environment_detector import choose_adapter
         detection_summary = choose_adapter()
 
-        if verbose or debug:
-            runtime_label = detection_summary["runtime"].upper() if detection_summary["runtime"] != "unknown" else "UNKNOWN"
-            adapter_label = "FastMCPAdapter" if detection_summary["adapter"] == "fastmcp" else "JSONRPCAdapter"
-            click.echo(f"[NOTE] Runtime detection: {runtime_label} -> {adapter_label} (candidate)")
-
+        # 환경 감지 정보는 디버깅/로깅 목적으로만 사용
         if debug:
+            runtime_label = detection_summary["runtime"].upper() if detection_summary["runtime"] != "unknown" else "UNKNOWN"
+            click.echo(f"[DEBUG] Environment detection: {runtime_label} runtime detected")
+            click.echo(f"[DEBUG] Using native JSONRPCAdapter (STDIO transport)")
+            
             details = detection_summary.get("details", {})
             for key, value in details.items():
                 pretty_value = value if value else "(empty)"

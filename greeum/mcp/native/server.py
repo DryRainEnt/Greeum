@@ -391,39 +391,23 @@ def run_server_sync(log_level: str = 'quiet', detection: Optional[Dict[str, Any]
 
     anyio.run() 사용으로 안전한 실행
     """
+    # 환경 감지 정보는 디버깅/로깅 목적으로만 사용
     detection_summary = dict(detection or choose_adapter())
     runtime = detection_summary.get("runtime", "unknown")
-    adapter_choice = detection_summary.get("adapter", "jsonrpc")
-    adapter_label = "FastMCPAdapter" if adapter_choice == "fastmcp" else "JSONRPCAdapter"
-    fallback_warning: Optional[str] = None
+    
+    # 항상 native JSONRPCAdapter 사용 (STDIO 타임아웃 문제 방지)
     runner = run_native_mcp_server
-
-    if adapter_choice == "fastmcp":
-        try:
-            from greeum.mcp.adapters.fastmcp_adapter import FastMCPAdapter
-        except ImportError as exc:
-            fallback_warning = (
-                f"FastMCP adapter requested for runtime '{runtime}' but unavailable: {exc}. "
-                "Falling back to JSONRPCAdapter"
-            )
-            adapter_choice = "jsonrpc"
-            adapter_label = "JSONRPCAdapter"
-            detection_summary["adapter"] = "jsonrpc"
-        else:
-
-            async def _run_fastmcp_adapter() -> None:
-                adapter = FastMCPAdapter()
-                await adapter.run()
-
-            runner = _run_fastmcp_adapter
-
-    runtime_label = runtime.upper() if runtime != "unknown" else "UNKNOWN"
-    if runtime == "unknown":
-        logger.info("Runtime detection returned UNKNOWN -> using %s", adapter_label)
-    else:
-        logger.info("Detected %s runtime -> using %s", runtime_label, adapter_label)
-    if fallback_warning:
-        logger.warning(fallback_warning)
+    
+    # 디버깅/로깅 목적으로만 환경 정보 출력
+    if log_level == 'debug':
+        runtime_label = runtime.upper() if runtime != "unknown" else "UNKNOWN"
+        logger.debug("Environment detection: %s runtime detected", runtime_label)
+        logger.debug("Using native JSONRPCAdapter (STDIO transport)")
+        
+        # 환경 세부 정보 출력
+        details = detection_summary.get("details", {})
+        for key, value in details.items():
+            logger.debug("env.%s=%s", key, value or "<empty>")
 
     # Register cleanup handlers (guard unsupported signals for cross-platform compatibility)
     for _sig_name in ("SIGTERM", "SIGINT", "SIGHUP"):
