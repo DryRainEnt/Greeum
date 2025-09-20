@@ -398,6 +398,9 @@ def run_server_sync(log_level: str = 'quiet', detection: Optional[Dict[str, Any]
     # 항상 native JSONRPCAdapter 사용 (STDIO 타임아웃 문제 방지)
     runner = run_native_mcp_server
     
+    # 실제 사용하는 어댑터와 디버그 정보 일치시키기 위해 요약 정규화
+    detection_summary["adapter"] = "jsonrpc"
+    
     # 디버깅/로깅 목적으로만 환경 정보 출력
     if log_level == 'debug':
         runtime_label = runtime.upper() if runtime != "unknown" else "UNKNOWN"
