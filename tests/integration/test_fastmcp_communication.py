@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 FastMCP 핫픽스 서버 실제 통신 테스트
 - JSON-RPC 2.0 프로토콜 준수 확인
@@ -11,6 +12,11 @@ import time
 import threading
 import sys
 import os
+from pathlib import Path
+
+import pytest
+
+pytest.importorskip("greeum.mcp.fastmcp_hotfix_server", reason="FastMCP hotfix server unavailable in current build")
 
 def test_mcp_server_communication():
     """FastMCP 서버와 실제 JSON-RPC 통신 테스트"""
@@ -18,6 +24,7 @@ def test_mcp_server_communication():
     print("=" * 50)
     
     # 서버 프로세스 시작
+    project_root = Path(__file__).resolve().parents[2]
     server_proc = subprocess.Popen(
         ["python3", "-c", """
 import asyncio
@@ -30,7 +37,7 @@ asyncio.run(main())
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        cwd="/Users/dryrain/DevRoom/Greeum"
+        cwd=str(project_root)
     )
     
     def send_request(request_dict):
@@ -72,14 +79,13 @@ asyncio.run(main())
             }
         })
         
-        if not init_response:
-            print("❌ Initialize 실패")
-            return False
+        assert init_response is not None, "Initialize failed"
         
         time.sleep(0.5)
         
         # 2. 도구 목록 요청
-        print("\n2️⃣ Tools 목록 요청")
+        print()
+        print("2️⃣ Tools 목록 요청")
         tools_response = send_request({
             "jsonrpc": "2.0", 
             "id": 2,
@@ -87,16 +93,17 @@ asyncio.run(main())
             "params": {}
         })
         
-        if tools_response and "result" in tools_response:
-            tools = tools_response["result"]["tools"]
-            print(f"✅ 도구 목록 수신: {len(tools)}개")
-            for tool in tools:
-                print(f"  - {tool['name']}: {tool.get('description', '')[:50]}...")
-        
+        assert tools_response and "result" in tools_response, "tools/list call failed"
+        tools = tools_response["result"]["tools"]
+        print(f"✅ 도구 목록 수신: {len(tools)}개")
+        for tool in tools:
+            print(f"  - {tool['name']}: {tool.get('description', '')[:50]}...")
+
         time.sleep(0.5)
         
         # 3. 메모리 추가 도구 호출
-        print("\n3️⃣ add_memory 도구 호출")
+        print()
+        print("3️⃣ add_memory 도구 호출")
         add_response = send_request({
             "jsonrpc": "2.0",
             "id": 3, 
@@ -110,13 +117,14 @@ asyncio.run(main())
             }
         })
         
-        if add_response and "result" in add_response:
-            print("✅ 메모리 추가 성공")
+        assert add_response and "result" in add_response, "add_memory tool call failed"
+        print("✅ 메모리 추가 성공")
         
         time.sleep(0.5)
         
         # 4. 메모리 검색 도구 호출
-        print("\n4️⃣ search_memory 도구 호출")
+        print()
+        print("4️⃣ search_memory 도구 호출")
         search_response = send_request({
             "jsonrpc": "2.0",
             "id": 4,
@@ -130,15 +138,14 @@ asyncio.run(main())
             }
         })
         
-        if search_response and "result" in search_response:
-            print("✅ 메모리 검색 성공")
+        assert search_response and "result" in search_response, "search_memory tool call failed"
+        print("✅ 메모리 검색 성공")
         
-        print("\n🎉 모든 MCP 통신 테스트 통과!")
-        return True
+        print()
+        print("🎉 모든 MCP 통신 테스트 통과!")
         
     except Exception as e:
-        print(f"❌ 테스트 실패: {e}")
-        return False
+        pytest.fail(f"MCP 통신 테스트 실패: {e}")
     finally:
         # 서버 프로세스 정리
         server_proc.terminate()
@@ -147,5 +154,4 @@ asyncio.run(main())
             server_proc.kill()
 
 if __name__ == "__main__":
-    success = test_mcp_server_communication()
-    sys.exit(0 if success else 1)
+    test_mcp_server_communication()
