@@ -176,19 +176,35 @@ Please search existing memories first or provide more specific content."""
                 results = self._expand_search_with_associations(results, depth, tolerance, limit)
 
             # 사용 통계 로깅 (확장된 파라미터 포함)
-            self.components['usage_analytics'].log_event(
-                "tool_usage", "search_memory",
-                {
-                    "query_length": len(query),
-                    "results_found": len(results),
-                    "limit_requested": limit,
-                    "depth": depth,
-                    "tolerance": tolerance,
-                    "search_type": meta.get('search_type', 'direct'),
-                    "entry_type": meta.get('entry_type', entry)
-                },
-                0, True
-            )
+            try:
+                analytics_obj = self.components['usage_analytics']
+                if hasattr(analytics_obj, 'log_event'):
+                    analytics_obj.log_event(
+                        "tool_usage", "search_memory",
+                        {
+                            "query_length": len(query),
+                            "results_found": len(results),
+                            "limit_requested": limit,
+                            "depth": depth,
+                            "tolerance": tolerance,
+                            "search_type": meta.get('search_type', 'direct'),
+                            "entry_type": meta.get('entry_type', entry)
+                        },
+                        0, True
+                    )
+                else:
+                    # log_event 메서드가 없는 경우 대체 메서드 사용
+                    analytics_obj.log_operation(
+                        "search_memory",
+                        {
+                            "query_length": len(query),
+                            "results_found": len(results),
+                            "limit_requested": limit
+                        }
+                    )
+            except Exception:
+                # 오류가 발생해도 검색 기능은 계속 동작하도록 함
+                pass
 
             if results:
                 # 메타정보 표시

@@ -909,11 +909,6 @@ MCP_TOOLS_WITH_ENCOURAGEMENT = [
         "description": "Enhanced search with relevance scoring and query suggestions (v2.5.0). Provides percentage-based relevance scores and suggests alternative search terms to help find the most appropriate memories.",
         "function": smart_search_memory
     },
-    {
-        "name": "usage_analytics",
-        "description": "Get comprehensive usage analytics and insights for memory system optimization. Analyze usage patterns, quality trends, and performance metrics to understand system utilization.",
-        "function": usage_analytics
-    }
 ]
 
 
@@ -1060,9 +1055,11 @@ async def smart_search_memory(query: str, limit: int = 5, show_relevance: bool =
         # Import SmartSearchEngine
         from greeum.core.smart_search_engine import SmartSearchEngine
         from greeum.core.database_manager import DatabaseManager
+        from greeum.core.block_manager import BlockManager
         
         db_manager = DatabaseManager()
-        smart_search = SmartSearchEngine(db_manager=db_manager)
+        block_manager = BlockManager(db_manager)
+        smart_search = SmartSearchEngine(block_manager=block_manager)
         
         # Perform smart search
         results = smart_search.smart_search(
@@ -1151,3 +1148,43 @@ async def smart_search_memory(query: str, limit: int = 5, show_relevance: bool =
             pass
         
         return f"Search failed: {str(e)}"
+
+
+# MCP Tools 리스트 (실제 존재하는 함수들만 참조)
+MCP_TOOLS = [
+    {
+        "name": "add_memory_frequent",
+        "description": "Store important permanent memories using [Subject-Action-Object] structure. Store completed work immediately after finishing tasks like writing documents, coding, analysis, or problem-solving. Record key decisions, discoveries, and deliverables as they occur to build conversation continuity.",
+        "function": add_memory_frequent
+    },
+    {
+        "name": "add_structured_memory",
+        "description": "Advanced structured memory storage with detailed actant analysis. Use for complex interactions requiring precise relationship mapping between actors, actions, and outcomes.",
+        "function": add_structured_memory
+    },
+    {
+        "name": "search_memory_contextual", 
+        "description": "Search existing memories to provide richer context. Use when discussing topics that might have been covered before, or when users reference past conversations. Helps maintain conversational continuity.",
+        "function": search_memory_contextual
+    },
+    {
+        "name": "check_memory_freshness",
+        "description": "Review current memory usage patterns and storage frequency. Check if recent work activities like document writing, coding, or analysis have been properly recorded. Particularly useful at conversation start and after completing significant tasks.",
+        "function": check_memory_freshness
+    },
+    {
+        "name": "suggest_memory_opportunities",
+        "description": "Identify moments in conversation that would benefit from memory storage. Actively detect completion of work tasks, document creation, coding activities, and problem resolution that should be recorded. Use when handling complex topics or important decisions.",
+        "function": suggest_memory_opportunities
+    },
+    {
+        "name": "smart_search_memory",
+        "description": "Enhanced search with relevance scoring and query suggestions (v2.5.0). Provides percentage-based relevance scores and suggests alternative search terms to help find the most appropriate memories.",
+        "function": smart_search_memory
+    },
+    {
+        "name": "usage_analytics",
+        "description": "Get comprehensive usage analytics and insights for memory system optimization. Analyze usage patterns, quality trends, and performance metrics to understand system utilization.",
+        "function": usage_analytics
+    }
+]
