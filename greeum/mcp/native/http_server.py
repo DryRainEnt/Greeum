@@ -41,6 +41,13 @@ def create_http_app(
             allow_headers=["*"],
         )
 
+    @app.middleware("http")
+    async def log_request(request, call_next):
+        logger.info("HTTP %s %s", request.method, request.url.path)
+        response = await call_next(request)
+        logger.info("HTTP %s %s -> %s", request.method, request.url.path, response.status_code)
+        return response
+
     @app.on_event("startup")
     async def startup_event():
         await mcp_server.initialize()

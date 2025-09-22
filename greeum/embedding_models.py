@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import logging
+import os
 import time
 import threading
 from dataclasses import dataclass
@@ -10,6 +11,13 @@ import numpy as np
 
 
 logger = logging.getLogger(__name__)
+
+
+def _sentence_transformer_disabled() -> bool:
+    """Return True when SentenceTransformer embeddings should be skipped."""
+
+    value = os.getenv("GREEUM_DISABLE_ST", "")
+    return value.lower() in {"1", "true", "yes", "on"}
 
 
 @dataclass
@@ -285,6 +293,12 @@ class SentenceTransformerModel(EmbeddingModel):
     def _ensure_model_loaded(self):
         """모델이 로드되어 있는지 확인하고 필요 시 로드"""
         if self.model is None:
+            if _sentence_transformer_disabled():
+                raise RuntimeError(
+                    "SentenceTransformer usage disabled via GREEUM_DISABLE_ST; "
+                    "switching to fallback embedding model."
+                )
+
             logger.info("Loading SentenceTransformer model: %s", self.model_name)
 
             try:
@@ -437,15 +451,21 @@ class EmbeddingRegistry:
 
     def _auto_init(self):
         """레지스트리 초기화 시 최적 모델 자동 선택"""
+        if _sentence_transformer_disabled():
+            logger.info(
+                "GREEUM_DISABLE_ST set – defaulting to SimpleEmbeddingModel (hash fallback)."
+            )
+            self.register_model("simple", SimpleEmbeddingModel(dimension=768), set_as_default=True)
+            return
         try:
             # 1순위: Sentence-Transformers (의미 기반)
             model = SentenceTransformerModel()
             self.register_model("sentence-transformer", model, set_as_default=True)
             logger.info("✅ SentenceTransformer 모델 자동 초기화 성공 (의미 기반 검색 활성화)")
-        except ImportError:
+        except (ImportError, RuntimeError):
             # 2순위: Simple (Fallback)
             logger.warning(
-                "⚠️ WARNING: sentence-transformers not installed - using SimpleEmbeddingModel\n"
+                "⚠️ WARNING: sentence-transformers unavailable or disabled - using SimpleEmbeddingModel\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 "의미 기반 검색이 비활성화됩니다. 다음 기능들이 제대로 작동하지 않습니다:\n"
                 "  • 의미 기반 검색\n"
@@ -589,6 +609,9 @@ def init_sentence_transformer(model_name: str = None, set_as_default: bool = Tru
     Raises:
         ImportError: sentence-transformers가 설치되지 않은 경우
     """
+    if _sentence_transformer_disabled():
+        raise RuntimeError("SentenceTransformer usage disabled via GREEUM_DISABLE_ST.")
+
     try:
         # 모델 생성
         model = SentenceTransformerModel(model_name)
@@ -623,6 +646,9 @@ def init_sentence_transformer(model_name: str = None, set_as_default: bool = Tru
             "pip install sentence-transformers를 실행하세요."
         )
         raise
+    except RuntimeError as e:
+        logger.warning(str(e))
+        raise
 
 
 def init_openai(api_key: str = None, model_name: str = "text-embedding-ada-002", set_as_default: bool = True):
@@ -655,7 +681,7 @@ def auto_init_best_model() -> str:
         logger.info("✅ Sentence-Transformers 모델 초기화 성공 (의미 기반 검색 활성화)")
         return "sentence-transformer"
 
-    except ImportError:
+    except (ImportError, RuntimeError):
         # 2순위: Simple (Fallback)
         logger.warning(
             "⚠️  WARNING: Using SimpleEmbeddingModel (random vectors)\n"

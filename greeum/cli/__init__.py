@@ -15,8 +15,34 @@ except ImportError:
     import sys
     sys.exit(1)
 
+import os
 import sys
+from pathlib import Path
 from typing import Optional
+
+from ..config_store import (
+    DEFAULT_DATA_DIR,
+    DEFAULT_ST_MODEL,
+    GreeumConfig,
+    ensure_data_dir,
+    load_config,
+    mark_semantic_ready,
+    save_config,
+)
+
+
+def _download_sentence_transformer(model: str) -> Path:
+    try:
+        from sentence_transformers import SentenceTransformer
+    except ImportError as exc:
+        raise ImportError(
+            "sentence-transformers not installed. Install with 'pip install greeum[full]' "
+            "or 'pip install sentence-transformers'."
+        ) from exc
+
+    cache_dir = Path.home() / ".cache" / "sentence_transformers"
+    SentenceTransformer(model, cache_folder=str(cache_dir))
+    return cache_dir
 
 @click.group()
 @click.version_option()
@@ -34,7 +60,6 @@ def main(ctx: click.Context, verbose: bool, debug: bool, quiet: bool):
     ctx.obj['quiet'] = quiet
     
     # Console output 설정을 위한 환경변수 설정
-    import os
     if verbose or debug:
         os.environ['GREEUM_CLI_VERBOSE'] = '1'
     else:
@@ -72,6 +97,71 @@ def main(ctx: click.Context, verbose: bool, debug: bool, quiet: bool):
         logging.getLogger('requests').setLevel(logging.WARNING)
         logging.getLogger('sqlalchemy').setLevel(logging.WARNING)
 
+    # Ensure data directory from config is available if user hasn't set env vars
+    config = load_config()
+    data_dir = config.data_dir or str(DEFAULT_DATA_DIR)
+    ensure_data_dir(data_dir)
+    os.environ.setdefault('GREEUM_DATA_DIR', data_dir)
+
+
+@main.command()
+@click.option('--data-dir', type=click.Path(file_okay=False, dir_okay=True, writable=True), help='Custom data directory')
+@click.option('--skip-warmup', is_flag=True, help='Skip SentenceTransformer warm-up step')
+def setup(data_dir: Optional[str], skip_warmup: bool):
+    """Interactive first-time setup (data dir + optional warm-up)."""
+
+    click.echo("🛠️  Greeum setup wizard")
+    config = load_config()
+
+    default_dir = data_dir or config.data_dir or str(DEFAULT_DATA_DIR)
+    chosen_dir = click.prompt(
+        "Data directory (used for memories, cache, logs)",
+        default=str(Path(default_dir).expanduser()),
+    )
+
+    target_dir = ensure_data_dir(chosen_dir)
+    os.environ['GREEUM_DATA_DIR'] = str(target_dir)
+
+    semantic_ready = config.semantic_ready
+    warmup_performed = False
+
+    if skip_warmup:
+        click.echo("Skipping embedding warm-up (hash fallback will be used by default).")
+    else:
+        default_confirm = not config.semantic_ready
+        if click.confirm("Run SentenceTransformer warm-up now?", default=default_confirm):
+            click.echo(f"📦 Downloading {DEFAULT_ST_MODEL} …")
+            try:
+                cache_dir = _download_sentence_transformer(DEFAULT_ST_MODEL)
+            except ImportError as exc:
+                click.echo(f"[ERROR] {exc}", err=True)
+                semantic_ready = False
+            except Exception as exc:  # noqa: BLE001
+                click.echo(f"[ERROR] Warm-up failed: {exc}", err=True)
+                semantic_ready = False
+            else:
+                click.echo(f"✅ Warm-up complete. Model cached at {cache_dir}.")
+                semantic_ready = True
+                warmup_performed = True
+        else:
+            click.echo("Warm-up skipped. You can run 'greeum mcp warmup' later.")
+
+    config.data_dir = str(target_dir)
+    config.semantic_ready = semantic_ready
+    save_config(config)
+
+    if warmup_performed:
+        mark_semantic_ready(True)
+    elif not semantic_ready:
+        mark_semantic_ready(False)
+
+    click.echo("\nSetup summary:")
+    click.echo(f"   • Data directory: {target_dir}")
+    click.echo(
+        "   • Semantic embeddings: "
+        + ("ready" if semantic_ready else "hash fallback (run warmup to enable)")
+    )
+    click.echo("   • Next step: add 'greeum mcp serve -t stdio' to your MCP config")
 @main.group()
 def memory():
     """Memory management commands (STM/LTM)"""
@@ -318,8 +408,11 @@ def search(query: str, count: int, threshold: float, slot: str, radius: int, no_
 @click.option('--verbose', '-v', is_flag=True, help='Enable verbose logging (INFO level)')
 @click.option('--debug', '-d', is_flag=True, help='Enable debug logging (DEBUG level)')
 @click.option('--quiet', '-q', is_flag=True, help='[DEPRECATED] Use default behavior instead')
-def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quiet: bool):
+@click.option('--semantic/--no-semantic', default=False, show_default=True,
+              help='Enable semantic embeddings (requires cached SentenceTransformer)')
+def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quiet: bool, semantic: bool):
     """Start MCP server for Claude Code integration"""  
+    config = load_config()
     # 로깅 레벨 결정 (새로운 정책: 기본은 조용함)
     if debug:
         log_level = 'debug'
@@ -339,6 +432,21 @@ def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quie
             click.echo("⚠️  Warning: --quiet is deprecated. Default behavior is now quiet.")
     
     if transport == 'stdio':
+        ensure_data_dir(config.data_dir)
+        os.environ.setdefault('GREEUM_DATA_DIR', config.data_dir)
+        if semantic:
+            # Allow explicit opt-in by clearing the fallback flag
+            if os.getenv('GREEUM_DISABLE_ST'):
+                os.environ.pop('GREEUM_DISABLE_ST')
+            if verbose or debug and not config.semantic_ready:
+                click.echo('[WARN] Semantic mode requested but warm-up is not recorded; first startup may take longer.')
+        else:
+            os.environ.setdefault('GREEUM_DISABLE_ST', '1')
+            if verbose or debug:
+                if config.semantic_ready:
+                    click.echo('[NOTE] Semantic embeddings available. Use --semantic to enable them for this session.')
+                else:
+                    click.echo('[NOTE] SentenceTransformer disabled (hash fallback). Use --semantic after warm-up to re-enable.')
         try:
             # Native MCP Server 사용 (FastMCP 완전 배제, anyio 기반 안전한 실행)
             from ..mcp.native import run_server_sync
@@ -401,6 +509,31 @@ def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quie
         if verbose or debug:
             click.echo(f"[ERROR] Transport '{transport}' not supported")
         sys.exit(1)
+
+
+@mcp.command('warmup')
+@click.option('--model', default='sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
+              show_default=True, help='SentenceTransformer model to pre-download')
+def warmup_embeddings(model: str):
+    """Download the semantic embedding model so --semantic starts instantly."""
+
+    click.echo(f"📦 Downloading {model} …")
+
+    try:
+        cache_dir = _download_sentence_transformer(model)
+    except ImportError as exc:
+        click.echo(f"[ERROR] {exc}", err=True)
+        mark_semantic_ready(False)
+        sys.exit(1)
+    except Exception as exc:  # noqa: BLE001 - surface full error to user
+        click.echo(f"[ERROR] Warm-up failed: {exc}", err=True)
+        mark_semantic_ready(False)
+        sys.exit(1)
+
+    mark_semantic_ready(True)
+    click.echo(f"✅ Warm-up complete. Model cached at {cache_dir}.")
+    click.echo("   Use 'greeum mcp serve --semantic' to enable semantic embeddings.")
+
 
 # API 서브명령어들  
 @api.command()

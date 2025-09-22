@@ -2,6 +2,38 @@
 
 All notable changes to this project are documented in this file.
 
+## [3.1.1rc4.dev1] - 2025-09-20
+
+### Added
+- Introduced `greeum setup` wizard that guides first-time configuration (data directory, optional SentenceTransformer warm-up) and persists choices under `~/.config/greeum/config.json`.
+- Bundled lightweight configuration storage utilities so CLI commands can share the saved settings.
+
+### Changed
+- `greeum mcp serve` now auto-loads the stored data directory and exposes a `--semantic` flag to re-enable SentenceTransformer embeddings after warm-up.
+- `greeum mcp warmup` records semantic-readiness so future sessions know whether to default to hash fallback or semantic mode.
+- Updated workflow documentation to highlight the new one-time setup flow.
+
+### Tests
+- Regression suite (`tests/test_embedding_models.py`) rerun on Python 3.11 to verify the embedding fallback remains stable.
+
+## [3.1.1rc3.dev5] - 2025-01-16
+
+### Added
+- Bundled workflow automation helpers (`greeum-workflow`, `greeum-digest`) so pipx users get search/add/stats commands out of the box.
+- Included workflow guide documentation inside the package for quick access.
+
+### Fixed
+- Codex STDIO guide now lives in `docs/greeum-workflow-guide.md` and ships with the wheel.
+
+## [3.1.1rc3.dev4] - 2025-01-16
+
+### Fixed
+- MCP HTTP handshake now echoes the protocol version requested by clients such as Codex CLI, preventing startup timeouts during `initialize`.
+- Added HTTP middleware logging so connection attempts are visible in `greeum_native_http` logs for easier diagnostics.
+
+### Tests
+- Added regression coverage ensuring unsupported protocol versions fall back to the default while known versions are echoed verbatim.
+
 ## [3.1.1rc3.dev3] - 2025-01-16
 
 ### Fixed

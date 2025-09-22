@@ -21,6 +21,20 @@ from .types import (
 
 logger = logging.getLogger("greeum_native_protocol")
 
+
+# Known protocol versions observed across Claude, Codex, Gemini, and OpenAI MCP clients.
+# Codex is unhappy unless the server echoes the version string it requested, so we keep a
+# small compatibility table and fall back to the latest version if we see an unknown value.
+SUPPORTED_PROTOCOL_VERSIONS = {
+    "2025-03-26",
+    "2024-12-17",
+    "2024-08-05",
+    "2024-06-17",
+    "2024-02-01",
+    "1.0",
+}
+DEFAULT_PROTOCOL_VERSION = "2025-03-26"
+
 class JSONRPCProcessor:
     """
     JSON-RPC 2.0 message processor
@@ -125,12 +139,41 @@ class JSONRPCProcessor:
         try:
             # Validate parameters
             init_params = InitializeParams.model_validate(params)
-            logger.info(f"Initialize request from {init_params.clientInfo.name} v{init_params.clientInfo.version}")
-            
-            # Check protocol version
-            if not init_params.protocolVersion.startswith("2025-"):
-                logger.warning(f"Unsupported protocol version: {init_params.protocolVersion}")
-            
+            logger.info(
+                "Initialize request from %s v%s (protocol %s)",
+                init_params.clientInfo.name,
+                init_params.clientInfo.version,
+                init_params.protocolVersion,
+            )
+
+            requested_version = (init_params.protocolVersion or "").strip()
+            negotiated_version = DEFAULT_PROTOCOL_VERSION
+
+            if requested_version:
+                alias_map = {
+                    "1": "1.0",
+                    "latest": DEFAULT_PROTOCOL_VERSION,
+                }
+                if requested_version in SUPPORTED_PROTOCOL_VERSIONS:
+                    negotiated_version = requested_version
+                elif requested_version.lower() in alias_map:
+                    negotiated_version = alias_map[requested_version.lower()]
+                elif requested_version.replace(".", "", 1).isdigit():
+                    negotiated_version = requested_version
+                elif requested_version.startswith("2024-") or requested_version.startswith("2025-"):
+                    negotiated_version = requested_version
+                else:
+                    logger.warning(
+                        "Unknown protocol version '%s'; falling back to %s",
+                        requested_version,
+                        DEFAULT_PROTOCOL_VERSION,
+                    )
+            else:
+                logger.warning(
+                    "Empty protocol version received; defaulting to %s",
+                    DEFAULT_PROTOCOL_VERSION,
+                )
+
             # Define server capabilities
             server_capabilities = Capabilities(
                 tools={
@@ -143,12 +186,12 @@ class JSONRPCProcessor:
             
             # Generate initialization result
             result = InitializeResult(
-                protocolVersion="2025-03-26",
+                protocolVersion=negotiated_version,
                 capabilities=server_capabilities,
                 serverInfo=ServerInfo()
             )
             
-            logger.info("Server initialization completed")
+            logger.info("Server initialization completed (protocol %s)", negotiated_version)
             return result.model_dump()
             
         except Exception as e:

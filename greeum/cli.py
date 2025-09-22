@@ -6,10 +6,21 @@ import argparse
 from datetime import datetime
 import logging
 from pathlib import Path
+from typing import Optional
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 import click
+
+from .config_store import (
+    DEFAULT_DATA_DIR,
+    DEFAULT_ST_MODEL,
+    ensure_data_dir,
+    load_config,
+    mark_semantic_ready,
+    save_config,
+)
+from .cli.__init__ import _download_sentence_transformer
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -36,7 +47,71 @@ except ImportError:
 @click.version_option(version=__version__)
 def main():
     """Greeum - LLM 독립적 기억 시스템 CLI"""
-    pass
+
+    config = load_config()
+    data_dir = config.data_dir or str(DEFAULT_DATA_DIR)
+    ensure_data_dir(data_dir)
+    os.environ.setdefault("GREEUM_DATA_DIR", data_dir)
+
+
+@main.command("setup")
+@click.option('--data-dir', type=click.Path(file_okay=False, dir_okay=True, writable=True), help='Custom data directory')
+@click.option('--skip-warmup', is_flag=True, help='Skip SentenceTransformer warm-up step')
+def setup_command(data_dir: Optional[str], skip_warmup: bool):
+    """Interactive first-time setup (data dir + optional warm-up)."""
+
+    console.print("🛠️  Greeum setup wizard")
+    config = load_config()
+
+    default_dir = data_dir or config.data_dir or str(DEFAULT_DATA_DIR)
+    chosen_dir = click.prompt(
+        "Data directory (used for memories, cache, logs)",
+        default=str(Path(default_dir).expanduser()),
+    )
+
+    target_dir = ensure_data_dir(chosen_dir)
+    os.environ['GREEUM_DATA_DIR'] = str(target_dir)
+
+    semantic_ready = config.semantic_ready
+    warmup_performed = False
+
+    if skip_warmup:
+        console.print("Skipping embedding warm-up (hash fallback will be used by default).")
+    else:
+        default_confirm = not config.semantic_ready
+        if click.confirm("Run SentenceTransformer warm-up now?", default=default_confirm):
+            console.print(f"📦 Downloading {DEFAULT_ST_MODEL} …")
+            try:
+                cache_dir = _download_sentence_transformer(DEFAULT_ST_MODEL)
+            except ImportError as exc:
+                console.print(f"[ERROR] {exc}")
+                semantic_ready = False
+            except Exception as exc:  # noqa: BLE001
+                console.print(f"[ERROR] Warm-up failed: {exc}")
+                semantic_ready = False
+            else:
+                console.print(f"✅ Warm-up complete. Model cached at {cache_dir}.")
+                semantic_ready = True
+                warmup_performed = True
+        else:
+            console.print("Warm-up skipped. You can run 'greeum mcp warmup' later.")
+
+    config.data_dir = str(target_dir)
+    config.semantic_ready = semantic_ready
+    save_config(config)
+
+    if warmup_performed:
+        mark_semantic_ready(True)
+    elif not semantic_ready:
+        mark_semantic_ready(False)
+
+    console.print("\nSetup summary:")
+    console.print(f"   • Data directory: {target_dir}")
+    console.print(
+        "   • Semantic embeddings: "
+        + ("ready" if semantic_ready else "hash fallback (run warmup to enable)")
+    )
+    console.print("   • Next step: add 'greeum mcp serve -t stdio' to your MCP config")
 
 @main.command("init")
 @click.option("--db-path", default=None, help="데이터베이스 경로 (기본: data/memory.db)")

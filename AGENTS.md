@@ -1,5 +1,7 @@
 # Repository Guidelines
 
+사용자가 별도로 지시하기 전까지는 모든 답변은 한국어로 답변합니다.
+
 ## Project Structure & Module Organization
 The core package lives in `greeum/`, providing the STM/LTM memory managers, graph index logic, and shared utilities. Command-line tooling is under `cli/`, while `api/` exposes the REST/MCP layers used by Claude and other integrations. Reusable examples and smoke assets live in `examples/` and `data/`. Automated documentation, migration notes, and design briefs live under `docs/` and the top-level `*.md` reports. Tests are grouped in `tests/` for pytest suites, with scenario-specific regression harnesses in the `test_*/` directories that mirror production incidents.
 
@@ -21,4 +23,4 @@ Place new tests under `tests/` mirroring the package path, and name files `test_
 Commits in this project emphasize clear release notes (`Release v3.1.1rc2.dev9: …`) or component tags (`cli:`, `stm:`) followed by an imperative change summary. Structure PRs with a concise description, linked issues, and verification steps (`pytest`, `tox`, or `run_all_tests.py`). Include configuration notes (e.g., env vars, new assets) and screenshots for CLI/API UX changes so agents consuming these docs can quickly validate behavior.
 
 ## Security & Configuration Tips
-Never commit personal conversation logs or production data; scrub fixtures before upload. Document any required environment variables in the PR (notably `GREEUM_DATA_DIR` and tokens for external embeddings). Store secrets in a local `.env` and load them through `python-dotenv`; avoid hard-coding paths inside modules.
+Never commit personal conversation logs or production data; scrub fixtures before upload. Document any required environment variables in the PR (notably `GREEUM_DATA_DIR`, `GREEUM_DISABLE_ST`, and tokens for external embeddings). Store secrets in a local `.env` and load them through `python-dotenv`; avoid hard-coding paths inside modules.
