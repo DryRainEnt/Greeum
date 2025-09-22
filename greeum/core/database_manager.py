@@ -180,8 +180,33 @@ class DatabaseManager:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_block_keywords ON block_keywords(keyword)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_block_tags ON block_tags(tag)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_stm_timestamp ON short_term_memories(timestamp)')
-        
+
+        # Branch-aware defaults
+        self._initialize_branch_structures(cursor)
+
         self.conn.commit()
+
+    def _initialize_branch_structures(self, cursor):
+        """Ensure branch-specific tables and defaults exist."""
+        try:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS stm_slots (
+                    slot_name TEXT PRIMARY KEY,
+                    block_hash TEXT,
+                    branch_root TEXT,
+                    updated_at REAL
+                )
+            ''')
+
+            for slot in ("A", "B", "C"):
+                cursor.execute(
+                    '''INSERT OR IGNORE INTO stm_slots(slot_name, block_hash, branch_root, updated_at)
+                       VALUES(?, NULL, NULL, 0)''',
+                    (slot,)
+                )
+
+        except sqlite3.OperationalError as e:
+            logger.warning(f"stm_slots initialization skipped: {e}")
     
     def _create_v3_tables(self, cursor):
         """Create v3.0.0 association-based memory tables"""
@@ -370,42 +395,52 @@ class DatabaseManager:
             # Check if branch columns exist
             cursor.execute("PRAGMA table_info(blocks)")
             columns = {row[1] for row in cursor.fetchall()}
-            has_branch_columns = {'root', 'before', 'after'}.issubset(columns)
+            base_columns = {'block_index', 'timestamp', 'context', 'importance', 'hash', 'prev_hash'}
+            branch_columns = {
+                'root', 'before', 'after', 'xref', 'branch_depth', 'visit_count', 'last_seen_at'
+            }
+            extended_branch_columns = branch_columns | {'slot', 'branch_similarity', 'branch_created_at'}
 
-            if has_branch_columns:
-                # Insert with branch fields
-                cursor.execute('''
-                INSERT INTO blocks (block_index, timestamp, context, importance, hash, prev_hash,
-                                  root, before, after, xref, branch_depth, visit_count, last_seen_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    block_data.get('block_index'),
-                    block_data.get('timestamp'),
-                    block_data.get('context'),
-                    block_data.get('importance', 0.0),
-                    block_data.get('hash'),
-                    block_data.get('prev_hash', ''),
-                    block_data.get('root'),
-                    block_data.get('before'),
-                    json.dumps(block_data.get('after', [])),
-                json.dumps(block_data.get('xref', [])),
-                block_data.get('branch_depth', 0),
-                block_data.get('visit_count', 0),
-                block_data.get('last_seen_at', 0)
-                ))
-            else:
-                # Legacy insert without branch fields
-                cursor.execute('''
-                INSERT INTO blocks (block_index, timestamp, context, importance, hash, prev_hash)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ''', (
+            if base_columns.issubset(columns):
+                insert_columns = [
+                    'block_index', 'timestamp', 'context', 'importance', 'hash', 'prev_hash'
+                ]
+                values = [
                     block_data.get('block_index'),
                     block_data.get('timestamp'),
                     block_data.get('context'),
                     block_data.get('importance', 0.0),
                     block_data.get('hash'),
                     block_data.get('prev_hash', '')
-                ))
+                ]
+
+                if branch_columns.issubset(columns):
+                    insert_columns.extend(['root', 'before', 'after', 'xref', 'branch_depth', 'visit_count', 'last_seen_at'])
+                    values.extend([
+                        block_data.get('root'),
+                        block_data.get('before'),
+                        json.dumps(block_data.get('after', [])),
+                        json.dumps(block_data.get('xref', [])),
+                        block_data.get('branch_depth', 0),
+                        block_data.get('visit_count', 0),
+                        block_data.get('last_seen_at', 0)
+                    ])
+
+                if extended_branch_columns.issubset(columns):
+                    insert_columns.extend(['slot', 'branch_similarity', 'branch_created_at'])
+                    values.extend([
+                        block_data.get('slot'),
+                        block_data.get('branch_similarity', 0.0),
+                        block_data.get('branch_created_at', 0.0)
+                    ])
+
+                placeholders = ', '.join(['?'] * len(insert_columns))
+                cursor.execute(
+                    f"INSERT INTO blocks ({', '.join(insert_columns)}) VALUES ({placeholders})",
+                    tuple(values)
+                )
+            else:
+                raise sqlite3.OperationalError("blocks table missing required columns")
 
             block_index = block_data.get('block_index')
 

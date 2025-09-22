@@ -239,6 +239,11 @@ class BlockManager:
         # v2.4.0a2: 액탄트 분석 정보 자동 추가
         enhanced_metadata = self._enhance_metadata_with_actants(context, metadata or {})
         
+        # Ensure we have a slot value recorded
+        slot_was_none = slot is None
+        slot = slot or 'A'
+        branch_similarity = branch_info.get('similarity', 0.0) if branch_info else 0.0
+
         # Branch/DFS fields
         branch_fields = {
             "root": root_id or new_block_id,  # If no root, this block becomes root
@@ -247,7 +252,10 @@ class BlockManager:
             "xref": [],  # Cross-references
             "branch_depth": 0 if not head_block else 1,  # Simple depth for now
             "visit_count": 0,
-            "last_seen_at": time.time()
+            "last_seen_at": time.time(),
+            "slot": slot,
+            "branch_similarity": branch_similarity,
+            "branch_created_at": time.time()
         }
         
         block_to_store_in_db = {
@@ -301,15 +309,13 @@ class BlockManager:
             
             # Update STM head to new block
             if slot:
-                stm.update_head(slot, current_hash)
-                logger.info(f"P1: Updated slot {slot} head to {current_hash[:8]}...")
-            else:
-                # No slot specified - this shouldn't happen as BaseAdapter should always provide a slot
-                # Use default slot A as fallback
-                logger.warning("No slot specified for block, using default slot A")
-                slot = 'A'
-                stm.update_head(slot, current_hash)
-                logger.info(f"Updated slot {slot} head to {current_hash[:8]}...")
+                if slot_was_none:
+                    logger.warning("No slot specified for block, using default slot A")
+                try:
+                    stm.update_head(slot, current_hash)
+                    logger.info(f"P1: Updated slot {slot} head to {current_hash[:8]}...")
+                except Exception as slot_error:
+                    logger.warning(f"STM head update failed for slot {slot}: {slot_error}")
             
             # v2.7.0: Analyze causal relationships after successful block addition
             if self.causal_manager and added_block:

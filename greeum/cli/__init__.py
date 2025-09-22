@@ -17,6 +17,7 @@ except ImportError:
 
 import os
 import sys
+import sqlite3
 from pathlib import Path
 from typing import Optional
 
@@ -28,6 +29,12 @@ from ..config_store import (
     load_config,
     mark_semantic_ready,
     save_config,
+)
+from ..core.database_manager import DatabaseManager
+from ..core.branch_schema import BranchSchemaSQL
+from ..embedding_models import (
+    init_sentence_transformer,
+    force_simple_fallback,
 )
 
 
@@ -395,10 +402,54 @@ def search(query: str, count: int, threshold: float, slot: str, radius: int, no_
                 click.echo(f"[ERROR] No memories found in anchor slot {slot}, and fallback disabled")
             else:
                 click.echo("[ERROR] No memories found")
-            
+
     except Exception as e:
         click.echo(f"[ERROR] Search failed: {e}")
         sys.exit(1)
+
+
+@memory.command('reindex')
+@click.option(
+    '--data-dir',
+    type=click.Path(file_okay=False, dir_okay=True, writable=True),
+    help='Target data directory (defaults to configured data store)',
+)
+@click.option('--disable-faiss', is_flag=True, help='Skip FAISS vector index rebuild')
+def memory_reindex(data_dir: Optional[str], disable_faiss: bool) -> None:
+    """Rebuild branch-aware indices for the selected database."""
+    from ..core.branch_index import BranchIndexManager
+
+    if disable_faiss:
+        os.environ['GREEUM_DISABLE_FAISS'] = 'true'
+
+    if data_dir:
+        target_dir = Path(data_dir).expanduser()
+        db_path = target_dir if target_dir.suffix == '.db' else target_dir / 'memory.db'
+        manager = DatabaseManager(connection_string=str(db_path))
+    else:
+        manager = DatabaseManager()
+
+    click.echo('🔄 Rebuilding branch indices...')
+    try:
+        branch_manager = BranchIndexManager(manager)
+        stats = branch_manager.get_stats()
+        click.echo(
+            "✅ Rebuilt {count} branches ({mode}, vectorized={vectorized}).".format(
+                count=stats['branch_count'],
+                mode=stats['mode'],
+                vectorized=stats['vectorized_branches'],
+            )
+        )
+    except Exception as exc:  # noqa: BLE001 - surface to CLI
+        click.echo(f"[ERROR] Branch reindex failed: {exc}")
+        sys.exit(1)
+    finally:
+        try:
+            manager.conn.close()
+        except Exception:
+            pass
+        except Exception:
+            pass
 
 # MCP 서브명령어들
 @mcp.command()
@@ -440,6 +491,15 @@ def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quie
                 os.environ.pop('GREEUM_DISABLE_ST')
             if verbose or debug and not config.semantic_ready:
                 click.echo('[WARN] Semantic mode requested but warm-up is not recorded; first startup may take longer.')
+            try:
+                init_sentence_transformer(set_as_default=True)
+            except RuntimeError as err:
+                if verbose or debug:
+                    click.echo(f'[WARN] {err}')
+            except ImportError as err:
+                if verbose or debug:
+                    click.echo(f'[WARN] {err}')
+                force_simple_fallback(set_as_default=True)
         else:
             os.environ.setdefault('GREEUM_DISABLE_ST', '1')
             if verbose or debug:
@@ -447,6 +507,7 @@ def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quie
                     click.echo('[NOTE] Semantic embeddings available. Use --semantic to enable them for this session.')
                 else:
                     click.echo('[NOTE] SentenceTransformer disabled (hash fallback). Use --semantic after warm-up to re-enable.')
+            force_simple_fallback(set_as_default=True)
         try:
             # Native MCP Server 사용 (FastMCP 완전 배제, anyio 기반 안전한 실행)
             from ..mcp.native import run_server_sync
@@ -1094,25 +1155,27 @@ def check(data_dir: str, force: bool):
     click.echo("🔍 Checking Greeum database schema version...")
     
     try:
-        from ..core.migration import ForcedMigrationInterface
-        
-        # Create migration interface
-        interface = ForcedMigrationInterface(data_dir)
-        
-        if force:
-            # Force migration regardless of version
-            success = interface._force_migration_flow()
+        from pathlib import Path
+
+        db_path = Path(data_dir).expanduser() / "memory.db"
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        manager = DatabaseManager(str(db_path))
+        cursor = manager.conn.cursor()
+
+        needs_migration = BranchSchemaSQL.check_migration_needed(cursor)
+
+        if force or needs_migration:
+            manager._apply_branch_migration(cursor)
+            manager._initialize_branch_structures(cursor)
+            manager.conn.commit()
+            click.echo("\n✅ Branch schema migration applied.")
         else:
-            # Normal migration check
-            success = interface.check_and_force_migration()
-        
-        if success:
-            click.echo("\n[SPECIAL] Database is ready for use!")
-            sys.exit(0)
-        else:
-            click.echo("\n[ERROR] Migration failed or was cancelled")
-            sys.exit(1)
-            
+            click.echo("\n✅ Branch schema already up to date.")
+
+        manager.conn.close()
+        sys.exit(0)
+
     except Exception as e:
         click.echo(f"[ERROR] Migration check failed: {e}")
         sys.exit(1)
@@ -1125,50 +1188,50 @@ def status(data_dir: str):
     click.echo("=" * 40)
     
     try:
-        from ..core.migration import SchemaVersionManager, AtomicBackupSystem
         from pathlib import Path
-        import os
-        
-        db_path = Path(data_dir) / "memory.db"
-        
+
+        db_path = Path(data_dir).expanduser() / "memory.db"
+
         if not db_path.exists():
             click.echo("📂 Database Status: Not found")
             click.echo("   This appears to be a new installation")
             return
-        
-        # Check schema version
-        version_manager = SchemaVersionManager(str(db_path))
-        version_manager.connect()
-        
-        current_version = version_manager.detect_schema_version()
-        needs_migration = version_manager.needs_migration()
-        stats = version_manager.get_migration_stats() if needs_migration else None
-        
-        click.echo(f"📋 Schema Version: {current_version.value}")
+
+        manager = DatabaseManager(str(db_path))
+        cursor = manager.conn.cursor()
+
+        cursor.execute("PRAGMA table_info(blocks)")
+        columns = {row[1] for row in cursor.fetchall()}
+        branch_columns = {
+            'root', 'before', 'after', 'xref',
+            'slot', 'branch_similarity', 'branch_created_at'
+        }
+
+        branch_ready = branch_columns.issubset(columns)
+        slot_rows = []
+        try:
+            cursor.execute("SELECT slot_name, block_hash, branch_root FROM stm_slots ORDER BY slot_name")
+            slot_rows = cursor.fetchall()
+        except sqlite3.OperationalError:
+            pass
+
         click.echo(f"📂 Database Size: {db_path.stat().st_size} bytes")
-        
-        if stats:
-            click.echo(f"💾 Total Memories: {stats['total_blocks']}")
-            click.echo(f"[DATE] Date Range: {stats['earliest_memory']} to {stats['latest_memory']}")
-        
-        if needs_migration:
-            click.echo("\n⚠️  Migration Required:")
-            click.echo("   Legacy v2.5.2 database detected")
-            click.echo("   Run 'greeum migrate check' to upgrade")
+        click.echo(f"📋 Branch Columns Present: {'yes' if branch_ready else 'no'}")
+
+        if slot_rows:
+            click.echo("\n🎯 STM Slots:")
+            for slot_name, block_hash, branch_root in slot_rows:
+                head = block_hash[:8] + '...' if block_hash else 'None'
+                branch = branch_root[:8] + '...' if branch_root else 'None'
+                click.echo(f"   • {slot_name}: head={head}, branch={branch}")
         else:
-            click.echo("\n✅ Migration Status: Up to date")
-        
-        # Check backup status
-        backup_system = AtomicBackupSystem(data_dir)
-        backups = backup_system.list_backups()
-        
-        click.echo(f"\n💾 Backup Status: {len(backups)} backups available")
-        if backups:
-            recent_backup = sorted(backups, key=lambda x: x['created_at'], reverse=True)[0]
-            click.echo(f"   Most recent: {recent_backup['created_at']}")
-        
-        version_manager.close()
-        
+            click.echo("\n⚠️  STM slot entries not initialized (run 'greeum migrate check').")
+
+        pending = BranchSchemaSQL.check_migration_needed(cursor)
+        click.echo("\n✅ Migration Status: {}".format("Ready" if not pending else "Additional migration required"))
+
+        manager.conn.close()
+
     except Exception as e:
         click.echo(f"[ERROR] Status check failed: {e}")
         sys.exit(1)
@@ -1179,210 +1242,26 @@ def status(data_dir: str):
 @click.option('--reason', default='Manual rollback', help='Reason for rollback')
 def rollback(data_dir: str, backup_id: str, reason: str):
     """Rollback to previous database state using backups"""
-    click.echo("↩️  Initiating Emergency Rollback")
-    
-    try:
-        from ..core.migration import EmergencyRollbackManager, AtomicBackupSystem
-        from pathlib import Path
-        
-        db_path = Path(data_dir) / "memory.db"
-        backup_system = AtomicBackupSystem(data_dir)
-        rollback_manager = EmergencyRollbackManager(str(db_path), backup_system)
-        
-        if not backup_id:
-            # List available rollback options
-            options = rollback_manager.list_rollback_options()
-            
-            if not options:
-                click.echo("[ERROR] No rollback options available")
-                return
-            
-            click.echo("📋 Available rollback options:")
-            for i, option in enumerate(options[:10], 1):
-                created = option['created_at'][:19]  # Remove milliseconds
-                size_kb = option['backup_size'] / 1024
-                status = "✅ Verified" if option['backup_verified'] else "⚠️  Unverified"
-                
-                click.echo(f"{i}. {option['backup_id']}")
-                click.echo(f"   Created: {created}")
-                click.echo(f"   Size: {size_kb:.1f} KB")
-                click.echo(f"   Status: {status}")
-                click.echo()
-            
-            # Get user choice
-            choice = click.prompt("Select backup number (1-{}) or 'q' to quit".format(len(options)), type=str)
-            
-            if choice.lower() == 'q':
-                click.echo("Rollback cancelled")
-                return
-            
-            try:
-                backup_index = int(choice) - 1
-                if 0 <= backup_index < len(options):
-                    backup_id = options[backup_index]['backup_id']
-                else:
-                    click.echo("[ERROR] Invalid selection")
-                    return
-            except ValueError:
-                click.echo("[ERROR] Invalid selection")
-                return
-        
-        # Confirm rollback
-        click.echo(f"\n⚠️  WARNING: This will restore database to backup '{backup_id}'")
-        click.echo("   All changes since that backup will be lost!")
-        
-        if not click.confirm("Proceed with rollback?"):
-            click.echo("Rollback cancelled")
-            return
-        
-        # Perform rollback
-        result = rollback_manager.perform_emergency_rollback(backup_id, reason)
-        
-        # Show results
-        if result['status'] == 'SUCCESS':
-            click.echo(f"\n✅ Rollback completed successfully!")
-            click.echo(f"⏱️  Duration: {result['rollback_duration']:.1f} seconds")
-            click.echo(f"💾 Current state backed up as: {result.get('current_state_backup', 'N/A')}")
-        elif result['status'] == 'PARTIAL_SUCCESS':
-            click.echo(f"\n⚠️  Rollback completed with warnings")
-            click.echo(f"⏱️  Duration: {result['rollback_duration']:.1f} seconds")
-            for error in result['errors']:
-                click.echo(f"   ⚠️  {error}")
-        else:
-            click.echo(f"\n[ERROR] Rollback failed!")
-            for error in result['errors']:
-                click.echo(f"   [ERROR] {error}")
-        
-    except Exception as e:
-        click.echo(f"[ERROR] Rollback failed: {e}")
-        sys.exit(1)
+    click.echo("↩️  Emergency rollback tooling has been deprecated in the branch-aware preview.")
+    click.echo("   Please restore from your manual backup if needed.")
+    sys.exit(0)
 
 @migrate.command()
 @click.option('--data-dir', default='data', help='Data directory path')
 def validate(data_dir: str):
     """Validate migration results and database health"""
-    click.echo("🔍 Validating Database Migration Health")
-    click.echo("=" * 40)
-    
-    try:
-        from ..core.migration import MigrationValidator, AtomicBackupSystem
-        from pathlib import Path
-        
-        db_path = Path(data_dir) / "memory.db"
-        
-        if not db_path.exists():
-            click.echo("[ERROR] Database not found")
-            return
-        
-        # Create validator
-        backup_system = AtomicBackupSystem(data_dir)
-        validator = MigrationValidator(str(db_path), backup_system)
-        
-        # Find most recent backup for validation
-        backups = backup_system.list_backups()
-        recent_backup_id = None
-        
-        if backups:
-            recent_backup = sorted(backups, key=lambda x: x['created_at'], reverse=True)[0]
-            recent_backup_id = recent_backup['backup_id']
-        
-        if not recent_backup_id:
-            click.echo("⚠️  No recent backup found for validation")
-            return
-        
-        # Run validation
-        click.echo("[PROCESS] Running comprehensive validation...")
-        results = validator.validate_full_migration(recent_backup_id)
-        
-        # Display results
-        status_colors = {
-            "VALIDATION_PASSED": "✅",
-            "MINOR_WARNINGS": "⚠️ ", 
-            "WARNINGS": "⚠️ ",
-            "MINOR_ISSUES": "🔶",
-            "MAJOR_ISSUES": "🔴",
-            "CRITICAL_FAILURE": "[ERROR]"
-        }
-        
-        status_icon = status_colors.get(results['overall_status'], "❓")
-        click.echo(f"\n{status_icon} Overall Status: {results['overall_status']}")
-        
-        # Show individual check results
-        for check_name, check_result in results['checks'].items():
-            check_status = check_result.get('status', 'UNKNOWN')
-            check_icon = {"PASS": "✅", "WARN": "⚠️ ", "FAIL": "[ERROR]", "ERROR": "💥"}.get(check_status, "❓")
-            
-            click.echo(f"\n{check_icon} {check_name.replace('_', ' ').title()}: {check_status}")
-            
-            # Show additional details for failed/warning checks
-            if check_status in ["FAIL", "ERROR"]:
-                error = check_result.get('error')
-                if error:
-                    click.echo(f"   Error: {error}")
-                
-                errors = check_result.get('errors', [])
-                for error in errors[:3]:  # Show first 3 errors
-                    click.echo(f"   • {error}")
-            
-            elif check_status == "WARN":
-                warnings = check_result.get('warnings', [])
-                for warning in warnings[:3]:  # Show first 3 warnings
-                    click.echo(f"   • {warning}")
-        
-        # Migration recommendations
-        if results['overall_status'] == "CRITICAL_FAILURE":
-            click.echo(f"\n[ALERT] CRITICAL: Consider emergency rollback")
-            click.echo(f"   Run: greeum migrate rollback --backup-id {recent_backup_id}")
-        elif results['overall_status'] in ["MAJOR_ISSUES", "MINOR_ISSUES"]:
-            click.echo(f"\n💡 Recommendation: Monitor system closely")
-            click.echo(f"   Consider rollback if issues persist")
-        else:
-            click.echo(f"\n[SUCCESS] Migration validation completed successfully!")
-        
-    except Exception as e:
-        click.echo(f"[ERROR] Validation failed: {e}")
-        sys.exit(1)
+    click.echo("🔍 Automated migration validation is not available in this preview build.")
+    click.echo("   Please run manual smoke tests after 'greeum migrate check'.")
+    sys.exit(0)
 
 @migrate.command()
 @click.option('--data-dir', default='data', help='Data directory path')
 @click.option('--keep-backups', default=5, help='Number of backups to keep')
 def cleanup(data_dir: str, keep_backups: int):
     """Clean up old migration backups"""
-    click.echo(f"🧹 Cleaning up migration backups (keeping {keep_backups} most recent)")
-    
-    try:
-        from ..core.migration import AtomicBackupSystem
-        
-        backup_system = AtomicBackupSystem(data_dir)
-        
-        # Show current backup status
-        backups = backup_system.list_backups()
-        click.echo(f"📊 Current backups: {len(backups)}")
-        
-        if len(backups) <= keep_backups:
-            click.echo("✅ No cleanup needed")
-            return
-        
-        # Perform cleanup
-        backup_system.cleanup_old_backups(keep_backups)
-        
-        # Show results
-        remaining_backups = backup_system.list_backups()
-        removed_count = len(backups) - len(remaining_backups)
-        
-        click.echo(f"✅ Cleanup completed:")
-        click.echo(f"   Removed: {removed_count} old backups")
-        click.echo(f"   Remaining: {len(remaining_backups)} backups")
-        
-        # Calculate space saved (approximate)
-        if backups:
-            avg_size = sum(b.get('backup_size', 0) for b in backups) / len(backups)
-            space_saved = avg_size * removed_count
-            click.echo(f"   Space saved: ~{space_saved/1024:.1f} KB")
-        
-    except Exception as e:
-        click.echo(f"[ERROR] Cleanup failed: {e}")
-        sys.exit(1)
+    click.echo("🧹 Backup cleanup is not implemented in the branch-aware preview.")
+    click.echo("   Remove unwanted backup files manually if needed.")
+    sys.exit(0)
 
 # v2.6.1 Backup 서브명령어들
 @backup.command()

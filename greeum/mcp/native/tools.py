@@ -11,10 +11,15 @@ Core Features:
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 from datetime import datetime
 import json
 import hashlib
+
+try:
+    import anyio
+except ImportError:  # pragma: no cover - anyio는 서버 초기화에서 이미 강제됨
+    anyio = None
 
 logger = logging.getLogger("greeum_native_tools")
 # Enable DEBUG logging temporarily with file output
@@ -53,6 +58,7 @@ class GreeumMCPTools:
             greeum_components: Dictionary containing DatabaseManager, BlockManager, etc.
         """
         self.components = greeum_components
+        self._add_lock = anyio.Lock() if anyio else None
         logger.info("Greeum MCP tools initialized with direct v3 implementation")
 
     def _get_version(self) -> str:
@@ -97,6 +103,12 @@ class GreeumMCPTools:
             raise ValueError(f"Tool execution failed: {e}")
 
     async def _handle_add_memory(self, arguments: Dict[str, Any]) -> str:
+        if self._add_lock is not None:
+            async with self._add_lock:
+                return await self._add_memory_impl(arguments)
+        return await self._add_memory_impl(arguments)
+
+    async def _add_memory_impl(self, arguments: Dict[str, Any]) -> str:
         """
         Handle add_memory tool - direct v3 implementation
 
@@ -176,7 +188,7 @@ Please search existing memories first or provide more specific content."""
 Please try again or check database status."""
 
             # Get block index from result
-            block_index = None
+            block_index: Optional[Union[int, str]] = None
             if isinstance(block_result, int):
                 block_index = block_result
                 logger.info(f"[DEBUG] Extracted block_index from int: {block_index}")
@@ -195,7 +207,7 @@ Please try again or check database status."""
                 block_index = 'unknown'
 
             # Verify save if we have an index
-            if block_index and block_index != 'unknown':
+            if block_index is not None and block_index != 'unknown':
                 verify_block = self.components['db_manager'].get_block(block_index)
                 if not verify_block:
                     return f"""**WARNING: Memory Save Uncertain!**
@@ -258,7 +270,7 @@ This may indicate a transaction rollback or database issue."""
 
             return f"""**SUCCESS: Memory Successfully Added!**
 
-**Block Index**: #{block_index if block_index else 'unknown'}
+**Block Index**: #{block_index if block_index is not None else 'unknown'}
 **Storage**: Branch-based (v3 System){slot_info}
 **Duplicate Check**: Passed{quality_feedback}{suggestions_text}{routing_info}"""
 

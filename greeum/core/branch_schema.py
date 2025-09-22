@@ -167,13 +167,22 @@ class BranchSchemaSQL:
             """
             ALTER TABLE blocks ADD COLUMN last_seen_at REAL DEFAULT 0;
             """,
+            """
+            ALTER TABLE blocks ADD COLUMN slot TEXT;
+            """,
+            """
+            ALTER TABLE blocks ADD COLUMN branch_similarity REAL DEFAULT 0;
+            """,
+            """
+            ALTER TABLE blocks ADD COLUMN branch_created_at REAL DEFAULT 0;
+            """,
             
             # Create branch_meta table
             """
             CREATE TABLE IF NOT EXISTS branch_meta (
                 root TEXT PRIMARY KEY,
                 title TEXT NOT NULL DEFAULT 'Untitled Branch',
-                heads TEXT NOT NULL DEFAULT '{}',
+                heads TEXT NOT NULL DEFAULT '{"A": null, "B": null, "C": null}',
                 size INTEGER DEFAULT 0,
                 depth INTEGER DEFAULT 0,
                 created_at REAL NOT NULL,
@@ -183,6 +192,16 @@ class BranchSchemaSQL:
                 total_visits INTEGER DEFAULT 0,
                 total_searches INTEGER DEFAULT 0,
                 local_hits INTEGER DEFAULT 0
+            );
+            """,
+
+            # Create STM slots table
+            """
+            CREATE TABLE IF NOT EXISTS stm_slots (
+                slot_name TEXT PRIMARY KEY,
+                block_hash TEXT,
+                branch_root TEXT,
+                updated_at REAL
             );
             """,
             
@@ -218,6 +237,9 @@ class BranchSchemaSQL:
             CREATE INDEX IF NOT EXISTS idx_blocks_before ON blocks(before);
             """,
             """
+            CREATE INDEX IF NOT EXISTS idx_blocks_slot ON blocks(slot);
+            """,
+            """
             CREATE INDEX IF NOT EXISTS idx_blocks_created_at ON blocks(timestamp);
             """,
             """
@@ -235,11 +257,19 @@ class BranchSchemaSQL:
             # Check if branch columns exist
             cursor.execute("PRAGMA table_info(blocks)")
             columns = {row[1] for row in cursor.fetchall()}
-            branch_columns = {'root', 'before', 'after', 'xref'}
-            
+            branch_columns = {
+                'root',
+                'before',
+                'after',
+                'xref',
+                'slot',
+                'branch_similarity',
+                'branch_created_at'
+            }
+
             if not branch_columns.issubset(columns):
                 return True
-                
+
             # Check if branch_meta table exists
             cursor.execute("""
                 SELECT name FROM sqlite_master 
@@ -247,7 +277,15 @@ class BranchSchemaSQL:
             """)
             if not cursor.fetchone():
                 return True
-                
+
+            # Check if stm_slots table exists
+            cursor.execute("""
+                SELECT name FROM sqlite_master
+                WHERE type='table' AND name='stm_slots'
+            """)
+            if not cursor.fetchone():
+                return True
+
             return False
         except Exception:
             return True

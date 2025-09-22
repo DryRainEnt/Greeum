@@ -1,89 +1,43 @@
-"""
-Greeum v2.5.3 AI-Powered Migration System
+"""Greeum branch-aware migration helpers.
 
-Revolutionary AI-powered database migration with comprehensive safety guarantees.
-This system provides forced migration with AI parsing when legacy databases are detected.
-
-Key Features:
-- AI-powered actant parsing for legacy memory blocks
-- 5-layer safety system with atomic backups
-- Forced migration interface with compelling value proposition
-- Comprehensive validation and emergency rollback
-- Relationship discovery and causality inference
-
-Usage:
-    from greeum.core.migration import ForcedMigrationInterface
-    
-    interface = ForcedMigrationInterface("data/")
-    success = interface.check_and_force_migration()
+v3.x에서는 AI 기반 액턴트 마이그레이션을 제거하고 브랜치 메타데이터 확장을
+다루는 경량 유틸리티만 유지합니다.
 """
 
 from .schema_version import (
     SchemaVersionManager,
     SchemaVersion,
-    MigrationVersionGuard
+    MigrationVersionGuard,
 )
 
 from .backup_system import (
     AtomicBackupSystem,
     BackupMetadata,
-    TransactionSafetyWrapper
-)
-
-from .ai_parser import (
-    AIActantParser,
-    ActantParseResult,
-    ParseConfidence,
-    RelationshipExtractor
+    TransactionSafetyWrapper,
 )
 
 from .migration_interface import (
-    ForcedMigrationInterface,
+    BranchMigrationInterface,
+    MigrationCLI,
     MigrationResult,
-    MigrationCLI
-)
-
-from .validation_rollback import (
-    MigrationValidator,
-    EmergencyRollbackManager,
-    MigrationHealthMonitor,
-    ValidationError,
-    RollbackError
 )
 
 __all__ = [
-    # Core migration interface
-    'ForcedMigrationInterface',
-    'MigrationResult',
-    'MigrationCLI',
-    
-    # Schema management
-    'SchemaVersionManager',
-    'SchemaVersion',
-    'MigrationVersionGuard',
-    
-    # Safety systems
-    'AtomicBackupSystem',
-    'BackupMetadata', 
-    'TransactionSafetyWrapper',
-    
-    # AI parsing
-    'AIActantParser',
-    'ActantParseResult',
-    'ParseConfidence',
-    'RelationshipExtractor',
-    
-    # Validation and rollback
-    'MigrationValidator',
-    'EmergencyRollbackManager',
-    'MigrationHealthMonitor',
-    'ValidationError',
-    'RollbackError'
+    "SchemaVersionManager",
+    "SchemaVersion",
+    "MigrationVersionGuard",
+    "AtomicBackupSystem",
+    "BackupMetadata",
+    "TransactionSafetyWrapper",
+    "BranchMigrationInterface",
+    "MigrationCLI",
+    "MigrationResult",
 ]
 
-# Version info - use main package version
-try:
-    from greeum import __version__
-except ImportError:
-    __version__ = "unknown"
-__migration_version__ = SchemaVersion.V253_ACTANT
+try:  # align with top-level package version when available
+    from greeum import __version__ as _pkg_version
+except ImportError:  # pragma: no cover - during isolated tests
+    _pkg_version = "unknown"
+
+__migration_version__ = SchemaVersion.BRANCH_READY
+__version__ = _pkg_version

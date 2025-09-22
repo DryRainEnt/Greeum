@@ -451,6 +451,16 @@ class STMManager:
                     INSERT INTO branch_meta (root, heads, created_at, last_modified)
                     VALUES (?, ?, ?, ?)
                 """, (root_id, heads_json, current_time, current_time))
+
+            # Persist STM slot mapping
+            cursor.execute("""
+                INSERT INTO stm_slots(slot_name, block_hash, branch_root, updated_at)
+                VALUES(?, ?, ?, ?)
+                ON CONFLICT(slot_name) DO UPDATE SET
+                    block_hash = excluded.block_hash,
+                    branch_root = excluded.branch_root,
+                    updated_at = excluded.updated_at
+            """, (slot, new_head_id, root_id, current_time))
             
             self.db_manager.conn.commit()
             

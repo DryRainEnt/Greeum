@@ -4,7 +4,7 @@ Turn the `search → work → add` loop into a daily habit. Everything below use
 
 **First-time checklist**
 - `pipx install --pip-args "--pre" greeum`
-- `greeum setup` → choose the data directory and (optionally) warm up semantic embeddings
+- `greeum setup` → choose the data directory, generate base schema, and optionally warm up semantic embeddings
 - Update your MCP configuration to call `greeum mcp serve -t stdio` (instructions below)
 
 ## 1. Daily Flow (human-friendly)
@@ -53,6 +53,7 @@ greeum-digest --limit 10
    args = ["mcp", "serve", "-t", "stdio"]
    env = { "PYTORCH_ENABLE_MPS_FALLBACK" = "1", "GREEUM_QUIET" = "true" }
    ```
+   > 설치 직후 바로 연결하면 SentenceTransformer 초기화 때문에 타임아웃이 발생할 수 있으니, **반드시 `greeum setup`을 먼저 실행**해 데이터 디렉터리와 캐시를 준비하세요.
 2. Add a checklist snippet:
    - Start prompt: “Before coding, run `greeum-workflow search …`.”
    - Finish prompt: “Wrap up with `greeum-workflow add …`.”
@@ -91,6 +92,8 @@ greeum-digest --limit 10
 - **Apple Silicon** – `PYTORCH_ENABLE_MPS_FALLBACK=1` avoids meta-tensor errors when loading sentence-transformers.
 - **Semantic mode** – run `greeum mcp warmup` and then start the server with `greeum mcp serve --semantic` once the cache is ready.
 - **Database locks** – occasional `database is locked` warnings mean two jobs overlapped; schedule heavy jobs sequentially or run `greeum migrate doctor` during low traffic.
+- **Branch index refresh** – `greeum memory reindex` rebuilds FAISS + keyword indices (add `--disable-faiss` if vector libs are missing).
+- **Fallback tuning** – adjust `GREEUM_BRANCH_FALLBACK_RATIO` (e.g., `0.4:0.6`) when you want recency to weigh more than keyword overlap in FAISS-off environments.
 
 ---
 

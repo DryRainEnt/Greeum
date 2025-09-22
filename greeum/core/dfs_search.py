@@ -101,13 +101,17 @@ class DFSSearchEngine:
             search_meta["root"] = current_branch
 
             # Search current branch index first (2ms)
-            branch_results = self.branch_index_manager.search_current_branch(query, limit)
+            branch_results = self.branch_index_manager.search_current_branch(
+                query, limit, query_embedding=query_embedding
+            )
 
             if len(branch_results) < 3:  # Not enough in current branch
                 # Search related branches
                 related = self.branch_index_manager.get_related_branches(current_branch, 2)
                 for branch in related:
-                    additional = self.branch_index_manager.search_branch(branch, query, limit)
+                    additional = self.branch_index_manager.search_branch(
+                        branch, query, limit, query_embedding=query_embedding
+                    )
                     branch_results.extend(additional)
                     if len(branch_results) >= limit:
                         break

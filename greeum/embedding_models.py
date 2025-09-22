@@ -595,6 +595,21 @@ def get_embedding_stats() -> Dict[str, Dict[str, Any]]:
     return embedding_registry.stats()
 
 
+def force_simple_fallback(set_as_default: bool = True) -> None:
+    """강제로 SimpleEmbeddingModel을 기본값으로 등록.
+
+    CLI나 워크플로우가 `GREEUM_DISABLE_ST`를 켰을 때 기존 SentenceTransformer
+    레지스트리가 남아 있으면 이후 호출에서 런타임 오류가 발생하므로, 해당
+    상황에서 즉시 호출해 해시 기반 임베딩으로 전환한다.
+    """
+
+    embedding_registry.register_model(
+        "simple",
+        SimpleEmbeddingModel(dimension=768),
+        set_as_default=set_as_default,
+    )
+
+
 def init_sentence_transformer(model_name: str = None, set_as_default: bool = True) -> SentenceTransformerModel:
     """
     Sentence-Transformer 모델 초기화 및 등록

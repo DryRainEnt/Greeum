@@ -134,10 +134,10 @@
         -0.045403312891721725,
         -0.03592229634523392
       ],
-      "last_used_ts": 1757681899,
-      "hop_budget": 2,
-      "summary": "First test anchor",
-      "pinned": false
+      "last_used_ts": 1758557074,
+      "hop_budget": 3,
+      "summary": "Test slot A - API updated",
+      "pinned": true
     },
     {
       "slot": "B",
@@ -158,5 +158,5 @@
       "pinned": false
     }
   ],
-  "updated_at": 1757681899
+  "updated_at": 1758557074
 }

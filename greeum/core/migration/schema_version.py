@@ -1,307 +1,215 @@
-"""
-Schema Version Management for AI-Powered Migration System
-Handles detection, validation, and version transitions for Greeum v2.5.3
+"""Branch-aware schema version management for Greeum.
+
+이 모듈은 브랜치 메타데이터 컬럼과 STM 슬롯 테이블이 준비되었는지 확인하고
+필요 시 안전하게 스키마를 업그레이드하는 단순한 버전 관리 유틸리티를 제공합니다.
 """
 
-import sqlite3
-from enum import Enum
-from datetime import datetime
-from typing import Optional, Dict, Any, List
+from __future__ import annotations
+
 import logging
+import sqlite3
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from ..branch_schema import BranchSchemaSQL
 
 logger = logging.getLogger(__name__)
 
 
 class SchemaVersion(Enum):
-    """Database schema versions"""
-    V252_LEGACY = "2.5.2"
-    V253_ACTANT = "2.5.3"
+    """High level schema states used by the branch-aware preview."""
+
+    LEGACY = "legacy"
+    BRANCH_READY = "branch-ready"
+    EMPTY = "empty"
     UNKNOWN = "unknown"
 
 
+@dataclass
+class SchemaInspection:
+    """Snapshot describing the current database schema state."""
+
+    version: SchemaVersion
+    needs_migration: bool
+    block_count: int = 0
+    has_branch_tables: bool = False
+
+
 class SchemaVersionManager:
-    """Manages schema version detection and validation"""
-    
+    """SQLite schema inspector/upgrade helper for branch meta columns."""
+
     def __init__(self, db_path: str):
-        self.db_path = db_path
-        self.conn = None
-    
+        self.db_path = Path(db_path)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.conn: Optional[sqlite3.Connection] = None
+
+    # ------------------------------------------------------------------
+    # Connection helpers
+    # ------------------------------------------------------------------
     def connect(self) -> None:
-        """Establish database connection"""
-        try:
-            self.conn = sqlite3.connect(self.db_path)
+        if self.conn is None:
+            self.conn = sqlite3.connect(str(self.db_path))
             self.conn.row_factory = sqlite3.Row
-        except Exception as e:
-            logger.error(f"Failed to connect to database {self.db_path}: {e}")
-            raise
-    
+
     def close(self) -> None:
-        """Close database connection"""
-        if self.conn:
+        if self.conn is not None:
             self.conn.close()
             self.conn = None
-    
-    def detect_schema_version(self) -> SchemaVersion:
-        """
-        Detect current database schema version
-        
-        Returns:
-            SchemaVersion: Current schema version
-        """
-        if not self.conn:
-            self.connect()
-        
-        try:
-            cursor = self.conn.cursor()
-            
-            # Check if blocks table exists
-            cursor.execute("""
-                SELECT name FROM sqlite_master 
-                WHERE type='table' AND name='blocks'
-            """)
-            
-            if not cursor.fetchone():
-                # No blocks table - completely new database
-                return SchemaVersion.V253_ACTANT
-            
-            # Check for v2.5.3 actant fields
-            cursor.execute("PRAGMA table_info(blocks)")
-            columns = [col[1] for col in cursor.fetchall()]
-            
-            actant_fields = [
-                'actant_subject', 'actant_action', 'actant_object', 
-                'actant_parsed_at', 'migration_confidence'
-            ]
-            
-            if all(field in columns for field in actant_fields):
-                return SchemaVersion.V253_ACTANT
-            elif 'context' in columns:
-                return SchemaVersion.V252_LEGACY
-            else:
-                return SchemaVersion.UNKNOWN
-                
-        except Exception as e:
-            logger.error(f"Schema version detection failed: {e}")
-            return SchemaVersion.UNKNOWN
-    
-    def needs_migration(self) -> bool:
-        """
-        Check if migration is needed
-        
-        Returns:
-            bool: True if legacy data exists and needs migration
-        """
-        version = self.detect_schema_version()
-        
-        if version == SchemaVersion.V252_LEGACY:
-            # Check if there's actual data to migrate
-            cursor = self.conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM blocks")
-            count = cursor.fetchone()[0]
-            return count > 0
-        
-        return False
-    
-    def get_migration_stats(self) -> Dict[str, Any]:
-        """
-        Get statistics about data that needs migration
-        
-        Returns:
-            Dict containing migration statistics
-        """
-        if not self.needs_migration():
-            return {"needs_migration": False}
-        
-        cursor = self.conn.cursor()
-        
-        # Count total blocks
+
+    def _cursor(self) -> sqlite3.Cursor:
+        self.connect()
+        assert self.conn is not None  # For type checkers
+        return self.conn.cursor()
+
+    # ------------------------------------------------------------------
+    # Inspection utilities
+    # ------------------------------------------------------------------
+    def inspect(self) -> SchemaInspection:
+        cursor = self._cursor()
+
+        # Determine whether we have any data at all.
+        cursor.execute(
+            """
+            SELECT name FROM sqlite_master
+            WHERE type='table' AND name='blocks'
+            """
+        )
+        blocks_table_exists = cursor.fetchone() is not None
+
+        if not blocks_table_exists:
+            return SchemaInspection(version=SchemaVersion.EMPTY, needs_migration=True)
+
+        # Count total blocks for reporting.
         cursor.execute("SELECT COUNT(*) FROM blocks")
-        total_blocks = cursor.fetchone()[0]
-        
-        # Get date range
-        cursor.execute("""
-            SELECT MIN(timestamp) as earliest, MAX(timestamp) as latest 
-            FROM blocks
-        """)
-        date_range = cursor.fetchone()
-        
-        # Sample some contexts for complexity analysis
-        cursor.execute("""
-            SELECT context, LENGTH(context) as length 
-            FROM blocks 
-            ORDER BY RANDOM() 
-            LIMIT 10
-        """)
-        samples = cursor.fetchall()
-        
-        avg_length = sum(row[1] for row in samples) / len(samples) if samples else 0
-        
-        return {
-            "needs_migration": True,
-            "total_blocks": total_blocks,
-            "earliest_memory": date_range[0] if date_range else None,
-            "latest_memory": date_range[1] if date_range else None,
-            "avg_context_length": avg_length,
-            "sample_contexts": [row[0][:100] + "..." if len(row[0]) > 100 else row[0] 
-                             for row in samples[:3]]
-        }
-    
-    def upgrade_schema_to_v253(self) -> bool:
-        """
-        Safely upgrade database schema to v2.5.3 actant format
-        
-        Returns:
-            bool: True if upgrade successful
-        """
+        block_count = int(cursor.fetchone()[0])
+
+        needs_migration = BranchSchemaSQL.check_migration_needed(cursor)
+
+        branch_tables_present = not needs_migration
+        version = SchemaVersion.BRANCH_READY if branch_tables_present else SchemaVersion.LEGACY
+
+        return SchemaInspection(
+            version=version,
+            needs_migration=needs_migration,
+            block_count=block_count,
+            has_branch_tables=branch_tables_present,
+        )
+
+    def detect_schema_version(self) -> SchemaVersion:
+        return self.inspect().version
+
+    def needs_migration(self) -> bool:
+        return self.inspect().needs_migration
+
+    # ------------------------------------------------------------------
+    # Upgrade helpers
+    # ------------------------------------------------------------------
+    def _ensure_base_tables(self, cursor: sqlite3.Cursor) -> None:
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS blocks (
+                block_index INTEGER PRIMARY KEY,
+                timestamp TEXT NOT NULL,
+                context TEXT NOT NULL,
+                importance REAL NOT NULL,
+                hash TEXT NOT NULL,
+                prev_hash TEXT NOT NULL
+            )
+            """
+        )
+
+    def upgrade_to_branch_schema(self) -> bool:
+        """Apply BranchSchemaSQL statements if the schema is not yet updated."""
+
+        cursor = self._cursor()
+        self._ensure_base_tables(cursor)
+
+        statements = BranchSchemaSQL.get_migration_sql()
+        statements_run = 0
+
         try:
-            cursor = self.conn.cursor()
-            
-            # Add actant fields to blocks table (safe ALTER TABLE)
-            actant_additions = [
-                "ALTER TABLE blocks ADD COLUMN actant_subject TEXT DEFAULT NULL",
-                "ALTER TABLE blocks ADD COLUMN actant_action TEXT DEFAULT NULL", 
-                "ALTER TABLE blocks ADD COLUMN actant_object TEXT DEFAULT NULL",
-                "ALTER TABLE blocks ADD COLUMN actant_parsed_at TEXT DEFAULT NULL",
-                "ALTER TABLE blocks ADD COLUMN migration_confidence REAL DEFAULT NULL"
-            ]
-            
-            for sql in actant_additions:
+            for sql in statements:
                 try:
                     cursor.execute(sql)
-                except sqlite3.OperationalError as e:
-                    if "duplicate column name" in str(e).lower():
-                        # Column already exists, skip
-                        logger.info(f"Column already exists, skipping: {sql}")
+                    statements_run += 1
+                except sqlite3.OperationalError as exc:
+                    message = str(exc).lower()
+                    if "duplicate" in message or "exists" in message:
+                        logger.debug("Skipping already-applied SQL: %s", sql.strip().split("\n")[0])
                         continue
-                    else:
-                        raise
-            
-            # Create actant relationships table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS actant_relationships (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    source_block INTEGER NOT NULL,
-                    target_block INTEGER NOT NULL,
-                    relationship_type TEXT NOT NULL,
-                    confidence REAL NOT NULL,
-                    discovered_at TEXT NOT NULL,
-                    FOREIGN KEY (source_block) REFERENCES blocks(block_index),
-                    FOREIGN KEY (target_block) REFERENCES blocks(block_index)
-                )
-            """)
-            
-            # Create schema version tracking table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS schema_versions (
-                    version TEXT PRIMARY KEY,
-                    upgraded_at TEXT NOT NULL,
-                    migration_stats TEXT
-                )
-            """)
-            
-            # Record schema upgrade
-            cursor.execute("""
-                INSERT OR REPLACE INTO schema_versions 
-                (version, upgraded_at, migration_stats) 
-                VALUES (?, ?, ?)
-            """, (
-                SchemaVersion.V253_ACTANT.value,
-                datetime.now().isoformat(),
-                "Schema upgraded to v2.5.3 actant format"
-            ))
-            
-            self.conn.commit()
-            logger.info("Successfully upgraded schema to v2.5.3")
+                    raise
+
+            if self.conn:
+                self.conn.commit()
+
+            logger.info("Branch schema upgrade completed (%s statements)", statements_run)
             return True
-            
-        except Exception as e:
-            logger.error(f"Schema upgrade failed: {e}")
-            self.conn.rollback()
+        except Exception as exc:  # noqa: BLE001 - broad to rollback safely
+            if self.conn:
+                self.conn.rollback()
+            logger.error("Branch schema upgrade failed: %s", exc)
             return False
-    
+
+    # ------------------------------------------------------------------
+    # Validation utilities
+    # ------------------------------------------------------------------
     def validate_schema_integrity(self) -> Dict[str, Any]:
-        """
-        Validate schema integrity after migration
-        
-        Returns:
-            Dict containing validation results
-        """
+        cursor = self._cursor()
+        issues: Dict[str, Any] = {"ok": True, "errors": [], "warnings": []}
+
         try:
-            cursor = self.conn.cursor()
-            results = {
-                "valid": True,
-                "errors": [],
-                "warnings": []
-            }
-            
-            # Check required tables exist
-            required_tables = ['blocks', 'actant_relationships', 'schema_versions']
-            for table in required_tables:
-                cursor.execute("""
-                    SELECT name FROM sqlite_master 
-                    WHERE type='table' AND name=?
-                """, (table,))
-                
-                if not cursor.fetchone():
-                    results["valid"] = False
-                    results["errors"].append(f"Missing required table: {table}")
-            
-            # Check blocks table has all required columns
             cursor.execute("PRAGMA table_info(blocks)")
-            columns = [col[1] for col in cursor.fetchall()]
-            
-            required_columns = [
-                'block_index', 'timestamp', 'context', 'importance', 'hash',
-                'actant_subject', 'actant_action', 'actant_object', 
-                'actant_parsed_at', 'migration_confidence'
-            ]
-            
-            for column in required_columns:
-                if column not in columns:
-                    results["valid"] = False
-                    results["errors"].append(f"Missing required column: {column}")
-            
-            # Check for orphaned data
-            cursor.execute("""
-                SELECT COUNT(*) FROM blocks 
-                WHERE actant_subject IS NOT NULL 
-                AND (actant_action IS NULL OR actant_object IS NULL)
-            """)
-            
-            partial_actants = cursor.fetchone()[0]
-            if partial_actants > 0:
-                results["warnings"].append(
-                    f"{partial_actants} blocks have incomplete actant parsing"
-                )
-            
-            return results
-            
-        except Exception as e:
-            return {
-                "valid": False,
-                "errors": [f"Validation failed: {e}"],
-                "warnings": []
+            columns = {row[1] for row in cursor.fetchall()}
+            required_columns = {
+                "root",
+                "before",
+                "after",
+                "xref",
+                "slot",
+                "branch_similarity",
+                "branch_created_at",
             }
+
+            missing_columns = sorted(required_columns - columns)
+            if missing_columns:
+                issues["ok"] = False
+                issues["errors"].append({"missing_columns": missing_columns})
+
+            cursor.execute(
+                """
+                SELECT name FROM sqlite_master
+                WHERE type='table' AND name IN ('branch_meta', 'stm_slots')
+                """
+            )
+            tables = {row[0] for row in cursor.fetchall()}
+            for table in ("branch_meta", "stm_slots"):
+                if table not in tables:
+                    issues["ok"] = False
+                    issues["errors"].append({"missing_table": table})
+
+        except Exception as exc:  # noqa: BLE001
+            issues["ok"] = False
+            issues["errors"].append({"exception": str(exc)})
+
+        return issues
 
 
 class MigrationVersionGuard:
-    """Guards against operations on incompatible schema versions"""
-    
+    """Utility to guard branch-aware features behind a schema check."""
+
     def __init__(self, version_manager: SchemaVersionManager):
         self.version_manager = version_manager
-        self.required_version = SchemaVersion.V253_ACTANT
-    
+
     def check_compatibility(self) -> bool:
-        """Check if current schema is compatible with operations"""
-        current_version = self.version_manager.detect_schema_version()
-        return current_version == self.required_version
-    
+        return self.version_manager.detect_schema_version() == SchemaVersion.BRANCH_READY
+
     def enforce_compatibility(self) -> None:
-        """Raise exception if schema is incompatible"""
         if not self.check_compatibility():
-            current = self.version_manager.detect_schema_version()
+            inspection = self.version_manager.inspect()
             raise RuntimeError(
-                f"Schema version {current.value} is incompatible. "
-                f"Required: {self.required_version.value}. "
-                "Please run migration first."
+                "Branch metadata is not ready. "
+                f"Current version: {inspection.version.value}. "
+                "Run `greeum migrate check` to upgrade the schema."
             )
