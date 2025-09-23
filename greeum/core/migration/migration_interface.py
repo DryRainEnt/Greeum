@@ -8,13 +8,16 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sqlite3
+from datetime import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
 from ..branch_schema import BranchSchemaSQL
 from .backup_system import AtomicBackupSystem, TransactionSafetyWrapper
+from ..stm_anchor_store import STMAnchorStore
 from .schema_version import SchemaVersionManager
 
 logger = logging.getLogger(__name__)
@@ -41,6 +44,7 @@ class BranchMigrationInterface:
         self.data_dir = Path(data_dir).expanduser()
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.db_path = self.data_dir / db_filename
+        os.environ.setdefault("GREEUM_STM_DB", str(self.data_dir / "stm_anchors.db"))
         self.version_manager = SchemaVersionManager(str(self.db_path))
         self.backup_system = AtomicBackupSystem(str(self.data_dir))
 
@@ -50,25 +54,47 @@ class BranchMigrationInterface:
     def _cursor(self) -> sqlite3.Cursor:
         return self.version_manager._cursor()
 
-    def _ensure_slot_defaults(self, cursor: sqlite3.Cursor) -> None:
+    def _migrate_stm_slots(self, cursor: sqlite3.Cursor) -> None:
+        anchor_path = self.data_dir / "stm_anchors.db"
+        anchor_store = STMAnchorStore(anchor_path)
+
         cursor.execute(
             """
-            CREATE TABLE IF NOT EXISTS stm_slots (
-                slot_name TEXT PRIMARY KEY,
-                block_hash TEXT,
-                branch_root TEXT,
-                updated_at REAL
-            )
+            SELECT name FROM sqlite_master
+            WHERE type='table' AND name='stm_slots'
             """
         )
-        for slot in ("A", "B", "C"):
-            cursor.execute(
-                """
-                INSERT OR IGNORE INTO stm_slots(slot_name, block_hash, branch_root, updated_at)
-                VALUES(?, NULL, NULL, 0)
-                """,
-                (slot,),
+        if not cursor.fetchone():
+            try:
+                anchor_store.close()
+            except Exception:
+                pass
+            return
+
+        cursor.execute(
+            "SELECT slot_name, block_hash, branch_root, updated_at FROM stm_slots"
+        )
+        rows = cursor.fetchall()
+
+        for slot_name, block_hash, branch_root, updated_at in rows:
+            anchor_store.upsert_slot(
+                slot_name=slot_name,
+                anchor_block=block_hash,
+                topic_vec=None,
+                summary=branch_root or "",
+                last_seen=updated_at or 0,
+                hysteresis=0,
             )
+
+        try:
+            cursor.execute("DROP TABLE IF EXISTS stm_slots")
+        except sqlite3.OperationalError as exc:
+            logger.debug(f"Skipping stm_slots drop: {exc}")
+
+        try:
+            anchor_store.close()
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Public API
@@ -82,6 +108,19 @@ class BranchMigrationInterface:
         logger.info("Starting branch migration for %s", self.db_path)
 
         result = MigrationResult(applied=False)
+        anchor_path = self.data_dir / "stm_anchors.db"
+        anchor_backup_id: Optional[str] = None
+
+        if create_backup and anchor_path.exists():
+            try:
+                anchor_backup_id = self.backup_system.create_backup(
+                    str(anchor_path),
+                    backup_id=f"anchor_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                )
+                logger.info("Created STM anchor backup: %s", anchor_backup_id)
+            except Exception as backup_exc:  # noqa: BLE001
+                logger.warning("Failed to backup STM anchors: %s", backup_exc)
+                anchor_backup_id = None
 
         def _execute(cursor: sqlite3.Cursor) -> None:
             statements = BranchSchemaSQL.get_migration_sql()
@@ -97,7 +136,7 @@ class BranchMigrationInterface:
                         continue
                     result.errors.append(str(exc))
                     logger.error("Migration statement failed: %s", exc)
-            self._ensure_slot_defaults(cursor)
+            self._migrate_stm_slots(cursor)
 
         if not self.db_path.exists():
             # Touch the file so SQLite opens it without error.
@@ -124,6 +163,13 @@ class BranchMigrationInterface:
                 self.version_manager.conn.rollback()
             result.errors.append(str(exc))
             logger.error("Branch migration failed: %s", exc)
+
+            if anchor_backup_id:
+                try:
+                    self.backup_system.restore_backup(anchor_backup_id, str(anchor_path))
+                    logger.info("Restored STM anchor store from backup %s", anchor_backup_id)
+                except Exception as restore_exc:  # noqa: BLE001
+                    logger.error("Failed to restore STM anchor backup %s: %s", anchor_backup_id, restore_exc)
             return result
 
     def close(self) -> None:

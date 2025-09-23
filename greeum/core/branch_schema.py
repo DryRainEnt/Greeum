@@ -195,16 +195,6 @@ class BranchSchemaSQL:
             );
             """,
 
-            # Create STM slots table
-            """
-            CREATE TABLE IF NOT EXISTS stm_slots (
-                slot_name TEXT PRIMARY KEY,
-                block_hash TEXT,
-                branch_root TEXT,
-                updated_at REAL
-            );
-            """,
-            
             # Create merge_proposals table
             """
             CREATE TABLE IF NOT EXISTS merge_proposals (
@@ -274,14 +264,6 @@ class BranchSchemaSQL:
             cursor.execute("""
                 SELECT name FROM sqlite_master 
                 WHERE type='table' AND name='branch_meta'
-            """)
-            if not cursor.fetchone():
-                return True
-
-            # Check if stm_slots table exists
-            cursor.execute("""
-                SELECT name FROM sqlite_master
-                WHERE type='table' AND name='stm_slots'
             """)
             if not cursor.fetchone():
                 return True

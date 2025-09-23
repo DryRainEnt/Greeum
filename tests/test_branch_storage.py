@@ -66,19 +66,72 @@ def test_branch_columns_persist_after_migration(temp_data_dir: Path) -> None:
     manager.conn.close()
 
 
-def test_stm_slots_initialized(temp_data_dir: Path) -> None:
+def test_stm_anchor_initialized(temp_data_dir: Path) -> None:
     interface = BranchMigrationInterface(str(temp_data_dir))
     interface.apply(create_backup=False)
 
-    conn = sqlite3.connect(str(temp_data_dir / "memory.db"))
+    anchor_path = temp_data_dir / "stm_anchors.db"
+    assert anchor_path.exists()
+
+    conn = sqlite3.connect(str(anchor_path))
     cursor = conn.cursor()
-    cursor.execute("SELECT slot_name, block_hash, branch_root FROM stm_slots ORDER BY slot_name")
+    cursor.execute(
+        "SELECT slot_name, anchor_block, summary, hysteresis FROM slots ORDER BY slot_name"
+    )
     rows = cursor.fetchall()
 
     assert [row[0] for row in rows] == ["A", "B", "C"]
-    # 초기 상태에서는 머리 포인터가 비어있어야 한다.
+    # 초기 상태에서는 머리 포인터와 요약이 비어있어야 한다.
     assert all(row[1] is None for row in rows)
-    assert all(row[2] is None for row in rows)
+    assert all((row[2] or "") == "" for row in rows)
+    assert all((row[3] or 0) == 0 for row in rows)
 
     conn.close()
     interface.close()
+
+
+def test_legacy_stm_slots_migrated_to_anchor_store(temp_data_dir: Path) -> None:
+    db_path = temp_data_dir / "memory.db"
+    conn = sqlite3.connect(str(db_path))
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS stm_slots (
+            slot_name TEXT PRIMARY KEY,
+            block_hash TEXT,
+            branch_root TEXT,
+            updated_at REAL
+        )
+        """
+    )
+    cursor.execute(
+        "INSERT INTO stm_slots(slot_name, block_hash, branch_root, updated_at) VALUES('A', 'hash-123', 'root-zeta', 123.0)"
+    )
+    conn.commit()
+    conn.close()
+
+    interface = BranchMigrationInterface(str(temp_data_dir))
+    interface.apply(create_backup=False)
+    interface.close()
+
+    conn = sqlite3.connect(str(db_path))
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='stm_slots'"
+    )
+    assert cursor.fetchone() is None
+    conn.close()
+
+    anchor_path = temp_data_dir / "stm_anchors.db"
+    assert anchor_path.exists()
+    conn = sqlite3.connect(str(anchor_path))
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT slot_name, anchor_block, summary FROM slots WHERE slot_name='A'"
+    )
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == "A"
+    assert row[1] == "hash-123"
+    assert row[2] == "root-zeta"
+    conn.close()

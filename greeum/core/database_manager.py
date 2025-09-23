@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 import logging
 from .branch_schema import BranchSchemaSQL, BranchBlock, BranchMeta, SearchMeta
+from .stm_anchor_store import STMAnchorStore
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ class DatabaseManager:
     def __init__(self, connection_string=None, db_type='sqlite'):
         """
         데이터베이스 관리자 초기화
-        
+
         Args:
             connection_string: 데이터베이스 연결 문자열 (기본값: data/memory.db)
             db_type: 데이터베이스 타입 (sqlite, postgres 등)
@@ -28,6 +29,7 @@ class DatabaseManager:
         else:
             self.connection_string = self._get_smart_db_path()
         self._ensure_data_dir()
+        self._ensure_anchor_env()
         self._setup_connection()
         self._create_schemas()
         # logger.info(f"DatabaseManager initialization complete: {self.connection_string} (type: {self.db_type})")  # Too verbose
@@ -81,12 +83,36 @@ class DatabaseManager:
         data_dir = os.path.dirname(self.connection_string)
         if data_dir:
             os.makedirs(data_dir, exist_ok=True)
+
+    def _ensure_anchor_env(self):
+        """Ensure STM anchor store points to the same directory as the active DB."""
+        if "GREEUM_STM_DB" in os.environ:
+            return
+
+        try:
+            db_dir = Path(self.connection_string).expanduser().resolve().parent
+        except Exception:  # noqa: BLE001 - 경로 계산 실패 시 기본 경로 사용
+            return
+
+        anchor_path = db_dir / "stm_anchors.db"
+        os.environ.setdefault("GREEUM_STM_DB", str(anchor_path))
     
     def _setup_connection(self):
         """데이터베이스 연결 설정"""
         if self.db_type == 'sqlite':
-            self.conn = sqlite3.connect(self.connection_string)
+            self.conn = sqlite3.connect(
+                self.connection_string,
+                timeout=float(os.getenv('GREEUM_SQLITE_TIMEOUT', '10')),
+            )
             self.conn.row_factory = sqlite3.Row
+            try:
+                self.conn.execute('PRAGMA journal_mode=WAL')
+                self.conn.execute('PRAGMA synchronous=NORMAL')
+                self.conn.execute('PRAGMA temp_store=MEMORY')
+                busy_ms = int(float(os.getenv('GREEUM_SQLITE_BUSY_TIMEOUT', '5')) * 1000)
+                self.conn.execute(f'PRAGMA busy_timeout = {busy_ms}')
+            except sqlite3.OperationalError as pragma_error:
+                logger.debug(f"SQLite PRAGMA setup skipped: {pragma_error}")
         elif self.db_type == 'postgres':
             try:
                 import psycopg2
@@ -189,24 +215,47 @@ class DatabaseManager:
     def _initialize_branch_structures(self, cursor):
         """Ensure branch-specific tables and defaults exist."""
         try:
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS stm_slots (
-                    slot_name TEXT PRIMARY KEY,
-                    block_hash TEXT,
-                    branch_root TEXT,
-                    updated_at REAL
-                )
-            ''')
+            cursor.execute(
+                """
+                SELECT name FROM sqlite_master
+                WHERE type='table' AND name='stm_slots'
+                """
+            )
+            row = cursor.fetchone()
+            if not row:
+                return
 
-            for slot in ("A", "B", "C"):
-                cursor.execute(
-                    '''INSERT OR IGNORE INTO stm_slots(slot_name, block_hash, branch_root, updated_at)
-                       VALUES(?, NULL, NULL, 0)''',
-                    (slot,)
+            cursor.execute(
+                "SELECT slot_name, block_hash, branch_root, updated_at FROM stm_slots"
+            )
+            rows = cursor.fetchall()
+
+            # Anchor store mirrors the DB directory so it remains coupled to this dataset.
+            anchor_path = Path(os.environ.get("GREEUM_STM_DB", "")).expanduser()
+            if not anchor_path:
+                anchor_path = Path(self.connection_string).expanduser().resolve().parent / "stm_anchors.db"
+
+            anchor_store = STMAnchorStore(anchor_path)
+            for slot_name, block_hash, branch_root, updated_at in rows:
+                anchor_store.upsert_slot(
+                    slot_name=slot_name,
+                    anchor_block=block_hash,
+                    topic_vec=None,
+                    summary=branch_root or "",
+                    last_seen=updated_at or 0,
+                    hysteresis=0,
                 )
+
+            try:
+                anchor_store.close()
+            except Exception:
+                pass
+
+            cursor.execute("DROP TABLE IF EXISTS stm_slots")
+            logger.info("Migrated legacy stm_slots table into stm_anchors store")
 
         except sqlite3.OperationalError as e:
-            logger.warning(f"stm_slots initialization skipped: {e}")
+            logger.debug(f"stm_slots migration skipped: {e}")
     
     def _create_v3_tables(self, cursor):
         """Create v3.0.0 association-based memory tables"""

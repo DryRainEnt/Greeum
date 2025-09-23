@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -7,6 +8,7 @@ import pytest
 from greeum.core.branch_aware_storage import BranchAwareStorage
 from greeum.core.branch_index import BranchIndexManager
 from greeum.core.database_manager import DatabaseManager
+from greeum.core.stm_anchor_store import STMAnchorStore
 
 
 def _add_block(manager: DatabaseManager, *, block_index: int, context: str, root: str,
@@ -70,16 +72,26 @@ def _prepare_storage(tmp_path: Path):
         prev_hash="hash-alpha-1",
     )
 
-    cursor = manager.conn.cursor()
-    cursor.execute(
-        "UPDATE stm_slots SET block_hash=?, branch_root=?, updated_at=? WHERE slot_name='A'",
-        ("hash-alpha-1", root_alpha, time.time()),
+    anchor_path = Path(os.environ.get("GREEUM_STM_DB", tmp_path / "stm_anchors.db"))
+    anchor_store = STMAnchorStore(anchor_path)
+    now_ts = time.time()
+    anchor_store.upsert_slot(
+        slot_name="A",
+        anchor_block="hash-alpha-1",
+        topic_vec=None,
+        summary=root_alpha,
+        last_seen=now_ts,
+        hysteresis=0,
     )
-    cursor.execute(
-        "UPDATE stm_slots SET block_hash=?, branch_root=?, updated_at=? WHERE slot_name='B'",
-        ("hash-beta-1", root_beta, time.time()),
+    anchor_store.upsert_slot(
+        slot_name="B",
+        anchor_block="hash-beta-1",
+        topic_vec=None,
+        summary=root_beta,
+        last_seen=now_ts,
+        hysteresis=0,
     )
-    manager.conn.commit()
+    anchor_store.close()
 
     branch_index_manager = BranchIndexManager(manager)
     storage = BranchAwareStorage(manager, branch_index_manager)

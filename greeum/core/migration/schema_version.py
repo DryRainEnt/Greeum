@@ -1,12 +1,13 @@
 """Branch-aware schema version management for Greeum.
 
-이 모듈은 브랜치 메타데이터 컬럼과 STM 슬롯 테이블이 준비되었는지 확인하고
+이 모듈은 브랜치 메타데이터 컬럼과 STM 앵커 저장소가 준비되었는지 확인하고
 필요 시 안전하게 스키마를 업그레이드하는 단순한 버전 관리 유틸리티를 제공합니다.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import sqlite3
 from dataclasses import dataclass
 from enum import Enum
@@ -180,14 +181,21 @@ class SchemaVersionManager:
             cursor.execute(
                 """
                 SELECT name FROM sqlite_master
-                WHERE type='table' AND name IN ('branch_meta', 'stm_slots')
+                WHERE type='table' AND name='branch_meta'
                 """
             )
-            tables = {row[0] for row in cursor.fetchall()}
-            for table in ("branch_meta", "stm_slots"):
-                if table not in tables:
-                    issues["ok"] = False
-                    issues["errors"].append({"missing_table": table})
+            if not cursor.fetchone():
+                issues["ok"] = False
+                issues["errors"].append({"missing_table": "branch_meta"})
+
+            anchor_path = Path(
+                os.environ.get("GREEUM_STM_DB", str(self.db_path.parent / "stm_anchors.db"))
+            ).expanduser()
+            if not anchor_path.exists():
+                issues["warnings"].append({
+                    "missing_anchor_store": str(anchor_path),
+                    "hint": "STM 앵커 저장소가 초기화되지 않았습니다. greeum setup 또는 STMManager 초기화를 실행해 주세요.",
+                })
 
         except Exception as exc:  # noqa: BLE001
             issues["ok"] = False
