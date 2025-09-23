@@ -39,8 +39,9 @@ CLI -> JSON-RPC request -> Worker queue -> BlockManager._add_block -> STM anchor
 
 ## Implementation Checklist
 - [x] Introduce worker command (`greeum worker serve`) with shared write queue.
-- [ ] Refactor BlockManager to operate on external connections & queue-based writes.
+- [x] Refactor BlockManager to operate on external connections & queue-based writes (AsyncWriteQueue + connection injection, 2025-09-19 Codex).
 - [x] Adjust CLI memory commands to auto-detect/optionally use the worker.
-- [ ] Extend tests to cover worker RPC path (start worker in fixture, run add/search).
+- [x] CLI auto-spawns HTTP worker when none is running (`greeum memory add/search` now ensures a background daemon per data dir).
+- [x] Extend tests to cover worker RPC path (start worker in fixture, run add/search) — `tests/test_worker_cli_integration.py` boots HTTP worker and exercises CLI worker calls.
 - [ ] Measure latency with worker vs. CLI cold-start; capture numbers in docs.
 - [ ] Update README + workflow guide with new workflow.

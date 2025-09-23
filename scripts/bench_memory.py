@@ -14,6 +14,8 @@ import sys
 import time
 from typing import Iterable, List, Tuple
 
+import os
+
 DEFAULT_ADD_TEXT = "[Bench] quick brown fox jumps over the lazy dog"
 DEFAULT_SEARCH_QUERY = "quick brown fox"
 
@@ -55,6 +57,14 @@ def build_env(args) -> dict:
         env.pop("GREEUM_DISABLE_ST", None)
     else:
         env["GREEUM_DISABLE_ST"] = "1"
+    if args.worker_endpoint:
+        env["GREEUM_MCP_HTTP"] = args.worker_endpoint
+        env["GREEUM_USE_WORKER"] = "1"
+    elif args.force_worker:
+        env["GREEUM_USE_WORKER"] = "1"
+    if args.no_worker:
+        env["GREEUM_USE_WORKER"] = "0"
+        env.pop("GREEUM_MCP_HTTP", None)
     return env
 
 
@@ -82,8 +92,6 @@ def display_result(label: str, durations: List[float], note: str) -> None:
 
 
 if __name__ == "__main__":
-    import os
-
     parser = argparse.ArgumentParser(description="Benchmark greeum memory add/search operations")
     parser.add_argument("--data-dir", help="Override GREEUM_DATA_DIR for benchmark runs")
     parser.add_argument("--iterations", type=int, default=5, help="Number of repetitions per command")
@@ -116,6 +124,20 @@ if __name__ == "__main__":
         "--warmup",
         action="store_true",
         help="Run greeum mcp warmup for the selected mode before benchmarking",
+    )
+    parser.add_argument(
+        "--worker-endpoint",
+        help="HTTP worker endpoint (e.g., http://127.0.0.1:8800/mcp). Enables worker mode automatically.",
+    )
+    parser.add_argument(
+        "--force-worker",
+        action="store_true",
+        help="Force worker usage even if the endpoint relies on environment variables.",
+    )
+    parser.add_argument(
+        "--no-worker",
+        action="store_true",
+        help="Disable worker usage even if environment variables are set.",
     )
 
     args = parser.parse_args()

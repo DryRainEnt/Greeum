@@ -27,7 +27,7 @@ class PromptWrapper:
                 self.stm_manager = STMManager(self.cache_manager.block_manager.db_manager)
             else:
                 from .database_manager import DatabaseManager
-                self.stm_manager = STMManager(DatabaseManager())
+                self.stm_manager = STMManager(self.cache_manager.block_manager.db_manager)
     
     def _format_memory_block(self, block: Dict[str, Any]) -> str:
         """

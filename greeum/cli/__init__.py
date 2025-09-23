@@ -21,6 +21,7 @@ import sqlite3
 import subprocess
 from pathlib import Path
 from typing import Optional, Dict, Any
+from datetime import datetime
 
 from ..config_store import (
     DEFAULT_DATA_DIR,
@@ -39,6 +40,7 @@ from ..embedding_models import (
     force_simple_fallback,
 )
 from ..worker.client import WriteServiceClient, resolve_endpoint, WorkerUnavailableError
+from ..worker import ensure_http_worker, get_worker_state
 
 
 def _download_sentence_transformer(model: str) -> Path:
@@ -123,17 +125,22 @@ def main(ctx: click.Context, verbose: bool, debug: bool, quiet: bool):
 @main.command()
 @click.option('--data-dir', type=click.Path(file_okay=False, dir_okay=True, writable=True), help='Custom data directory')
 @click.option('--skip-warmup', is_flag=True, help='Skip SentenceTransformer warm-up step')
-def setup(data_dir: Optional[str], skip_warmup: bool):
+@click.option('--start-worker/--skip-worker', default=True, show_default=True, help='Launch background worker after setup completes')
+def setup(data_dir: Optional[str], skip_warmup: bool, start_worker: bool):
     """Interactive first-time setup (data dir + optional warm-up)."""
 
     click.echo("🛠️  Greeum setup wizard")
     config = load_config()
 
     default_dir = data_dir or config.data_dir or str(DEFAULT_DATA_DIR)
-    chosen_dir = click.prompt(
-        "Data directory (used for memories, cache, logs)",
-        default=str(Path(default_dir).expanduser()),
-    )
+    if data_dir:
+        chosen_dir = str(Path(data_dir).expanduser())
+        click.echo(f"Using data directory: {chosen_dir}")
+    else:
+        chosen_dir = click.prompt(
+            "Data directory (used for memories, cache, logs)",
+            default=str(Path(default_dir).expanduser()),
+        )
 
     target_dir = ensure_data_dir(chosen_dir)
     os.environ['GREEUM_DATA_DIR'] = str(target_dir)
@@ -171,13 +178,42 @@ def setup(data_dir: Optional[str], skip_warmup: bool):
     elif not semantic_ready:
         mark_semantic_ready(False)
 
+    worker_endpoint = None
+    worker_log = None
+    if start_worker:
+        click.echo("\n🚀 Launching background worker…")
+        try:
+            endpoint = ensure_http_worker(
+                data_dir=Path(target_dir),
+                semantic=semantic_ready,
+                allow_spawn=True,
+            )
+            worker_endpoint = endpoint
+            os.environ['GREEUM_MCP_HTTP'] = endpoint
+            state = get_worker_state(Path(target_dir)) or {}
+            worker_log = state.get('log')
+        except Exception as exc:  # noqa: BLE001 - show warning only
+            click.echo(f"[WARN] Failed to launch worker automatically: {exc}")
+        else:
+            click.echo(f"   • Worker endpoint: {worker_endpoint}")
+            if worker_log:
+                click.echo(f"   • Worker log: {worker_log}")
+            else:
+                click.echo("   • Worker log: <not recorded>")
+
     click.echo("\nSetup summary:")
     click.echo(f"   • Data directory: {target_dir}")
     click.echo(
         "   • Semantic embeddings: "
         + ("ready" if semantic_ready else "hash fallback (run warmup to enable)")
     )
-    click.echo("   • Next step: add 'greeum mcp serve -t stdio' to your MCP config")
+    if start_worker and worker_endpoint:
+        click.echo("   • Worker: running (auto-start)")
+    elif start_worker:
+        click.echo("   • Worker: failed to start (use 'greeum worker serve' later)")
+    else:
+        click.echo("   • Worker: skipped (use 'greeum worker serve' when needed)")
+    click.echo("   • Next step: run 'greeum memory add ""Your first note""' to test the connection")
 @main.group()
 def memory():
     """Memory management commands (STM/LTM)"""
@@ -357,18 +393,45 @@ def _decide_worker(use_worker_flag: bool, no_worker_flag: bool) -> Optional[bool
     return None
 
 
-def _try_worker_call(tool: str, arguments: Dict[str, Any], use_worker_flag: bool, no_worker_flag: bool, quiet: bool = False) -> Optional[Dict[str, Any]]:
+def _try_worker_call(tool: str, arguments: Dict[str, Any], use_worker_flag: bool, no_worker_flag: bool, quiet: bool = False, config: Optional[GreeumConfig] = None) -> Optional[Dict[str, Any]]:
     decision = _decide_worker(use_worker_flag, no_worker_flag)
     endpoint = resolve_endpoint()
-    if decision is False or not endpoint:
+
+    if decision is False:
         return None
 
-    if decision is None and not endpoint:
-        return None
+    if not endpoint:
+        base_dir = os.environ.get("GREEUM_DATA_DIR")
+        data_root = base_dir or (config.data_dir if config else str(DEFAULT_DATA_DIR))
+        data_dir = Path(data_root).expanduser()
+        semantic_ready = bool(config.semantic_ready) if config else False
+        try:
+            endpoint = ensure_http_worker(
+                data_dir=data_dir,
+                semantic=semantic_ready,
+                allow_spawn=True,
+            )
+            if endpoint:
+                os.environ["GREEUM_MCP_HTTP"] = endpoint
+        except Exception as exc:  # noqa: BLE001 - surface fallback warning
+            if not quiet:
+                click.echo(f"[WARN] Auto worker unavailable ({exc}); using local execution.")
+            endpoint = None
 
     try:
+        if not endpoint:
+            return None
         client = WriteServiceClient(endpoint)
-        return client.call(tool, arguments)
+        payload = client.call(tool, arguments)
+        if isinstance(payload, dict):
+            text_blocks = [
+                block.get("text", "")
+                for block in payload.get("content", [])
+                if isinstance(block, dict) and block.get("type") == "text"
+            ]
+            if text_blocks:
+                payload["text"] = "\n".join(block.strip() for block in text_blocks if block)
+        return payload
     except WorkerUnavailableError as exc:
         if not quiet:
             click.echo(f"[WARN] Worker unavailable ({exc}); falling back to local execution.")
@@ -385,6 +448,7 @@ def _try_worker_call(tool: str, arguments: Dict[str, Any], use_worker_flag: bool
 def add(content: str, importance: float, tags: Optional[str], slot: Optional[str], use_worker: bool, no_worker: bool):
     """Add new memory to long-term storage"""
     try:
+        config = load_config()
         worker_args = {
             "content": content,
             "importance": importance,
@@ -393,8 +457,12 @@ def add(content: str, importance: float, tags: Optional[str], slot: Optional[str
             worker_args["metadata"] = {"tags": tags.split(',')}
         if slot:
             worker_args["slot"] = slot
-        worker_response = _try_worker_call("add_memory", worker_args, use_worker, no_worker)
+        worker_response = _try_worker_call("add_memory", worker_args, use_worker, no_worker, config=config)
         if worker_response is not None:
+            text = worker_response.get("text")
+            if text:
+                click.echo(text)
+                return
             data = worker_response.get("data") or {}
             block_id = data.get("block_index", data.get("id", "unknown"))
             click.echo(f"✅ Memory added via worker (Block #{block_id})")
@@ -416,7 +484,7 @@ def add(content: str, importance: float, tags: Optional[str], slot: Optional[str
             # Use traditional write
             from ..core import BlockManager, DatabaseManager
             from ..text_utils import process_user_input
-            
+
             db_manager = DatabaseManager()
             block_manager = BlockManager(db_manager)
             
@@ -457,6 +525,7 @@ def add(content: str, importance: float, tags: Optional[str], slot: Optional[str
 def search(query: str, count: int, threshold: float, slot: str, radius: int, no_fallback: bool, use_worker: bool, no_worker: bool):
     """Search memories by keywords/semantic similarity"""
     try:
+        config = load_config()
         worker_args = {
             "query": query,
             "limit": count,
@@ -465,16 +534,20 @@ def search(query: str, count: int, threshold: float, slot: str, radius: int, no_
         }
         if slot:
             worker_args["slot"] = slot
-        worker_response = _try_worker_call("search_memory", worker_args, use_worker, no_worker, quiet=True)
+        worker_response = _try_worker_call("search_memory", worker_args, use_worker, no_worker, quiet=True, config=config)
         if worker_response is not None:
-            items = worker_response.get('data', {}).get('items', [])
-            if not items:
-                click.echo("No results found (worker)")
+            text = worker_response.get("text")
+            if text:
+                click.echo(text)
                 return
-            for idx, item in enumerate(items, 1):
-                snippet = (item.get('context') or '')[:80]
-                score = item.get('relevance_score', item.get('score'))
-                click.echo(f"{idx}. {snippet} (score={score})")
+            items = worker_response.get('data', {}).get('items', [])
+            if items:
+                for idx, item in enumerate(items, 1):
+                    snippet = (item.get('context') or '')[:80]
+                    score = item.get('relevance_score', item.get('score'))
+                    click.echo(f"{idx}. {snippet} (score={score})")
+            else:
+                click.echo("No results found (worker)")
             return
 
         from ..core.block_manager import BlockManager

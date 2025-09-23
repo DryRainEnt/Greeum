@@ -278,7 +278,7 @@ class AutoMergeEngine:
             proposal.slot_j: head_j
         }
         
-        self.branch_manager.stm_slots[proposal.slot_i] = checkpoint.id
+        self.branch_manager.update_stm_slot(proposal.slot_i, checkpoint.id)
         
         # 머지 이력 저장
         history = MergeHistory(
@@ -330,7 +330,7 @@ class AutoMergeEngine:
             
         # 원래 헤드로 복원
         for slot, original_head in history.original_heads.items():
-            self.branch_manager.stm_slots[slot] = original_head
+            self.branch_manager.update_stm_slot(slot, original_head)
             
         # 이력 업데이트
         history.reverted_at = time.time()

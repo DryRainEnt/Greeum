@@ -13,6 +13,8 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
+from .stm_anchor_store import get_anchor_store
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,6 +28,7 @@ class BranchAwareStorage:
         self.branch_centroids = {}  # branch -> centroid embedding
         self.dynamic_threshold = 0.5  # Default, will be calculated
         self.keyword_weight, self.temporal_weight = self._load_fallback_weights()
+        self.anchor_store = get_anchor_store()
 
     # ------------------------------------------------------------------
     # Helpers
@@ -48,26 +51,19 @@ class BranchAwareStorage:
     def update_slot_mapping(self):
         """Update mapping of STM slots to their branches"""
         cursor = self.db_manager.conn.cursor()
-
-        # Get all active STM slots
-        cursor.execute("""
-            SELECT slot_name, block_hash
-            FROM stm_slots
-            WHERE block_hash IS NOT NULL
-        """)
-
         self.slot_branches = {}
-        for slot_name, block_hash in cursor.fetchall():
-            # Get branch for this block
-            cursor.execute("""
-                SELECT root FROM blocks
-                WHERE hash = ?
-            """, (block_hash,))
-
+        slots = self.anchor_store.get_slots()
+        for slot_name, slot_data in slots.items():
+            if not slot_data.anchor_block:
+                continue
+            cursor.execute(
+                "SELECT root FROM blocks WHERE hash = ?",
+                (slot_data.anchor_block,),
+            )
             result = cursor.fetchone()
-            if result and result[0]:
-                self.slot_branches[slot_name] = result[0]
-                logger.debug(f"Slot {slot_name} -> Branch {result[0][:8]}...")
+            root_hash = result[0] if result and result[0] else slot_data.anchor_block
+            self.slot_branches[slot_name] = root_hash
+            logger.debug(f"Slot {slot_name} -> Branch {root_hash[:8]}...")
 
     def calculate_branch_centroids(self):
         """Calculate centroid embeddings for each branch"""

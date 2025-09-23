@@ -7,10 +7,12 @@ and interact with Greeum memory components.
 from typing import Dict, List, Any, Optional
 import asyncio
 
+from ...worker import AsyncWriteQueue
+
 class MemoryTools:
     """Memory tools for GreeumMCP."""
     
-    def __init__(self, block_manager, stm_manager, cache_manager, temporal_reasoner):
+    def __init__(self, block_manager, stm_manager, cache_manager, temporal_reasoner, write_queue: Optional[AsyncWriteQueue] = None):
         """
         Initialize MemoryTools with required Greeum components.
         
@@ -24,6 +26,7 @@ class MemoryTools:
         self.stm_manager = stm_manager
         self.cache_manager = cache_manager
         self.temporal_reasoner = temporal_reasoner
+        self.write_queue = write_queue or AsyncWriteQueue(label="mcp")
     
     async def add_memory(self, content: str, importance: float = 0.5) -> str:
         """
@@ -39,28 +42,30 @@ class MemoryTools:
         from greeum.text_utils import process_user_input
         
         processed = process_user_input(content)
-        
-        # Add to long-term memory
-        block = self.block_manager.add_block(
-            context=processed.get("context", content),
-            keywords=processed.get("keywords", []),
-            tags=processed.get("tags", []),
-            importance=importance,
-            embedding=processed.get("embedding", None)
-        )
-        
-        if not block:
-            raise Exception("Failed to add memory block")
-        
-        # Also add to short-term memory
-        self.stm_manager.add_memory({
-            "content": content,
-            "metadata": {
-                "keywords": processed.get("keywords", []),
-                "importance": importance
-            }
-        })
-        
+
+        def _write_sync():
+            block = self.block_manager.add_block(
+                context=processed.get("context", content),
+                keywords=processed.get("keywords", []),
+                tags=processed.get("tags", []),
+                importance=importance,
+                embedding=processed.get("embedding", None),
+            )
+
+            if not block:
+                raise RuntimeError("Failed to add memory block")
+
+            self.stm_manager.add_memory({
+                "content": content,
+                "metadata": {
+                    "keywords": processed.get("keywords", []),
+                    "importance": importance,
+                },
+            })
+            return block
+
+        block = await self.write_queue.run(_write_sync)
+
         # Return the block index as the memory ID
         return str(block.get("block_index", ""))
     

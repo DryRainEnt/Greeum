@@ -456,7 +456,7 @@ class DatabaseManager:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_relations_source ON actant_relations(source_actant_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_relations_target ON actant_relations(target_actant_id)')
     
-    def add_block(self, block_data: Dict[str, Any]) -> Optional[int]:
+    def add_block(self, block_data: Dict[str, Any], connection: Optional[Any] = None) -> Optional[int]:
         """
         새 블록 추가 - v3.1.0rc7: 트랜잭션 안전성 개선
 
@@ -466,15 +466,16 @@ class DatabaseManager:
         Returns:
             추가된 블록의 인덱스 또는 None (실패시)
         """
-        cursor = self.conn.cursor()
+        conn = connection or self.conn
+        cursor = conn.cursor()
         block_index = block_data.get('block_index')
 
         try:
             # Check if we're already in a transaction
-            in_transaction = self.conn.in_transaction
+            in_transaction = conn.in_transaction
             if not in_transaction:
                 # Start transaction only if not already in one
-                self.conn.execute("BEGIN TRANSACTION")
+                conn.execute("BEGIN TRANSACTION")
 
             # 1. 블록 기본 정보 삽입 (브랜치 필드 포함)
             # Check if branch columns exist
@@ -574,11 +575,11 @@ class DatabaseManager:
 
             # Commit transaction only if we started it
             if not in_transaction:
-                self.conn.commit()
+                conn.commit()
 
             # Post-commit verification to ensure data is accessible
             try:
-                verification_cursor = self.conn.cursor()
+                verification_cursor = conn.cursor()
                 verification_cursor.execute("SELECT block_index FROM blocks WHERE block_index = ?", (block_index,))
                 if not verification_cursor.fetchone():
                     logger.error(f"Post-commit verification failed: Block {block_index} not found after commit")
@@ -593,14 +594,14 @@ class DatabaseManager:
         except sqlite3.IntegrityError as e:
             # Rollback on constraint violations (e.g., duplicate index)
             if not in_transaction:
-                self.conn.rollback()
+                conn.rollback()
             logger.error(f"Integrity error adding block {block_index}: {e}")
             return None
 
         except Exception as e:
             # Rollback on any other error only if we started the transaction
             if 'in_transaction' in locals() and not in_transaction:
-                self.conn.rollback()
+                conn.rollback()
             logger.error(f"Failed to add block {block_index}: {e}")
             return None
     

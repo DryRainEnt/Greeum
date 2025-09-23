@@ -117,7 +117,70 @@ class BlockManager:
                  embedding: List[float], importance: float,
                  metadata: Optional[Dict[str, Any]] = None,
                  embedding_model: Optional[str] = 'default',
-                 slot: Optional[str] = None) -> Optional[Dict[str, Any]]:
+                 slot: Optional[str] = None,
+                 connection: Optional[Any] = None) -> Optional[Dict[str, Any]]:
+        if hasattr(self.db_manager, "run_serialized"):
+            result = self.db_manager.run_serialized(lambda: self._add_block_internal(
+                context,
+                keywords,
+                tags,
+                embedding,
+                importance,
+                metadata,
+                embedding_model,
+                slot,
+                connection,
+            ))
+            if not result:
+                return None
+            head_update = result.get('head_update')
+            block_data = result.get('block')
+            if head_update:
+                slot_name, head_hash, head_context, head_embedding = head_update
+                try:
+                    self.stm_manager.update_head(
+                        slot_name,
+                        head_hash,
+                        context=head_context,
+                        embedding=head_embedding,
+                    )
+                    logger.info(f"P1: Updated slot {slot_name} head to {head_hash[:8]}...")
+                except Exception as slot_error:
+                    logger.warning(f"STM head update failed for slot {slot_name}: {slot_error}")
+            return block_data
+
+        block_result = self._add_block_internal(
+            context,
+            keywords,
+            tags,
+            embedding,
+            importance,
+            metadata,
+            embedding_model,
+            slot,
+            connection,
+        )
+        if block_result and block_result.get('head_update'):
+            slot_name, head_hash, head_context, head_embedding = block_result['head_update']
+            try:
+                self.stm_manager.update_head(
+                    slot_name,
+                    head_hash,
+                    context=head_context,
+                    embedding=head_embedding,
+                )
+                logger.info(f"P1: Updated slot {slot_name} head to {head_hash[:8]}...")
+            except Exception as slot_error:
+                logger.warning(f"STM head update failed for slot {slot_name}: {slot_error}")
+            return block_result.get('block')
+        return block_result.get('block') if block_result else None
+
+    def _add_block_internal(self, context: str, keywords: List[str], tags: List[str],
+                             embedding: List[float], importance: float,
+                             metadata: Optional[Dict[str, Any]] = None,
+                             embedding_model: Optional[str] = 'default',
+                             slot: Optional[str] = None,
+                             connection: Optional[Any] = None) -> Optional[Dict[str, Any]]:
         """
         새 블록 추가 - Branch/DFS 구조로 저장
         v3.1.0rc7: Branch-aware storage with dynamic threshold
@@ -146,6 +209,10 @@ class BlockManager:
             from .stm_manager import STMManager
             stm = STMManager(self.db_manager)
             self.stm_manager = stm  # Store for future use
+
+        conn = connection or getattr(self.db_manager, "conn", None)
+        if conn is None:
+            raise RuntimeError("Database connection is not available for block write")
         
         # Auto-merge evaluation (before adding new block)
         if self.merge_engine and slot:
@@ -185,7 +252,7 @@ class BlockManager:
 
         if head_id and not before_id:
             # Get head block info
-            cursor = self.db_manager.conn.cursor()
+            cursor = conn.cursor()
             cursor.execute("""
                 SELECT block_index, root, hash FROM blocks WHERE hash = ?
             """, (head_id,))
@@ -274,8 +341,10 @@ class BlockManager:
             **branch_fields  # Add branch fields
         }
         
+        head_update: Optional[Tuple[str, str, Optional[str], Optional[List[float]]]] = None
+
         try:
-            added_idx = self.db_manager.add_block(block_to_store_in_db)
+            added_idx = self.db_manager.add_block(block_to_store_in_db, connection=conn)
 
             # v3.1.0rc7: Verify block was actually saved
             if added_idx is None:
@@ -291,7 +360,7 @@ class BlockManager:
             # Update parent's after field if we have a parent
             if before_id:
                 try:
-                    cursor = self.db_manager.conn.cursor()
+                    cursor = conn.cursor()
                     # Get current after array
                     cursor.execute("SELECT after FROM blocks WHERE hash = ?", (before_id,))
                     result = cursor.fetchone()
@@ -302,20 +371,14 @@ class BlockManager:
                             "UPDATE blocks SET after = ? WHERE hash = ?",
                             (json.dumps(after_list), before_id)
                         )
-                        self.db_manager.conn.commit()
+                        conn.commit()
                         logger.debug(f"Updated parent {before_id} after field with child {current_hash}")
                 except Exception as e:
                     logger.warning(f"Failed to update parent after field: {e}")
             
-            # Update STM head to new block
+            # Prepare STM head update after serialized transaction completes
             if slot:
-                if slot_was_none:
-                    logger.warning("No slot specified for block, using default slot A")
-                try:
-                    stm.update_head(slot, current_hash)
-                    logger.info(f"P1: Updated slot {slot} head to {current_hash[:8]}...")
-                except Exception as slot_error:
-                    logger.warning(f"STM head update failed for slot {slot}: {slot_error}")
+                head_update = (slot, current_hash, context, embedding)
             
             # v2.7.0: Analyze causal relationships after successful block addition
             if self.causal_manager and added_block:
@@ -416,8 +479,10 @@ class BlockManager:
                 logger.debug(f"Failed to record write metric: {e}")
             
             logger.info(f"Block added successfully: index={new_block_index}, hash={current_hash[:10]}...")
-            # Return the full block dict for API compatibility
-            return block_to_store_in_db
+            return {
+                'block': block_to_store_in_db,
+                'head_update': head_update,
+            }
         except Exception as e:
             logger.error(f"BlockManager: Error adding block to DB - {e}", exc_info=True)
             return None

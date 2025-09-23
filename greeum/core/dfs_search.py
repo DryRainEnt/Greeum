@@ -227,6 +227,7 @@ class DFSSearchEngine:
         try:
             # Use STMManager's get_entry_point with priority
             from .stm_manager import STMManager
+
             stm = STMManager(self.db_manager)
             entry_block_id = stm.get_entry_point(slot, entry_type)
 

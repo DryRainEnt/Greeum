@@ -16,8 +16,10 @@
 
 > **First run checklist**
 > 1. Install the package (pipx or pip)
-> 2. Run `greeum setup` to create the data directory and optional warm-up
+> 2. Run `greeum setup --start-worker` to create the data directory and launch the worker
 > 3. Connect your MCP client (Codex, ClaudeCode, Cursor, …)
+
+👉 **Need the ultra-short version?** See [`docs/QUICKSTART.md`](docs/QUICKSTART.md) for “설치 → 셋업 → 연동” 한 페이지 요약.
 
 ```bash
 # Recommended (isolated) install
@@ -27,7 +29,7 @@ pipx install --pip-args "--pre" greeum
 pip install --upgrade "greeum"
 
 # initialise data directory, choose where memories live
-greeum setup
+greeum setup --start-worker
 ```
 
 ### Optional: enable semantic embeddings

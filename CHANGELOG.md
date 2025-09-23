@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.1.1rc7.dev4 - 2025-09-24
+
+### Added
+- `docs/README_ko.md`와 README 상단 언어 전환 링크를 추가해 한국어 초심자 온보딩을 지원.
+
+### Changed
+- 기본 SQLite 연결에 WAL 모드와 `busy_timeout`을 적용하고, MCP STDIO 경로에 비동기 쓰기 큐를 도입해 동시 `add_memory` 호출 시 잠금 충돌을 완화.
+- README를 설치 → `greeum setup` → MCP 연동 순으로 재구성하고 `--semantic` 사용 팁을 명확히 안내.
+
+### Fixed
+- SentenceTransformer 미설치 환경에서 폴백 임베딩을 사용할 때도 `add_memory`가 실패하지 않도록 로깅·보고 흐름을 조정.
+
+### Testing
+- `python3.11 -m pytest tests/test_branch_storage.py`
+
 ## 3.1.1rc7.dev3 - 2025-09-23
 
 ### Added

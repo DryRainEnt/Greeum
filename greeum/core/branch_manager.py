@@ -15,6 +15,8 @@ from pathlib import Path
 import logging
 import time
 
+from .stm_anchor_store import get_anchor_store
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -75,10 +77,16 @@ class BranchManager:
     def __init__(self, db_manager=None):
         """브랜치 매니저 초기화"""
         self.db_manager = db_manager
+        self.anchor_store = get_anchor_store()
         self.blocks: Dict[str, BranchBlock] = {}  # id -> block
         self.branches: Dict[str, BranchMeta] = {}  # root -> meta
         self.stm_slots = {"A": None, "B": None, "C": None}  # 슬롯 -> 헤드
         self.active_slot = "A"
+
+        # Load persisted STM anchors if present
+        for slot_name, slot_data in self.anchor_store.get_slots().items():
+            if slot_name in self.stm_slots:
+                self.stm_slots[slot_name] = slot_data.anchor_block
         
         # 전역 인덱스 초기화
         from .branch_global_index import GlobalIndex
@@ -105,6 +113,22 @@ class BranchManager:
         self.cache_ttl = 300  # 5분
         
         self._load_existing_data()
+
+    def update_stm_slot(self, slot: str, block_hash: Optional[str]) -> None:
+        if slot not in self.stm_slots:
+            return
+        self.stm_slots[slot] = block_hash
+        if block_hash:
+            self.anchor_store.upsert_slot(
+                slot_name=slot,
+                anchor_block=block_hash,
+                topic_vec=None,
+                summary="",
+                last_seen=time.time(),
+                hysteresis=0,
+            )
+        else:
+            self.anchor_store.reset_slot(slot)
         
     def _load_existing_data(self):
         """기존 데이터 로드 (마이그레이션 대비)"""
@@ -171,7 +195,7 @@ class BranchManager:
             )
         
         # 7) STM 헤드 업데이트
-        self.stm_slots[active_slot] = new_block.id
+        self.update_stm_slot(active_slot, new_block.id)
         self.active_slot = active_slot
         
         # 8) 브랜치 메타 업데이트
@@ -465,7 +489,7 @@ class BranchManager:
     def activate_slot(self, slot: str, block_id: str):
         """STM 슬롯 활성화"""
         if slot in self.stm_slots and block_id in self.blocks:
-            self.stm_slots[slot] = block_id
+            self.update_stm_slot(slot, block_id)
             self.active_slot = slot
             
             # 브랜치 메타 업데이트

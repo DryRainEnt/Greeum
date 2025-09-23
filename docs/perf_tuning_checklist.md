@@ -4,6 +4,9 @@
 
 ## 1. 현황 계측
 - [ ] `greeum mcp serve -t stdio` + `greeum memory add/search` 왕복 시간을 10회 측정하고 평균·p95 값을 기록하기 (`scripts/bench_memory.py` 초안 작성).
+- [ ] `greeum mcp serve -t stdio` + `greeum memory add/search` 왕복 시간을 10회 측정하고 평균·p95 값을 기록하기 (`scripts/bench_memory.py` 초안 작성).
+  - 2025-09-23 (hash fallback, SentenceTransformer 비활성화): HTTP 워커 경로 `scripts/bench_memory.py --iterations 3 --worker-endpoint http://127.0.0.1:8820/mcp --skip-search` → add avg **29.26s**, p95 **29.59s**.
+  - 동일 조건에서 로컬 직행(`--no-worker --skip-search`) → add avg **29.77s**, p95 **30.14s**. 현재 지연은 SentenceTransformer 초기화가 지배적이며 워커 유무 차이는 0.5s 이내.
 - [ ] `/tmp/greeum_codex_stdio.log` 및 SQLite `busy_timeout` 경고 수를 집계해 baseline 확보.
 
 ## 2. 쓰기 직렬화 & 재시도 정책

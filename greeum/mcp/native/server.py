@@ -16,7 +16,9 @@ import os
 import signal
 import atexit
 import asyncio
-from typing import Optional, Dict, Any, Union, List
+from typing import Optional, Dict, Any, Union, List, Tuple
+
+import anyio
 
 # Check anyio dependency
 try:
@@ -74,6 +76,9 @@ class GreeumNativeMCPServer:
         self.tools_handler: Optional[GreeumMCPTools] = None
         self.protocol_processor: Optional[JSONRPCProcessor] = None
         self.initialized = False
+        self._write_send_stream = None
+        self._write_receive_stream = None
+        self._write_worker_running = False
         
         logger.info("Greeum Native MCP Server created")
     
@@ -125,13 +130,23 @@ class GreeumNativeMCPServer:
             
             # MCP 도구 핸들러 초기화
             self.tools_handler = GreeumMCPTools(self.greeum_components)
-            
+
             # JSON-RPC 프로토콜 프로세서 초기화
             self.protocol_processor = JSONRPCProcessor(self.tools_handler)
-            
+
             self.initialized = True
             self.model_ready = False  # v3.1.1rc2.dev9: Track model loading status
             logger.info("Native MCP server initialization completed")
+
+            # Initialize write queue (FIFO) for serializing add_memory requests
+            try:
+                send_stream, receive_stream = anyio.create_memory_object_stream(0)
+                self._write_send_stream = send_stream
+                self._write_receive_stream = receive_stream
+            except Exception as queue_error:
+                logger.warning(f"Failed to create write queue: {queue_error}")
+                self._write_send_stream = None
+                self._write_receive_stream = None
 
             # v3.1.1rc2.dev9: Start model loading AFTER connection established
             # This prevents connection timeout while still pre-loading the model
@@ -244,11 +259,50 @@ class GreeumNativeMCPServer:
                 raise TimeoutError("Model loading timeout")
             await asyncio.sleep(0.1)
         return True
+
+    async def _write_worker(self) -> None:
+        """Serialize add_memory requests using a background worker."""
+
+        if self._write_receive_stream is None:
+            logger.debug("Write queue not available; worker exiting")
+            return
+
+        self._write_worker_running = True
+        logger.info("Write worker started")
+
+        try:
+            async with self._write_receive_stream:
+                async for job in self._write_receive_stream:
+                    reply_stream = job.get("reply")
+                    tool_name = job.get("name")
+                    arguments = job.get("arguments", {})
+                    result_text = ""
+
+                    try:
+                        if not hasattr(self.tools_handler, "execute_tool_internal"):
+                            raise RuntimeError("Tool handler does not support internal execution")
+
+                        result_text = await self.tools_handler.execute_tool_internal(tool_name, arguments)
+                    except Exception as worker_err:
+                        logger.error(f"Write worker failed to execute {tool_name}: {worker_err}")
+                        result_text = f"ERROR: Failed to add memory: {worker_err}"
+
+                    if reply_stream:
+                        try:
+                            await reply_stream.send(result_text)
+                        finally:
+                            await reply_stream.aclose()
+
+        except Exception as worker_exception:
+            logger.error(f"Write worker encountered an error: {worker_exception}")
+        finally:
+            self._write_worker_running = False
+            logger.info("Write worker stopped")
     
     async def run_stdio(self) -> None:
         """
         STDIO transport로 서버 실행
-        
+
         anyio 기반 안전한 AsyncIO 처리:
         - asyncio.run() 사용 안 함 (충돌 방지)
         - anyio.create_task_group으로 동시 실행
@@ -260,10 +314,14 @@ class GreeumNativeMCPServer:
         logger.info("Starting Native MCP server with STDIO transport")
         
         try:
-            # STDIO 서버 실행 (anyio 기반)
             stdio_server = STDIOServer(self._handle_message)
-            await stdio_server.run()
-            
+            async with anyio.create_task_group() as tg:
+                if self._write_receive_stream is not None:
+                    if hasattr(self.tools_handler, "enable_write_queue"):
+                        self.tools_handler.enable_write_queue(self._write_send_stream)
+                    tg.start_soon(self._write_worker)
+                tg.start_soon(stdio_server.run)
+
         except KeyboardInterrupt:
             logger.info("Server stopped by user")
         except Exception as e:

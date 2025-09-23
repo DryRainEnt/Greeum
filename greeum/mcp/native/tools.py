@@ -52,14 +52,20 @@ class GreeumMCPTools:
     - All latest features included
     """
 
-    def __init__(self, greeum_components: Dict[str, Any]):
+    def __init__(self, greeum_components: Dict[str, Any], write_queue_send: Optional[Any] = None):
         """
         Args:
             greeum_components: Dictionary containing DatabaseManager, BlockManager, etc.
         """
         self.components = greeum_components
         self._add_lock = anyio.Lock() if anyio else None
+        self._write_queue_send = write_queue_send
         logger.info("Greeum MCP tools initialized with direct v3 implementation")
+
+    def enable_write_queue(self, write_queue_send: Optional[Any]) -> None:
+        """Update the write queue send stream used for serialized writes."""
+
+        self._write_queue_send = write_queue_send
 
     def _get_version(self) -> str:
         """Centralized version reference"""
@@ -81,26 +87,45 @@ class GreeumMCPTools:
             str: MCP format response text
         """
         try:
-            if tool_name == "add_memory":
-                return await self._handle_add_memory(arguments)
-            elif tool_name == "search_memory":
-                return await self._handle_search_memory(arguments)
-            elif tool_name == "get_memory_stats":
-                return await self._handle_get_memory_stats(arguments)
-            elif tool_name == "usage_analytics":
-                return await self._handle_usage_analytics(arguments)
-            elif tool_name == "analyze_causality":
-                return await self._handle_analyze_causality(arguments)
-            elif tool_name == "infer_causality":
-                return await self._handle_infer_causality(arguments)
-            elif tool_name == "system_doctor":
-                return await self._handle_system_doctor(arguments)
-            else:
-                raise ValueError(f"Unknown tool: {tool_name}")
+            if tool_name == "add_memory" and self._write_queue_send is not None and anyio is not None:
+                reply_send, reply_receive = anyio.create_memory_object_stream(1)
+                await self._write_queue_send.send(
+                    {
+                        "name": tool_name,
+                        "arguments": arguments,
+                        "reply": reply_send,
+                    }
+                )
+                try:
+                    return await reply_receive.receive()
+                finally:
+                    await reply_receive.aclose()
+
+            return await self.execute_tool_internal(tool_name, arguments)
 
         except Exception as e:
             logger.error(f"Tool {tool_name} failed: {e}")
             raise ValueError(f"Tool execution failed: {e}")
+
+    async def execute_tool_internal(self, tool_name: str, arguments: Dict[str, Any]) -> str:
+        """Execute tool without routing through the write queue (used by worker)."""
+
+        if tool_name == "add_memory":
+            return await self._handle_add_memory(arguments)
+        elif tool_name == "search_memory":
+            return await self._handle_search_memory(arguments)
+        elif tool_name == "get_memory_stats":
+            return await self._handle_get_memory_stats(arguments)
+        elif tool_name == "usage_analytics":
+            return await self._handle_usage_analytics(arguments)
+        elif tool_name == "analyze_causality":
+            return await self._handle_analyze_causality(arguments)
+        elif tool_name == "infer_causality":
+            return await self._handle_infer_causality(arguments)
+        elif tool_name == "system_doctor":
+            return await self._handle_system_doctor(arguments)
+        else:
+            raise ValueError(f"Unknown tool: {tool_name}")
 
     async def _handle_add_memory(self, arguments: Dict[str, Any]) -> str:
         if self._add_lock is not None:
