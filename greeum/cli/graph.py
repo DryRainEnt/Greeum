@@ -3,6 +3,7 @@
 Graph management CLI commands for Greeum v3.0.0
 """
 
+import os
 import click
 import json
 from pathlib import Path
@@ -216,6 +217,45 @@ def restore_command(snapshot_file: str, merge: bool):
             
     except Exception as e:
         console.print(f"[red]Error restoring snapshot: {e}[/red]")
+
+
+@graph_group.command("reset-anchors")
+@click.option("--slot", type=click.Choice(["A", "B", "C", "all"]), default="all")
+@click.option("--confirm", is_flag=True, help="Skip confirmation prompt")
+def reset_anchors_command(slot: str, confirm: bool) -> None:
+    """Reset STM anchor slots back to empty state."""
+    from ..core.database_manager import DatabaseManager
+    from ..core.stm_anchor_store import STMAnchorStore
+
+    slots = [slot] if slot in {"A", "B", "C"} else ["A", "B", "C"]
+
+    if not confirm and not click.confirm(
+        f"Reset STM anchors for {', '.join(slots)}? This will clear branch head pointers.",
+        default=False,
+    ):
+        console.print("[yellow]Operation cancelled.[/yellow]")
+        return
+
+    db_manager = DatabaseManager()
+    db_dir = Path(db_manager.connection_string).expanduser().resolve().parent
+    anchor_path = Path(os.environ.get("GREEUM_STM_DB", str(db_dir / "stm_anchors.db"))).expanduser()
+
+    store = STMAnchorStore(anchor_path)
+    cleared = []
+    try:
+        for slot_name in slots:
+            store.reset_slot(slot_name)
+            cleared.append(slot_name)
+    finally:
+        try:
+            store.close()
+        except Exception:
+            pass
+
+    console.print(
+        f"[green]✅ Cleared STM anchors for slots: {', '.join(cleared)}[/green]\n"
+        f"[dim]Anchor store: {anchor_path}[/dim]"
+    )
 
 
 @graph_group.command("stats")

@@ -31,6 +31,7 @@ from ..config_store import (
     save_config,
 )
 from ..core.database_manager import DatabaseManager
+from ..core.stm_anchor_store import get_anchor_store
 from ..core.branch_schema import BranchSchemaSQL
 from ..embedding_models import (
     init_sentence_transformer,
@@ -1208,24 +1209,22 @@ def status(data_dir: str):
         }
 
         branch_ready = branch_columns.issubset(columns)
-        slot_rows = []
-        try:
-            cursor.execute("SELECT slot_name, block_hash, branch_root FROM stm_slots ORDER BY slot_name")
-            slot_rows = cursor.fetchall()
-        except sqlite3.OperationalError:
-            pass
+        anchor_store = get_anchor_store()
+        slot_rows = [
+            (slot_name, slot_data.anchor_block)
+            for slot_name, slot_data in anchor_store.get_slots().items()
+        ]
 
         click.echo(f"📂 Database Size: {db_path.stat().st_size} bytes")
         click.echo(f"📋 Branch Columns Present: {'yes' if branch_ready else 'no'}")
 
         if slot_rows:
             click.echo("\n🎯 STM Slots:")
-            for slot_name, block_hash, branch_root in slot_rows:
+            for slot_name, block_hash in slot_rows:
                 head = block_hash[:8] + '...' if block_hash else 'None'
-                branch = branch_root[:8] + '...' if branch_root else 'None'
-                click.echo(f"   • {slot_name}: head={head}, branch={branch}")
+                click.echo(f"   • {slot_name}: head={head}")
         else:
-            click.echo("\n⚠️  STM slot entries not initialized (run 'greeum migrate check').")
+            click.echo("\n⚠️  STM anchor entries not initialized yet.")
 
         pending = BranchSchemaSQL.check_migration_needed(cursor)
         click.echo("\n✅ Migration Status: {}".format("Ready" if not pending else "Additional migration required"))
@@ -2055,6 +2054,14 @@ def stats(output_format: str):
     except Exception as e:
         click.echo(f"❌ Error getting causal statistics: {e}", err=True)
 
+
+# Import and register graph commands
+try:
+    from .graph import graph_group
+    main.commands.pop('graph', None)
+    main.add_command(graph_group, name='graph')
+except ImportError:
+    pass  # Graph CLI not available
 
 # Import and register metrics commands
 try:

@@ -70,7 +70,7 @@ def migrate_database():
             global_cursor.execute(schema)
 
         # 모든 관련 테이블 마이그레이션
-        tables = ['blocks', 'block_embeddings', 'stm_slots', 'anchors', 'usage_metrics',
+        tables = ['blocks', 'block_embeddings', 'anchors', 'usage_metrics',
                  'temporal_memories', 'duplicate_hashes', 'memory_evolution']
 
         for table in tables:
@@ -132,6 +132,13 @@ def migrate_database():
 
         # 커밋
         global_conn.commit()
+
+        # STM 앵커 스토어 복사
+        local_anchor = local_db.parent / "stm_anchors.db"
+        global_anchor = global_db.parent / "stm_anchors.db"
+        if local_anchor.exists():
+            print("\n📦 Copying STM anchor store...")
+            shutil.copy2(local_anchor, global_anchor)
 
         # 최종 확인
         global_cursor.execute("SELECT COUNT(*) FROM blocks")
