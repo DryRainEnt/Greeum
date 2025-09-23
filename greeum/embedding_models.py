@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import hashlib
 import logging
 import os
 import time
@@ -214,15 +215,25 @@ class SimpleEmbeddingModel(EmbeddingModel):
         self._monitor = PerformanceMonitor(self.config.performance_monitoring)
 
     def _encode_without_cache(self, text: str) -> List[float]:
-        seed = len(text)
-        for char in text:
-            seed += ord(char)
-        np.random.seed(seed % 10000)
-        embedding = np.random.normal(0, 1, self.dimension)
-        norm = np.linalg.norm(embedding)
+        # Deterministic hash-based vector generation (no global RNG mutation)
+        bytes_needed = self.dimension * 4  # use 32-bit signed ints for range coverage
+        buffer = bytearray()
+        counter = 0
+        text_bytes = text.encode("utf-8", "ignore")
+        prefix = b"greeum.simple"
+        while len(buffer) < bytes_needed:
+            counter_bytes = counter.to_bytes(4, "big", signed=False)
+            digest = hashlib.blake2b(prefix + counter_bytes + text_bytes, digest_size=64)
+            buffer.extend(digest.digest())
+            counter += 1
+
+        arr = np.frombuffer(buffer[:bytes_needed], dtype=np.uint8).astype(np.float32)
+        # Map [0,255] -> [-1,1]
+        arr = (arr / 255.0) * 2.0 - 1.0
+        norm = np.linalg.norm(arr)
         if norm > 0:
-            embedding = embedding / norm
-        return embedding.tolist()
+            arr = arr / norm
+        return arr.tolist()
 
     def encode(self, text: str) -> List[float]:
         start = time.perf_counter()
