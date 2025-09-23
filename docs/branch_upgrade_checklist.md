@@ -9,15 +9,10 @@ Branch 기능을 안전하게 활성화하기 위한 단계별 계획입니다. 
 
 ## 1. 스키마 재정의
 - [x] 필요한 열 목록 확정 (`blocks.slot TEXT`, `blocks.branch_similarity REAL`, `blocks.branch_created_at REAL`, `blocks.root`는 기존 유지).
-- [x] STM 슬롯 테이블(`stm_slots`) / 브랜치 메타(`branch_meta`) 설계 검토.
+- [x] STM 앵커 스토어(`stm_anchors.db`) / 브랜치 메타(`branch_meta`) 설계 검토.
   ```sql
-  CREATE TABLE IF NOT EXISTS stm_slots (
-      slot_name TEXT PRIMARY KEY,
-      block_hash TEXT,
-      branch_root TEXT,
-      updated_at REAL
-  );
-
+  -- STM 앵커는 별도 SQLite(`stm_anchors.db`)에서 관리하며 slots 테이블에 저장한다.
+  -- Branch 메타는 본 DB(`memory.db`)에 존재.
   CREATE TABLE IF NOT EXISTS branch_meta (
       root TEXT PRIMARY KEY,
       title TEXT NOT NULL DEFAULT 'Untitled Branch',
@@ -46,7 +41,7 @@ Branch 기능을 안전하게 활성화하기 위한 단계별 계획입니다. 
 ## 3. 저장 경로 보강
 - [x] `BlockManager.add_block`가 새 컬럼(`slot`, `branch_root`, `before_id`)을 기록하도록 수정.
 - [x] `BranchAwareStorage` / `BranchIndexManager` 생성자 시그니처 정리.
-- [x] STM 슬롯 업데이트(`stm_slots` 테이블) ↔ 인메모리 구조 동기화.
+- [x] STM 앵커 업데이트(`stm_anchors.db` slots 테이블) ↔ 인메모리 구조 동기화.
 - [x] 실패 시 graceful fallback 경로 유지 (로그 경고 수준 조정).
 - [x] TDD: 신규 저장 테스트 (`tests/test_branch_storage.py`) 작성.
 - [x] Decision: **슬롯 배정 전략**(FAISS vs 키워드 fallback)에서 사용할 임계값, 기본 슬롯 정책 확정. --> 어떤 조건에도 맞지 않는다면 가장 최신 노드에 부착.
