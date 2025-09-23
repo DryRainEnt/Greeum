@@ -1,9 +1,11 @@
 import os
 import sqlite3
 import json
+import threading
+import time
 import numpy as np
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Callable
 import logging
 from .branch_schema import BranchSchemaSQL, BranchBlock, BranchMeta, SearchMeta
 from .stm_anchor_store import STMAnchorStore
@@ -32,6 +34,14 @@ class DatabaseManager:
         self._ensure_anchor_env()
         self._setup_connection()
         self._create_schemas()
+
+        # Serialized write coordination
+        self._write_lock = threading.RLock()
+        warn_env = os.getenv("GREEUM_SQLITE_WRITE_WARN", "5")
+        try:
+            self._write_warn_threshold = max(float(warn_env), 0.0)
+        except ValueError:
+            self._write_warn_threshold = 5.0
         # logger.info(f"DatabaseManager initialization complete: {self.connection_string} (type: {self.db_type})")  # Too verbose
     
     def _get_smart_db_path(self) -> str:
@@ -100,16 +110,17 @@ class DatabaseManager:
     def _setup_connection(self):
         """데이터베이스 연결 설정"""
         if self.db_type == 'sqlite':
+            timeout = float(os.getenv('GREEUM_SQLITE_TIMEOUT', '3'))
             self.conn = sqlite3.connect(
                 self.connection_string,
-                timeout=float(os.getenv('GREEUM_SQLITE_TIMEOUT', '10')),
+                timeout=timeout,
             )
             self.conn.row_factory = sqlite3.Row
             try:
                 self.conn.execute('PRAGMA journal_mode=WAL')
                 self.conn.execute('PRAGMA synchronous=NORMAL')
                 self.conn.execute('PRAGMA temp_store=MEMORY')
-                busy_ms = int(float(os.getenv('GREEUM_SQLITE_BUSY_TIMEOUT', '5')) * 1000)
+                busy_ms = int(float(os.getenv('GREEUM_SQLITE_BUSY_TIMEOUT', '1.5')) * 1000)
                 self.conn.execute(f'PRAGMA busy_timeout = {busy_ms}')
             except sqlite3.OperationalError as pragma_error:
                 logger.debug(f"SQLite PRAGMA setup skipped: {pragma_error}")
@@ -127,7 +138,7 @@ class DatabaseManager:
     def _create_schemas(self):
         """필요한 테이블 생성"""
         cursor = self.conn.cursor()
-        
+
         # Create v3.0.0 tables if needed
         self._create_v3_tables(cursor)
         
@@ -256,6 +267,31 @@ class DatabaseManager:
 
         except sqlite3.OperationalError as e:
             logger.debug(f"stm_slots migration skipped: {e}")
+
+    # ------------------------------------------------------------------
+    # Serialized write helpers
+    # ------------------------------------------------------------------
+    def run_serialized(self, func: Callable[[], Any]) -> Any:
+        """Serialize write operations to mitigate SQLite lock contention."""
+        start = time.time()
+        acquired = self._write_lock.acquire(timeout=self._write_warn_threshold)
+        if not acquired:
+            logger.warning(
+                "Write operation waited more than %.2fs for DB lock; continuing to wait.",
+                self._write_warn_threshold,
+            )
+            self._write_lock.acquire()
+        try:
+            return func()
+        finally:
+            elapsed = time.time() - start
+            if self._write_warn_threshold and elapsed > self._write_warn_threshold:
+                logger.info(
+                    "Serialized write completed after %.2fs (threshold %.2fs)",
+                    elapsed,
+                    self._write_warn_threshold,
+                )
+            self._write_lock.release()
     
     def _create_v3_tables(self, cursor):
         """Create v3.0.0 association-based memory tables"""

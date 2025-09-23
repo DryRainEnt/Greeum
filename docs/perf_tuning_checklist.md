@@ -7,8 +7,8 @@
 - [ ] `/tmp/greeum_codex_stdio.log` 및 SQLite `busy_timeout` 경고 수를 집계해 baseline 확보.
 
 ## 2. 쓰기 직렬화 & 재시도 정책
-- [ ] `ThreadSafeDatabaseManager`/`BlockManager`에 공용 write 큐 도입 (anyio / asyncio 기반 싱글 워커).
-- [ ] 큐 대기 시간이 임계치(예: 5초)를 넘으면 즉시 경고 응답을 반환하도록 처리.
+- [x] `DatabaseManager.run_serialized()`로 공용 쓰기 락/대기 경고(`GREEUM_SQLITE_WRITE_WARN`, 기본 5초) 도입.
+- [ ] 큐 또는 전용 워커 스레드 기반 직렬화로 확대(필요 시 anyio 적용).
 
 ## 3. SQLite 설정 최적화
 - [ ] `PRAGMA busy_timeout`을 실측 기반으로 1–2초 내외로 조정하고 환경 변수(`GREEUM_SQLITE_BUSY_TIMEOUT`) 문서화.
