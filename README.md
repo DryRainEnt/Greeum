@@ -1,189 +1,134 @@
 # Greeum
 
 [![PyPI version](https://badge.fury.io/py/greeum.svg)](https://badge.fury.io/py/greeum)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-AI conversations that remember everything.
-No more repeating context every time.
+> Context-aware memory for AI workflows. Keep long-running conversations and project notes persistent across tools.
 
-## ⚡ Quick Start
-
-```bash
-# Install
-pip install greeum
-
-# Add your first memory
-greeum memory add "Started working on the new dashboard project"
-
-# Set memory anchors for quick access
-greeum anchors set A 123  # Pin important memory to slot A
-
-# Search with anchor-based localization
-greeum memory search "dashboard project" --slot A --radius 2
-```
-
-That's it. Your AI now remembers.
-
-## ✨ What It Does
-
-🧠 **Remembers context** - AI recalls previous conversations and decisions
-⚡ **280x faster search** - Checkpoint-based memory retrieval
-🔄 **Works with any AI** - GPT, Claude, or your custom model
-🛡️ **Your data stays yours** - Local storage, no cloud required
-
-## 🔧 Installation
-
-### Basic Setup
-```bash
-pip install greeum
-```
-
-### With All Features
-```bash
-pip install greeum[all]  # includes vector search, embeddings
-```
-
-### For Claude Code Users
-```bash
-# Install and start MCP server
-pip install greeum
-greeum mcp serve
-```
-
-### For Codex/OpenAI MCP Clients
-```bash
-pip install greeum
-greeum mcp serve -t http --host 0.0.0.0 --port 8800
-# Register http://127.0.0.1:8800/mcp as the MCP endpoint
-```
-
-## 📝 Usage
-
-### Adding Memories
-```bash
-# Add important context
-greeum memory add "Client prefers minimal UI design"
-
-# Add with expiration
-greeum stm add "Working on login page today" --ttl 24h
-```
-
-### Memory Anchors (v2.2.5+)
-```bash
-# View current anchor status
-greeum anchors status
-
-# Set anchors for quick access
-greeum anchors set A 123     # Pin memory #123 to slot A
-greeum anchors set B 456     # Pin memory #456 to slot B
-
-# Search near anchored memories
-greeum memory search "UI design" --slot A --radius 3
-
-# Pin/unpin anchors
-greeum anchors pin A         # Prevent auto-movement
-greeum anchors unpin A       # Allow auto-movement
-
-# Clear all anchors
-greeum anchors clear
-```
-
-### Searching
-```bash
-# Find relevant memories
-greeum memory search "UI design preferences" --count 5
-
-# Anchor-based localized search (faster)
-greeum memory search "login" --slot B --radius 2 --fallback
-
-# Global search (traditional)
-greeum memory search "login" --count 10
-```
-
-### Python API
-```python
-from greeum import BlockManager, DatabaseManager
-
-# Initialize
-db_manager = DatabaseManager()
-memory = BlockManager(db_manager)
-
-# Add block to long-term memory
-block = memory.add_block(
-    context="User wants dark mode toggle",
-    keywords=["dark", "mode", "toggle"],
-    tags=["ui", "preference"],
-    embedding=[],  # Auto-generated if empty
-    importance=0.7
-)
-
-# Search memories
-results = memory.search_memories("dark mode", limit=3)
-```
-
-## 🤖 Claude Integration
-
-### Setup MCP Server
-Add to your Claude Desktop config:
-
-```json
-{
-  "mcpServers": {
-    "greeum": {
-      "command": "greeum",
-      "args": ["mcp", "serve"],
-      "env": {
-        "GREEUM_DATA_DIR": "/path/to/your/data"
-      }
-    }
-  }
-}
-```
-
-### Available Tools
-- `add_memory` - Store important context
-- `search_memory` - Find relevant memories
-- `get_memory_stats` - View memory statistics
-
-## 📚 Documentation
-
-- [Getting Started](docs/get-started.md) - Installation and first steps
-- [API Reference](docs/api-reference.md) - Complete API documentation
-- [MCP Integration](docs/mcp-integration.md) - Claude Code setup
-
-## 🏗️ Architecture
-
-```
-Your Input → Working Memory → Cache → Checkpoints → Long-term Storage
-             0.04ms          0.08ms   0.7ms        Permanent
-```
-
-Four-layer memory system optimized for speed and relevance.
-
-## 📋 Version Updates
-
-### v2.1.1 (2025-08)
-- Enhanced search with temporal boost for recent information prioritization
-- Optimized codebase with 955 lines of code reduction and improved test architecture
-- Resolved import dependencies and improved memory management
-- Added intelligent date keyword detection for search result ranking
-- Improved test stability with BaseGreeumTestCase standardization
-- Performance optimizations with minimal overhead (+1.0%)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Submit a pull request
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file.
+<p align="center">
+  <a href="README.md"><strong>English</strong></a> · <a href="docs/README_ko.md">한국어</a>
+</p>
 
 ---
 
-**Greeum** - Memory for AI that actually works.
-Made with ❤️ by the open source community.
+## 1. Installation & Setup
+
+> **First run checklist**
+> 1. Install the package (pipx or pip)
+> 2. Run `greeum setup` to create the data directory and optional warm-up
+> 3. Connect your MCP client (Codex, ClaudeCode, Cursor, …)
+
+```bash
+# Recommended (isolated) install
+pipx install --pip-args "--pre" greeum
+
+# or standard pip
+pip install --upgrade "greeum"
+
+# initialise data directory, choose where memories live
+greeum setup
+```
+
+### Optional: enable semantic embeddings
+```bash
+pip install sentence-transformers          # once per machine
+greeum mcp warmup                          # downloads the default model
+```
+- MCP/CLI run with **hash fallback by default** for fast startup.
+- Add `--semantic` (or unset `GREEUM_DISABLE_ST`) when you want the SentenceTransformer-enabled search:
+  ```bash
+  greeum mcp serve --semantic -t stdio
+  ```
+
+---
+
+## 2. MCP Integration
+
+### Codex (STDIO)
+1. Ensure `greeum setup` has been run at least once.
+2. `~/.codex/config.toml`
+   ```toml
+   [mcp_servers.greeum]
+   command = "greeum"
+   args    = ["mcp", "serve", "-t", "stdio"]
+   env     = { "GREEUM_QUIET" = "true", "PYTORCH_ENABLE_MPS_FALLBACK" = "1" }
+   ```
+3. Optional semantic mode:
+   ```toml
+   args = ["mcp", "serve", "-t", "stdio", "--semantic"]
+   ```
+   > First run may take longer while the model loads. Warm-up before enabling for smoother startup.
+
+### ClaudeCode / Cursor (native MCP)
+```bash
+greeum mcp serve
+```
+- Add the command above to the client’s MCP configuration.
+- Semantic mode: `greeum mcp serve --semantic`
+
+### HTTP / URL-based MCP (e.g. ChatGPT)
+```bash
+greeum mcp serve -t http --host 0.0.0.0 --port 8800
+```
+Then register `http://127.0.0.1:8800/mcp` as the endpoint.
+
+---
+
+## 3. LLM Prompting Guidelines
+- **Always close sessions with a summary**: “Call `add_memory` summarising decisions before ending the shift.”
+- **Retrieve before writing**: run `search_memory` with the task keywords before starting work.
+- **Use anchor slots (A/B/C)** for hot contexts:
+  ```json
+  {
+    "name": "search_memory",
+    "arguments": { "query": "login flow", "limit": 5, "slot": "A" }
+  }
+  ```
+- Encourage agents to log important facts with `importance` ≥ 0.6 so team hand‑offs stay seamless.
+
+---
+
+## 4. CLI Essentials
+
+```bash
+# Add context
+greeum memory add "Legal copy updated for release"
+
+# Search (global fallback enabled by default)
+greeum memory search "release notes" --count 5
+
+# Anchor-based search (slot-aware)
+greeum memory search "translations" --slot B --radius 2
+
+# Rebuild branch indices (FAISS + keyword or keyword-only)
+greeum memory reindex             # uses FAISS if available
+greeum memory reindex --disable-faiss
+
+# Reuse an existing HTTP MCP server
+export GREEUM_MCP_HTTP="http://127.0.0.1:8800/mcp"
+greeum memory add "Sprint hand-off" --use-http
+greeum memory search "hand-off" --use-http
+```
+
+Other useful commands:
+- `greeum anchors status` / `set A <block>` / `pin A`
+- `greeum workflow search "<topic>"` for scripted MCP calls
+- `greeum mcp warmup` to cache the embedding model before enabling semantic mode
+
+---
+
+## 5. Documentation
+- [Getting Started](docs/get-started.md)
+- [MCP Integration Details](docs/mcp-integration.md)
+- [Automation Workflow Guide](docs/greeum-workflow-guide.md)
+- [API Reference](docs/api-reference.md)
+
+---
+
+## 6. License
+MIT License — see [LICENSE](LICENSE).
+
+---
+
+**Greeum** · Persistent memory for AI—built and maintained by the community.

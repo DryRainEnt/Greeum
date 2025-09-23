@@ -290,14 +290,79 @@ def doctor(check: bool, fix: bool, force: bool, no_backup: bool, db_path: str):
 
 
 # Memory 서브명령어들
+def _maybe_call_http_tool(tool: str, arguments: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    endpoint = os.getenv('GREEUM_MCP_HTTP')
+    if not endpoint:
+        return None
+
+    import json
+    import urllib.request
+    import urllib.error
+    import uuid
+
+    payload = {
+        "jsonrpc": "2.0",
+        "id": str(uuid.uuid4()),
+        "method": "tools/call",
+        "params": {
+            "name": tool,
+            "arguments": arguments,
+        },
+    }
+
+    timeout = float(os.getenv('GREEUM_HTTP_TIMEOUT', '30'))
+    req = urllib.request.Request(
+        endpoint,
+        data=json.dumps(payload).encode('utf-8'),
+        headers={'Content-Type': 'application/json'},
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if resp.status == 204:
+                return {}
+            body = resp.read().decode('utf-8')
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode('utf-8')
+        raise RuntimeError(f"HTTP call failed: {exc.code} {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"HTTP call failed: {exc}") from exc
+
+    try:
+        message = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Invalid MCP HTTP response: {body}") from exc
+
+    if 'error' in message:
+        raise RuntimeError(f"MCP error: {message['error']}")
+
+    return message.get('result')
+
+
 @memory.command()
 @click.argument('content')
 @click.option('--importance', '-i', default=0.5, help='Importance score (0.0-1.0)')
 @click.option('--tags', '-t', help='Comma-separated tags')
 @click.option('--slot', '-s', type=click.Choice(['A', 'B', 'C']), help='Insert near specified anchor slot')
-def add(content: str, importance: float, tags: Optional[str], slot: Optional[str]):
+@click.option('--use-http', is_flag=True, help='Send request to MCP HTTP endpoint (GREEUM_MCP_HTTP)')
+def add(content: str, importance: float, tags: Optional[str], slot: Optional[str], use_http: bool):
     """Add new memory to long-term storage"""
     try:
+        if use_http:
+            arguments = {
+                "content": content,
+                "importance": importance,
+            }
+            if tags:
+                arguments["metadata"] = {"tags": tags.split(',')}
+            if slot:
+                arguments["slot"] = slot
+            result = _maybe_call_http_tool("add_memory", arguments)
+            if result is not None:
+                block_id = result.get('data', {}).get('block_index')
+                click.echo(f"✅ Memory added via HTTP (Block #{block_id if block_id is not None else 'unknown'})")
+                return
+
         if slot:
             # Use anchor-based write
             from ..api.write import write as anchor_write
@@ -350,15 +415,36 @@ def add(content: str, importance: float, tags: Optional[str], slot: Optional[str
 @click.option('--slot', '-s', type=click.Choice(['A', 'B', 'C']), help='Use anchor-based localized search')
 @click.option('--radius', '-r', type=int, help='Graph search radius (1-3)')
 @click.option('--no-fallback', is_flag=True, help='Disable fallback to global search')
-def search(query: str, count: int, threshold: float, slot: str, radius: int, no_fallback: bool):
+@click.option('--use-http', is_flag=True, help='Send request to MCP HTTP endpoint (GREEUM_MCP_HTTP)')
+def search(query: str, count: int, threshold: float, slot: str, radius: int, no_fallback: bool, use_http: bool):
     """Search memories by keywords/semantic similarity"""
     try:
+        if use_http:
+            arguments = {
+                "query": query,
+                "limit": count,
+                "threshold": threshold,
+                "fallback": not no_fallback,
+            }
+            if slot:
+                arguments["slot"] = slot
+            result = _maybe_call_http_tool("search_memory", arguments)
+            if result is not None:
+                items = result.get('data', {}).get('items', [])
+                if not items:
+                    click.echo("No results found (HTTP)")
+                    return
+                for idx, item in enumerate(items, 1):
+                    snippet = item.get('context', '')[:80]
+                    score = item.get('relevance_score')
+                    click.echo(f"{idx}. {snippet} (score={score})")
+                return
+
         from ..core.block_manager import BlockManager
         from ..core.database_manager import DatabaseManager
 
         # Use BlockManager for DFS-based search instead of SearchEngine
         db_manager = DatabaseManager()
-        block_manager = BlockManager(db_manager)
 
         # Perform search with v3 DFS system
         result = block_manager.search_with_slots(
