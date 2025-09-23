@@ -49,7 +49,13 @@ def _download_sentence_transformer(model: str) -> Path:
         ) from exc
 
     cache_dir = Path.home() / ".cache" / "sentence_transformers"
-    SentenceTransformer(model, cache_folder=str(cache_dir))
+    if os.getenv("GREEUM_DISABLE_ST"):
+        raise RuntimeError("Semantic warmup skipped because GREEUM_DISABLE_ST is set.")
+    SentenceTransformer(
+        model,
+        cache_folder=str(cache_dir),
+        device=os.getenv("GREEUM_ST_DEVICE", None),
+    )
     return cache_dir
 
 @click.group()

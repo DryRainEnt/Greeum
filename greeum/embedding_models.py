@@ -312,13 +312,20 @@ class SentenceTransformerModel(EmbeddingModel):
                     "  pip install greeum[full]"
                 )
 
-            # 모델 캐시 디렉토리 설정 (빠른 로딩)
-            import os
             cache_dir = os.path.expanduser("~/.cache/sentence_transformers")
             os.makedirs(cache_dir, exist_ok=True)
 
-            # 모델 로드
-            self.model = SentenceTransformer(self.model_name, cache_folder=cache_dir)
+            device = os.getenv("GREEUM_ST_DEVICE")
+            try:
+                self.model = SentenceTransformer(
+                    self.model_name,
+                    cache_folder=cache_dir,
+                    device=device,
+                )
+            except TypeError:
+                # Older sentence-transformers versions might not accept device kwarg
+                self.model = SentenceTransformer(self.model_name, cache_folder=cache_dir)
+            logger.debug("SentenceTransformer loaded on device %s", getattr(self.model, "_target_device", None))
             self._dimension = self.model.get_sentence_embedding_dimension()
 
             # 768차원 호환성을 위한 차원 변환 필요 여부
