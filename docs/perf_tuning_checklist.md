@@ -22,6 +22,7 @@
 
 ## 5. 테스트 & 자동화
 - [ ] `pytest -m "perf"` 태그로 성능 회귀 테스트 추가 (30초 이내 목표, 초과 시 실패).
+- [x] CLI 벤치마크 스크립트(`scripts/bench_memory.py`)로 add/search 왕복 시간 측정.
 - [ ] CI에 선택 실행 단계 문서화 (`docs/greeum-workflow-guide.md`에 링크 추가).
 
 ## 6. 문서 업데이트
