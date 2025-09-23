@@ -38,9 +38,9 @@ CLI -> JSON-RPC request -> Worker queue -> BlockManager._add_block -> STM anchor
 5. Benchmark latency (`scripts/bench_memory.py` & `scripts/benchmark_worker_status.py`).
 
 ## Implementation Checklist
-- [ ] Introduce worker command (`greeum worker serve`) with shared write queue.
+- [x] Introduce worker command (`greeum worker serve`) with shared write queue.
 - [ ] Refactor BlockManager to operate on external connections & queue-based writes.
-- [ ] Adjust CLI memory commands to auto-detect/optionally use the worker.
+- [x] Adjust CLI memory commands to auto-detect/optionally use the worker.
 - [ ] Extend tests to cover worker RPC path (start worker in fixture, run add/search).
 - [ ] Measure latency with worker vs. CLI cold-start; capture numbers in docs.
 - [ ] Update README + workflow guide with new workflow.

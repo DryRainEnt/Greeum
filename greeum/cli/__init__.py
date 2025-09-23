@@ -482,6 +482,7 @@ def search(query: str, count: int, threshold: float, slot: str, radius: int, no_
 
         # Use BlockManager for DFS-based search instead of SearchEngine
         db_manager = DatabaseManager()
+        block_manager = BlockManager(db_manager)
 
         # Perform search with v3 DFS system
         result = block_manager.search_with_slots(
