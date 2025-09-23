@@ -105,10 +105,11 @@ greeum memory search "translations" --slot B --radius 2
 greeum memory reindex             # uses FAISS if available
 greeum memory reindex --disable-faiss
 
-# Reuse an existing HTTP MCP server
-export GREEUM_MCP_HTTP="http://127.0.0.1:8800/mcp"
-greeum memory add "Sprint hand-off" --use-http
-greeum memory search "hand-off" --use-http
+# Reuse the long-running worker (avoids cold-start on each CLI call)
+greeum worker serve --host 127.0.0.1 --port 8800   # terminal 1
+export GREEUM_MCP_HTTP="http://127.0.0.1:8800/mcp" # terminal 2
+greeum memory add "Sprint hand-off" --use-worker
+greeum memory search "hand-off" --use-worker
 ```
 
 Other useful commands:

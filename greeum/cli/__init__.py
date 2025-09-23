@@ -18,8 +18,9 @@ except ImportError:
 import os
 import sys
 import sqlite3
+import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from ..config_store import (
     DEFAULT_DATA_DIR,
@@ -37,6 +38,7 @@ from ..embedding_models import (
     init_sentence_transformer,
     force_simple_fallback,
 )
+from ..worker.client import WriteServiceClient, resolve_endpoint, WorkerUnavailableError
 
 
 def _download_sentence_transformer(model: str) -> Path:
@@ -184,6 +186,11 @@ def memory():
 @main.group() 
 def mcp():
     """MCP server commands"""
+    pass
+
+@main.group()
+def worker():
+    """Worker daemon utilities"""
     pass
 
 @main.group()
@@ -339,29 +346,59 @@ def _maybe_call_http_tool(tool: str, arguments: Dict[str, Any]) -> Optional[Dict
     return message.get('result')
 
 
+def _decide_worker(use_worker_flag: bool, no_worker_flag: bool) -> Optional[bool]:
+    if no_worker_flag:
+        return False
+    if use_worker_flag:
+        return True
+    env = os.getenv("GREEUM_USE_WORKER")
+    if env:
+        return env.lower() not in {"0", "false", "no", "off"}
+    return None
+
+
+def _try_worker_call(tool: str, arguments: Dict[str, Any], use_worker_flag: bool, no_worker_flag: bool, quiet: bool = False) -> Optional[Dict[str, Any]]:
+    decision = _decide_worker(use_worker_flag, no_worker_flag)
+    endpoint = resolve_endpoint()
+    if decision is False or not endpoint:
+        return None
+
+    if decision is None and not endpoint:
+        return None
+
+    try:
+        client = WriteServiceClient(endpoint)
+        return client.call(tool, arguments)
+    except WorkerUnavailableError as exc:
+        if not quiet:
+            click.echo(f"[WARN] Worker unavailable ({exc}); falling back to local execution.")
+        return None
+
+
 @memory.command()
 @click.argument('content')
 @click.option('--importance', '-i', default=0.5, help='Importance score (0.0-1.0)')
 @click.option('--tags', '-t', help='Comma-separated tags')
 @click.option('--slot', '-s', type=click.Choice(['A', 'B', 'C']), help='Insert near specified anchor slot')
-@click.option('--use-http', is_flag=True, help='Send request to MCP HTTP endpoint (GREEUM_MCP_HTTP)')
-def add(content: str, importance: float, tags: Optional[str], slot: Optional[str], use_http: bool):
+@click.option('--use-worker', is_flag=True, help='Force using the worker endpoint when available')
+@click.option('--no-worker', is_flag=True, help='Force local execution without contacting the worker')
+def add(content: str, importance: float, tags: Optional[str], slot: Optional[str], use_worker: bool, no_worker: bool):
     """Add new memory to long-term storage"""
     try:
-        if use_http:
-            arguments = {
-                "content": content,
-                "importance": importance,
-            }
-            if tags:
-                arguments["metadata"] = {"tags": tags.split(',')}
-            if slot:
-                arguments["slot"] = slot
-            result = _maybe_call_http_tool("add_memory", arguments)
-            if result is not None:
-                block_id = result.get('data', {}).get('block_index')
-                click.echo(f"✅ Memory added via HTTP (Block #{block_id if block_id is not None else 'unknown'})")
-                return
+        worker_args = {
+            "content": content,
+            "importance": importance,
+        }
+        if tags:
+            worker_args["metadata"] = {"tags": tags.split(',')}
+        if slot:
+            worker_args["slot"] = slot
+        worker_response = _try_worker_call("add_memory", worker_args, use_worker, no_worker)
+        if worker_response is not None:
+            data = worker_response.get("data") or {}
+            block_id = data.get("block_index", data.get("id", "unknown"))
+            click.echo(f"✅ Memory added via worker (Block #{block_id})")
+            return
 
         if slot:
             # Use anchor-based write
@@ -415,30 +452,30 @@ def add(content: str, importance: float, tags: Optional[str], slot: Optional[str
 @click.option('--slot', '-s', type=click.Choice(['A', 'B', 'C']), help='Use anchor-based localized search')
 @click.option('--radius', '-r', type=int, help='Graph search radius (1-3)')
 @click.option('--no-fallback', is_flag=True, help='Disable fallback to global search')
-@click.option('--use-http', is_flag=True, help='Send request to MCP HTTP endpoint (GREEUM_MCP_HTTP)')
-def search(query: str, count: int, threshold: float, slot: str, radius: int, no_fallback: bool, use_http: bool):
+@click.option('--use-worker', is_flag=True, help='Force using the worker endpoint when available')
+@click.option('--no-worker', is_flag=True, help='Force local execution without contacting the worker')
+def search(query: str, count: int, threshold: float, slot: str, radius: int, no_fallback: bool, use_worker: bool, no_worker: bool):
     """Search memories by keywords/semantic similarity"""
     try:
-        if use_http:
-            arguments = {
-                "query": query,
-                "limit": count,
-                "threshold": threshold,
-                "fallback": not no_fallback,
-            }
-            if slot:
-                arguments["slot"] = slot
-            result = _maybe_call_http_tool("search_memory", arguments)
-            if result is not None:
-                items = result.get('data', {}).get('items', [])
-                if not items:
-                    click.echo("No results found (HTTP)")
-                    return
-                for idx, item in enumerate(items, 1):
-                    snippet = item.get('context', '')[:80]
-                    score = item.get('relevance_score')
-                    click.echo(f"{idx}. {snippet} (score={score})")
+        worker_args = {
+            "query": query,
+            "limit": count,
+            "threshold": threshold,
+            "fallback": not no_fallback,
+        }
+        if slot:
+            worker_args["slot"] = slot
+        worker_response = _try_worker_call("search_memory", worker_args, use_worker, no_worker, quiet=True)
+        if worker_response is not None:
+            items = worker_response.get('data', {}).get('items', [])
+            if not items:
+                click.echo("No results found (worker)")
                 return
+            for idx, item in enumerate(items, 1):
+                snippet = (item.get('context') or '')[:80]
+                score = item.get('relevance_score', item.get('score'))
+                click.echo(f"{idx}. {snippet} (score={score})")
+            return
 
         from ..core.block_manager import BlockManager
         from ..core.database_manager import DatabaseManager
@@ -664,6 +701,34 @@ def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quie
             click.echo(f"[ERROR] Transport '{transport}' not supported")
         sys.exit(1)
 
+
+@worker.command('serve')
+@click.option('--host', default='127.0.0.1', show_default=True)
+@click.option('--port', default=8800, show_default=True, type=int)
+@click.option('--semantic', is_flag=True, help='Enable semantic embeddings for the worker')
+@click.option('--stdio', is_flag=True, help='Use STDIO transport instead of HTTP')
+def worker_serve(host: str, port: int, semantic: bool, stdio: bool) -> None:
+    """Start the long-running worker daemon."""
+    transport = 'stdio' if stdio else 'http'
+    cmd = [
+        sys.executable,
+        '-m',
+        'greeum.cli',
+        'mcp',
+        'serve',
+        '-t',
+        transport,
+    ]
+    if not stdio:
+        cmd += ['--host', host, '--port', str(port)]
+    if semantic:
+        cmd.append('--semantic')
+    click.echo(f"Starting worker daemon ({'STDIO' if stdio else 'HTTP'})...")
+    click.echo('Command: ' + ' '.join(cmd))
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError as exc:
+        click.echo(f"Worker exited with status {exc.returncode}")
 
 @mcp.command('warmup')
 @click.option('--model', default='sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
