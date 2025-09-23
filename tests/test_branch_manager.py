@@ -12,7 +12,6 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from greeum.core.branch_manager import BranchManager, BranchBlock, BranchMeta, SearchResult
-from greeum.core.branch_migration import BranchMigration
 from greeum.core.branch_global_index import GlobalIndex
 
 
@@ -218,182 +217,10 @@ class TestBranchManager(unittest.TestCase):
             self.manager.search("테스트", k=2)
             
         metrics = self.manager.get_metrics()
-        
+
         self.assertEqual(metrics['total_searches'], 3)
         self.assertGreaterEqual(metrics['avg_hops'], 0)
         self.assertIn('local_hit_rate', metrics)
-        
-
-class TestBranchMigration(unittest.TestCase):
-    """BranchMigration 테스트"""
-    
-    def setUp(self):
-        """테스트 환경 설정"""
-        self.migration = BranchMigration()
-        
-    def test_simple_migration(self):
-        """간단한 마이그레이션 테스트"""
-        # 그래프 데이터 (시간순)
-        graph_data = [
-            {
-                'id': 'node1',
-                'block_index': 1,
-                'context': '첫번째 노드',
-                'timestamp': time.time() - 3600,
-                'hash': 'hash1',
-                'prev_hash': ''
-            },
-            {
-                'id': 'node2',
-                'block_index': 2,
-                'context': '두번째 노드',
-                'timestamp': time.time() - 1800,
-                'hash': 'hash2',
-                'prev_hash': 'hash1'
-            },
-            {
-                'id': 'node3',
-                'block_index': 3,
-                'context': '세번째 노드',
-                'timestamp': time.time() - 900,
-                'hash': 'hash3',
-                'prev_hash': 'hash2'
-            }
-        ]
-        
-        result = self.migration.migrate_graph_to_branch(graph_data)
-        
-        # 마이그레이션 결과 확인
-        self.assertIn('branches', result)
-        self.assertIn('stm_slots', result)
-        self.assertIn('stats', result)
-        
-        # 통계 확인
-        stats = result['stats']
-        self.assertEqual(stats['total_nodes'], 3)
-        self.assertEqual(stats['migrated_nodes'], 3)
-        self.assertEqual(stats['orphan_nodes'], 0)
-        
-        # STM 슬롯 확인 (최근 3개)
-        stm = result['stm_slots']
-        self.assertEqual(stm['A'], 'node3')  # 가장 최근
-        self.assertEqual(stm['B'], 'node2')
-        self.assertEqual(stm['C'], 'node1')
-        
-    def test_cycle_removal(self):
-        """사이클 제거 테스트"""
-        # 사이클이 있는 그래프
-        graph_data = [
-            {
-                'id': 'node1',
-                'context': '노드 1',
-                'timestamp': time.time() - 3000,
-                'related_nodes': {'node3': 0.8}  # node3와 연결 (사이클)
-            },
-            {
-                'id': 'node2',
-                'context': '노드 2',
-                'timestamp': time.time() - 2000,
-                'related_nodes': {'node1': 0.9}
-            },
-            {
-                'id': 'node3',
-                'context': '노드 3',
-                'timestamp': time.time() - 1000,
-                'related_nodes': {'node2': 0.7}
-            }
-        ]
-        
-        result = self.migration.migrate_graph_to_branch(graph_data)
-        
-        # xref로 사이클이 처리되었는지 확인
-        self.assertIn('xrefs', result)
-        if result['xrefs']:
-            self.assertGreater(len(result['xrefs']), 0)
-            
-        # 모든 노드가 마이그레이션되었는지 확인
-        stats = result['stats']
-        self.assertEqual(stats['total_nodes'], 3)
-        
-    def test_orphan_handling(self):
-        """고아 노드 처리 테스트"""
-        # 연결되지 않은 노드들
-        graph_data = [
-            {'id': 'node1', 'context': '독립 노드 1', 'timestamp': time.time() - 3000},
-            {'id': 'node2', 'context': '독립 노드 2', 'timestamp': time.time() - 2000},
-            {'id': 'node3', 'context': '독립 노드 3', 'timestamp': time.time() - 1000},
-        ]
-        
-        result = self.migration.migrate_graph_to_branch(graph_data)
-        
-        # 기본 루트에 추가되었는지 확인
-        branches = result['branches']
-        self.assertIn('root_default', branches)
-        
-        # 통계 확인 - orphan 노드는 자동으로 루트로 승격됨 (정식 사양)
-        stats = result['stats']
-        self.assertEqual(stats['orphan_nodes'], 0)  # orphan은 자동 승격되어 0
-        self.assertGreaterEqual(stats['roots_created'], 1)  # 최소 1개 이상의 루트 생성됨
-        
-    def test_orphan_batch_grouping(self):
-        """유사한 orphan 노드들이 하나의 루트로 그룹화되는지 테스트"""
-        # 유사한 컨텍스트의 orphan 노드들
-        graph_data = [
-            {'id': 'node1', 'context': 'API 에러 수정', 'timestamp': time.time() - 100},
-            {'id': 'node2', 'context': 'API 에러 디버깅', 'timestamp': time.time() - 90},
-            {'id': 'node3', 'context': 'API 에러 테스트', 'timestamp': time.time() - 80},
-            {'id': 'node4', 'context': '완전히 다른 작업', 'timestamp': time.time() - 1000},
-        ]
-        
-        result = self.migration.migrate_graph_to_branch(graph_data)
-        stats = result['stats']
-        
-        # 유사한 3개는 하나로, 다른 1개는 별도 루트 = 총 2개 루트 예상
-        # 현재 구현은 모두 하나의 default 루트로 가므로 1개
-        self.assertGreaterEqual(stats['roots_created'], 1)
-        self.assertEqual(stats['orphan_nodes'], 0)
-        
-    def test_quarantine_cap(self):
-        """대량 orphan 발생 시 quarantine 처리 테스트"""
-        # 대량의 독립 노드 생성 (예: 150개)
-        graph_data = []
-        for i in range(150):
-            graph_data.append({
-                'id': f'node{i}',
-                'context': f'독립 작업 {i}',
-                'timestamp': time.time() - i * 10
-            })
-        
-        result = self.migration.migrate_graph_to_branch(graph_data)
-        stats = result['stats']
-        
-        # 모든 orphan은 승격되므로 orphan_nodes는 0
-        self.assertEqual(stats['orphan_nodes'], 0)
-        
-        # 루트가 생성되었는지 확인
-        self.assertGreaterEqual(stats['roots_created'], 1)
-        
-        # 현재 구현은 quarantine 미지원이므로 모두 정상 루트
-        # 향후 구현 시: self.assertIn('quarantine-root', result['branches'])
-        
-    def test_soft_merge_suggestion_for_small_roots(self):
-        """소형 루트에 대한 머지 제안 테스트"""
-        # 매우 유사한 소형 orphan 그룹
-        graph_data = [
-            {'id': 'node1', 'context': '버그 수정 A', 'timestamp': time.time()},
-            {'id': 'node2', 'context': '버그 수정 B', 'timestamp': time.time() - 10},
-        ]
-        
-        result = self.migration.migrate_graph_to_branch(graph_data)
-        
-        # orphan 노드는 모두 승격됨
-        self.assertEqual(result['stats']['orphan_nodes'], 0)
-        
-        # 머지 제안이 생성되어야 함 (향후 구현)
-        # self.assertIn('merge_suggestions', result)
-        # if 'merge_suggestions' in result:
-        #     suggestions = result['merge_suggestions']
-        #     self.assertGreater(len(suggestions), 0)
         
 
 class TestGlobalIndex(unittest.TestCase):
@@ -523,53 +350,6 @@ class TestGlobalIndex(unittest.TestCase):
         # 검색에서도 나타나지 않아야 함
         results = self.index.search_keywords("테스트", limit=5)
         self.assertEqual(len(results), 0)
-
-
-class TestIntegration(unittest.TestCase):
-    """통합 테스트"""
-    
-    def test_full_workflow(self):
-        """전체 워크플로우 테스트"""
-        # 1. 기존 그래프 데이터
-        graph_data = [
-            {'id': f'node{i}', 'context': f'작업 {i}', 'timestamp': time.time() - i*100}
-            for i in range(10)
-        ]
-        
-        # 2. 마이그레이션
-        migration = BranchMigration()
-        migration_result = migration.migrate_graph_to_branch(graph_data)
-        
-        # 3. BranchManager 초기화
-        manager = BranchManager()
-        
-        # 4. 마이그레이션된 데이터로 브랜치 생성
-        for root_id, nodes in migration_result['branches'].items():
-            for node in nodes:
-                if node['before'] is None:  # 루트 노드
-                    manager.add_block(
-                        content=node['content'],
-                        root=root_id
-                    )
-                    
-        # 5. 전역 인덱스 구성
-        global_index = GlobalIndex()
-        for root_id, nodes in migration_result['branches'].items():
-            for node in nodes:
-                global_index.add_node(
-                    node_id=node['id'],
-                    content=node['content'],
-                    root=root_id,
-                    created_at=node['created_at']
-                )
-                
-        # 6. 검색 테스트
-        result = manager.search("작업", k=5)
-        self.assertGreater(len(result.items), 0)
-        
-        # 7. 메트릭 확인
-        metrics = manager.get_metrics()
-        self.assertGreater(metrics['total_searches'], 0)
 
 
 if __name__ == '__main__':

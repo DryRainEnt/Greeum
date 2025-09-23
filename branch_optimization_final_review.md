@@ -145,7 +145,7 @@ greeum/core/
 ├── branch_manager.py          # 핵심 브랜치 관리
 ├── branch_global_index.py     # 글로벌 인덱스
 ├── branch_auto_merge.py       # 자동 병합
-├── branch_migration.py        # 마이그레이션
+├── (deprecated) branch_migration.py  # v3.1.1 이후 STM 앵커 구조 도입으로 제거됨
 └── v3_migration_bridge.py     # 브릿지
 ```
 

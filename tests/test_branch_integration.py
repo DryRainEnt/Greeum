@@ -11,7 +11,6 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from greeum.core.branch_manager import BranchManager
-from greeum.core.branch_migration import BranchMigration
 from greeum.core.branch_global_index import GlobalIndex
 from greeum.core.branch_auto_merge import AutoMergeEngine
 
@@ -155,54 +154,6 @@ class TestBranchIntegration(unittest.TestCase):
             self.assertGreater(proposal.score, 0)
             self.assertTrue(proposal.reversible)
             
-    def test_migration_and_branch_conversion(self):
-        """마이그레이션 및 브랜치 변환 테스트"""
-        # 기존 그래프 데이터 시뮬레이션
-        graph_data = []
-        for i in range(5):
-            prev_hash = f"hash{i-1}" if i > 0 else ""
-            graph_data.append({
-                'id': f'node{i}',
-                'block_index': i,
-                'context': f'작업 단계 {i}: 기능 구현',
-                'timestamp': time.time() - (5-i) * 3600,  # 시간순
-                'hash': f'hash{i}',
-                'prev_hash': prev_hash,
-                'keywords': ['작업', '기능', '구현'],
-                'tags': ['development', 'feature']
-            })
-            
-        # 마이그레이션 수행
-        migration = BranchMigration()
-        result = migration.migrate_graph_to_branch(graph_data)
-        
-        # 마이그레이션 결과 검증
-        self.assertIn('branches', result)
-        self.assertIn('stm_slots', result)
-        self.assertEqual(result['stats']['total_nodes'], 5)
-        self.assertEqual(result['stats']['migrated_nodes'], 5)
-        
-        # STM 슬롯이 최근 노드들로 설정되었는지 확인
-        stm = result['stm_slots']
-        self.assertEqual(stm['A'], 'node4')  # 가장 최근
-        self.assertEqual(stm['B'], 'node3')
-        self.assertEqual(stm['C'], 'node2')
-        
-        # 새 BranchManager에 마이그레이션 결과 적용 (시뮬레이션)
-        new_manager = BranchManager()
-        
-        # 마이그레이션된 브랜치를 새로운 블록으로 추가
-        for root_id, nodes in result['branches'].items():
-            for node in nodes[:3]:  # 처음 3개만
-                new_manager.add_block(
-                    content=node['content'],
-                    root=root_id
-                )
-                
-        # 검색이 정상 작동하는지 확인
-        search_result = new_manager.search("기능 구현", k=3)
-        self.assertGreater(len(search_result.items), 0)
-        
     def test_performance_metrics_tracking(self):
         """성능 메트릭 추적 테스트"""
         # 다양한 패턴의 검색 수행
