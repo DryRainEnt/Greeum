@@ -5,12 +5,17 @@ import time
 import threading
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Dict, Optional, Union, Any
+from typing import List, Dict, Optional, Union, Any, Tuple
 
 import numpy as np
 
 
 logger = logging.getLogger(__name__)
+
+
+# Cache for loaded SentenceTransformer instances: model key -> (model, dim, needs_padding)
+_ST_MODEL_CACHE: Dict[str, Tuple[Any, int, bool]] = {}
+_ST_CACHE_LOCK = threading.Lock()
 
 
 def _sentence_transformer_disabled() -> bool:
@@ -316,22 +321,42 @@ class SentenceTransformerModel(EmbeddingModel):
             os.makedirs(cache_dir, exist_ok=True)
 
             device = os.getenv("GREEUM_ST_DEVICE")
-            try:
-                self.model = SentenceTransformer(
-                    self.model_name,
-                    cache_folder=cache_dir,
-                    device=device,
-                )
-            except TypeError:
-                # Older sentence-transformers versions might not accept device kwarg
-                self.model = SentenceTransformer(self.model_name, cache_folder=cache_dir)
-            logger.debug("SentenceTransformer loaded on device %s", getattr(self.model, "_target_device", None))
-            self._dimension = self.model.get_sentence_embedding_dimension()
+            cache_key = f"{self.model_name}@{device or 'auto'}"
 
-            # 768차원 호환성을 위한 차원 변환 필요 여부
-            self._needs_padding = (self._dimension < 768)
+            with _ST_CACHE_LOCK:
+                cached = _ST_MODEL_CACHE.get(cache_key)
+                if cached:
+                    self.model, self._dimension, self._needs_padding = cached
+                    logger.debug(
+                        "Reusing cached SentenceTransformer model %s on device %s",
+                        self.model_name,
+                        getattr(self.model, "_target_device", None),
+                    )
+                else:
+                    try:
+                        model = SentenceTransformer(
+                            self.model_name,
+                            cache_folder=cache_dir,
+                            device=device,
+                        )
+                    except TypeError:
+                        model = SentenceTransformer(self.model_name, cache_folder=cache_dir)
 
-            logger.info("Model loaded successfully: %s (dim: %s)", self.model_name, self._dimension)
+                    self.model = model
+                    logger.debug(
+                        "SentenceTransformer loaded on device %s",
+                        getattr(self.model, "_target_device", None),
+                    )
+                    self._dimension = self.model.get_sentence_embedding_dimension()
+                    self._needs_padding = (self._dimension < 768)
+                    _ST_MODEL_CACHE[cache_key] = (self.model, self._dimension, self._needs_padding)
+
+            if self._dimension is None:
+                self._dimension = self.model.get_sentence_embedding_dimension()
+            if self._needs_padding is None:
+                self._needs_padding = (self._dimension < 768)
+
+            logger.info("Model ready: %s (dim: %s)", self.model_name, self._dimension)
 
     @property
     def dimension(self):

@@ -16,7 +16,9 @@
 
 ## 4. 임베딩 로딩 개선
 - [ ] `greeum setup` 수행 시 SentenceTransformer 미리 로딩하고 캐시 경로 검증.
-- [ ] 실행 중에는 lazy singleton을 통해 모델 재사용, 폴백(SimpleEmbedding) 경로는 즉시 반환하도록 분리.
+- [x] 실행 중에는 lazy singleton을 통해 모델 재사용(같은 프로세스 내 중복 로딩 제거).
+- [x] `GREEUM_ST_DEVICE` 환경 변수로 장치 지정, `GREEUM_DISABLE_ST` 설정 시 warmup 차단.
+- [ ] 폴백(SimpleEmbedding) 경로는 즉시 반환하도록 최적화.
 
 ## 5. 테스트 & 자동화
 - [ ] `pytest -m "perf"` 태그로 성능 회귀 테스트 추가 (30초 이내 목표, 초과 시 실패).
