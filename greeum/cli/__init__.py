@@ -19,6 +19,8 @@ import os
 import sys
 import sqlite3
 import subprocess
+import shutil
+import time
 from pathlib import Path
 from typing import Optional, Dict, Any
 from datetime import datetime
@@ -41,6 +43,113 @@ from ..embedding_models import (
 )
 from ..worker.client import WriteServiceClient, resolve_endpoint, WorkerUnavailableError
 from ..worker import ensure_http_worker, get_worker_state
+
+
+def _backup_database_files(db_path: Path, label: str = "auto") -> Path:
+    """Create timestamped backups of the primary database and auxiliary files."""
+
+    data_dir = db_path.parent
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    backup_dir = data_dir / "backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+
+    backup_path = backup_dir / f"memory_{label}_{timestamp}.db"
+    if db_path.exists():
+        shutil.copy(db_path, backup_path)
+
+    for suffix in ("-wal", "-shm"):
+        sidecar = Path(f"{db_path}{suffix}")
+        if sidecar.exists():
+            shutil.copy(sidecar, backup_dir / f"{sidecar.name}_{timestamp}")
+
+    anchor_path = Path(os.environ.get("GREEUM_STM_DB", str(data_dir / "stm_anchors.db")))
+    if anchor_path.exists():
+        shutil.copy(anchor_path, backup_dir / f"stm_anchors_{label}_{timestamp}.db")
+
+    return backup_path
+
+
+def _reset_anchor_singleton() -> None:
+    try:
+        from ..core import stm_anchor_store
+
+        with stm_anchor_store._singleton_lock:  # type: ignore[attr-defined]
+            if stm_anchor_store._singleton is not None:  # type: ignore[attr-defined]
+                try:
+                    stm_anchor_store._singleton.close()  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+                stm_anchor_store._singleton = None  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
+
+def _remove_corrupt_database(db_path: Path) -> None:
+    for suffix in ("", "-wal", "-shm"):
+        target = Path(f"{db_path}{suffix}")
+        if target.exists():
+            target.unlink()
+
+    anchor_path = Path(os.environ.get("GREEUM_STM_DB", str(db_path.parent / "stm_anchors.db")))
+    if anchor_path.exists():
+        try:
+            anchor_path.unlink()
+        except OSError:
+            pass
+
+    _reset_anchor_singleton()
+
+
+def _ensure_database_ready(data_dir: Path) -> None:
+    db_path = data_dir / "memory.db"
+    if not db_path.exists():
+        return
+
+    try:
+        manager = DatabaseManager(connection_string=str(db_path))
+        cursor = manager.conn.cursor()
+    except sqlite3.DatabaseError as exc:
+        message = str(exc).lower()
+        if any(keyword in message for keyword in ("malformed", "not a database")):
+            click.echo("⚠️  Existing database appears to be corrupted or uses an unsupported schema.")
+            if click.confirm("Automatically back up the old files and rebuild a fresh database?", default=True):
+                backup_path = _backup_database_files(db_path, label="malformed")
+                click.echo(f"   • Backup saved to {backup_path}")
+                _remove_corrupt_database(db_path)
+                click.echo("   • Removed corrupt database. A new one will be created on next run.")
+                return
+            raise click.ClickException("Setup aborted: database schema is malformed.")
+        raise click.ClickException(f"Database initialization failed: {exc}")
+
+    try:
+        needs_migration = BranchSchemaSQL.check_migration_needed(cursor)
+    except Exception as exc:
+        manager.conn.close()
+        raise click.ClickException(f"Migration check failed: {exc}")
+
+    if not needs_migration:
+        manager.conn.close()
+        return
+
+    click.echo("⚠️  Existing database schema is older than the current release.")
+    if not click.confirm("Back up and upgrade the schema now?", default=True):
+        manager.conn.close()
+        raise click.ClickException("Setup aborted: schema migration declined by user.")
+
+    backup_path = _backup_database_files(db_path, label="schema")
+    click.echo(f"   • Backup saved to {backup_path}")
+
+    try:
+        manager._apply_branch_migration(cursor)
+        manager._initialize_branch_structures(cursor)
+        manager.conn.commit()
+    except Exception as exc:
+        manager.conn.close()
+        raise click.ClickException(f"Schema migration failed: {exc}")
+
+    manager.conn.close()
+    click.echo("   • Schema migration completed successfully.")
+
 
 
 def _download_sentence_transformer(model: str) -> Path:
@@ -144,6 +253,11 @@ def setup(data_dir: Optional[str], skip_warmup: bool, start_worker: bool):
 
     target_dir = ensure_data_dir(chosen_dir)
     os.environ['GREEUM_DATA_DIR'] = str(target_dir)
+    try:
+        _ensure_database_ready(Path(target_dir))
+    except click.ClickException as exc:
+        click.echo(f"[ERROR] {exc}")
+        sys.exit(1)
 
     semantic_ready = config.semantic_ready
     warmup_performed = False
