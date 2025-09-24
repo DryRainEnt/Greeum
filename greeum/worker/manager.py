@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import socket
 import subprocess
@@ -13,13 +14,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from .client import resolve_endpoint
+from .client import resolve_endpoint, WriteServiceClient, WorkerUnavailableError
+from ..config_store import DEFAULT_ST_MODEL
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8820
 MAX_PORT = 8840
 HEALTH_TIMEOUT = float(os.getenv("GREEUM_WORKER_HEALTH_TIMEOUT", "1.0"))
 START_TIMEOUT = float(os.getenv("GREEUM_WORKER_START_TIMEOUT", "30.0"))
+
+logger = logging.getLogger("greeum.worker.manager")
 
 
 def _find_free_port(start: int = DEFAULT_PORT, end: int = MAX_PORT) -> int:
@@ -65,6 +69,21 @@ def _read_state(path: Path) -> Optional[dict]:
 
 def _write_state(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _warmup_worker(endpoint: str, semantic: bool) -> None:
+    if not semantic:
+        return
+
+    model_name = os.environ.get("GREEUM_ST_MODEL", DEFAULT_ST_MODEL)
+    try:
+        client = WriteServiceClient(endpoint)
+        client.call("warmup_embeddings", {"model": model_name})
+        logger.info("Worker warm-up successful (%s)", model_name)
+    except WorkerUnavailableError as exc:  # pragma: no cover - network race
+        logger.warning("Worker warm-up unavailable: %s", exc)
+    except Exception as exc:  # pragma: no cover - non-fatal
+        logger.warning("Worker warm-up failed: %s", exc)
 
 
 def ensure_http_worker(
@@ -147,6 +166,7 @@ def ensure_http_worker(
                     "log": str(log_file),
                 },
             )
+            _warmup_worker(endpoint, semantic)
             return endpoint
         if proc.poll() is not None:
             break

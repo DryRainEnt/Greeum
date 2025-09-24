@@ -118,6 +118,8 @@ class GreeumMCPTools:
             return await self._handle_get_memory_stats(arguments)
         elif tool_name == "usage_analytics":
             return await self._handle_usage_analytics(arguments)
+        elif tool_name == "warmup_embeddings":
+            return await self._handle_warmup_embeddings(arguments)
         elif tool_name == "analyze_causality":
             return await self._handle_analyze_causality(arguments)
         elif tool_name == "infer_causality":
@@ -725,6 +727,23 @@ This may indicate a transaction rollback or database issue."""
         except Exception as e:
             logger.error(f"usage_analytics failed: {e}")
             return f"ERROR: Failed to get usage analytics: {str(e)}"
+
+    async def _handle_warmup_embeddings(self, arguments: Dict[str, Any]) -> str:
+        """Pre-load the SentenceTransformer model for faster first use."""
+
+        model_name = arguments.get("model")
+        try:
+            from greeum.embedding_models import init_sentence_transformer
+
+            init_sentence_transformer(model_name=model_name, set_as_default=True)
+            chosen = model_name or os.environ.get(
+                "GREEUM_ST_MODEL",
+                "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+            )
+            return f"✅ Warm-up complete for {chosen}"
+        except Exception as exc:
+            logger.warning(f"Warm-up failed: {exc}")
+            return f"WARNING: Warm-up failed: {exc}"
 
     async def _handle_analyze_causality(self, arguments: Dict[str, Any]) -> str:
         """analyze_causality 도구 처리"""
