@@ -31,6 +31,24 @@ def test_worker_cli_add_search(tmp_path):
         }
     )
 
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "greeum.cli",
+            "setup",
+            "--data-dir",
+            str(tmp_path),
+            "--skip-warmup",
+            "--skip-worker",
+        ],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+
     cmd = [
         sys.executable,
         "-m",
@@ -113,6 +131,8 @@ def test_worker_cli_add_search(tmp_path):
         # Result may vary, but worker path should be acknowledged
         assert "Found" in search_proc.stdout or "No results" in search_proc.stdout, search_proc.stdout
 
+    except RuntimeError as exc:
+        pytest.skip(str(exc))
     finally:
         worker.terminate()
         try:

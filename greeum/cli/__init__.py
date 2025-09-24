@@ -100,7 +100,7 @@ def _remove_corrupt_database(db_path: Path) -> None:
     _reset_anchor_singleton()
 
 
-def _ensure_database_ready(data_dir: Path) -> None:
+def _ensure_database_ready(data_dir: Path, *, auto_accept: bool = False) -> None:
     db_path = data_dir / "memory.db"
     if not db_path.exists():
         return
@@ -112,7 +112,7 @@ def _ensure_database_ready(data_dir: Path) -> None:
         message = str(exc).lower()
         if any(keyword in message for keyword in ("malformed", "not a database")):
             click.echo("⚠️  Existing database appears to be corrupted or uses an unsupported schema.")
-            if click.confirm("Automatically back up the old files and rebuild a fresh database?", default=True):
+            if auto_accept or click.confirm("Automatically back up the old files and rebuild a fresh database?", default=True):
                 backup_path = _backup_database_files(db_path, label="malformed")
                 click.echo(f"   • Backup saved to {backup_path}")
                 _remove_corrupt_database(db_path)
@@ -132,7 +132,7 @@ def _ensure_database_ready(data_dir: Path) -> None:
         return
 
     click.echo("⚠️  Existing database schema is older than the current release.")
-    if not click.confirm("Back up and upgrade the schema now?", default=True):
+    if not (auto_accept or click.confirm("Back up and upgrade the schema now?", default=True)):
         manager.conn.close()
         raise click.ClickException("Setup aborted: schema migration declined by user.")
 
@@ -1582,30 +1582,84 @@ def status(data_dir: str):
 
 @migrate.command()
 @click.option('--data-dir', default='data', help='Data directory path')
-@click.option('--backup-id', help='Specific backup ID to rollback to')
-@click.option('--reason', default='Manual rollback', help='Reason for rollback')
-def rollback(data_dir: str, backup_id: str, reason: str):
-    """Rollback to previous database state using backups"""
-    click.echo("↩️  Emergency rollback tooling has been deprecated in the branch-aware preview.")
-    click.echo("   Please restore from your manual backup if needed.")
-    sys.exit(0)
+@click.option('--yes', '-y', is_flag=True, help='Run without interactive prompts')
+def doctor(data_dir: str, yes: bool):
+    """Repair legacy or malformed databases."""
+
+    data_path = Path(data_dir).expanduser()
+    if data_path.is_file():
+        db_path = data_path
+        data_path = db_path.parent
+    else:
+        db_path = data_path / 'memory.db'
+
+    if not db_path.exists():
+        click.echo(f"📂 No database found at {db_path}. Nothing to repair.")
+        return
+
+    try:
+        _ensure_database_ready(data_path, auto_accept=yes)
+        click.echo("✅ Schema check completed. Database is ready.")
+    except click.ClickException as exc:
+        click.echo(f"❌ Repair aborted: {exc}")
+
 
 @migrate.command()
 @click.option('--data-dir', default='data', help='Data directory path')
 def validate(data_dir: str):
-    """Validate migration results and database health"""
-    click.echo("🔍 Automated migration validation is not available in this preview build.")
-    click.echo("   Please run manual smoke tests after 'greeum migrate check'.")
-    sys.exit(0)
+    """Run PRAGMA integrity_check on the active database."""
+
+    data_path = Path(data_dir).expanduser()
+    if data_path.is_file():
+        db_path = data_path
+    else:
+        db_path = data_path / 'memory.db'
+
+    if not db_path.exists():
+        click.echo(f"📂 Database not found at {db_path}")
+        return
+
+    try:
+        conn = sqlite3.connect(str(db_path))
+        result = conn.execute("PRAGMA integrity_check").fetchone()[0]
+        conn.close()
+    except sqlite3.DatabaseError as exc:
+        click.echo(f"❌ Integrity check failed to run: {exc}")
+        return
+
+    if result.lower() == 'ok':
+        click.echo("✅ Integrity check OK")
+    else:
+        click.echo(f"❌ Integrity issues detected: {result}")
+
 
 @migrate.command()
 @click.option('--data-dir', default='data', help='Data directory path')
 @click.option('--keep-backups', default=5, help='Number of backups to keep')
 def cleanup(data_dir: str, keep_backups: int):
-    """Clean up old migration backups"""
-    click.echo("🧹 Backup cleanup is not implemented in the branch-aware preview.")
-    click.echo("   Remove unwanted backup files manually if needed.")
-    sys.exit(0)
+    """Remove old backup files, keeping the most recent N entries."""
+
+    data_path = Path(data_dir).expanduser()
+    backup_dir = data_path / 'backups'
+    if not backup_dir.exists():
+        click.echo("📂 No backups directory found.")
+        return
+
+    backup_files = sorted(
+        [p for p in backup_dir.iterdir() if p.is_file()],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+
+    if len(backup_files) <= keep_backups:
+        click.echo(f"✅ {len(backup_files)} backups found. Nothing to remove.")
+        return
+
+    to_remove = backup_files[keep_backups:]
+    for path in to_remove:
+        path.unlink(missing_ok=True)
+
+    click.echo(f"🧹 Removed {len(to_remove)} old backups. Kept {keep_backups} recent copies.")
 
 # v2.6.1 Backup 서브명령어들
 @backup.command()
