@@ -10,7 +10,7 @@ pipx install --pip-args "--pre" greeum  # 권장 방식
 pip install --upgrade "greeum"
 
 # 데이터 디렉터리 생성 및 기본 설정
-greeum setup
+greeum setup --start-worker
 ```
 
 ### (선택) 의미 임베딩 활성화
@@ -28,11 +28,11 @@ greeum mcp warmup  # 모델 캐시 미리 다운로드
 
 | 환경 | 실행 명령 | 비고 |
 |------|-----------|------|
-| Codex (STDIO) | `greeum mcp serve -t stdio` | 설정 파일에서 `GREEUM_QUIET=true` 권장 |
-| ClaudeCode / Cursor | `greeum mcp serve` | `--semantic` 옵션으로 의미 검색 활성화 |
+| Codex (STDIO) | `greeum mcp serve -t stdio` | 설정에 `GREEUM_QUIET=true`, `PYTORCH_ENABLE_MPS_FALLBACK=1` 권장 |
+| ClaudeCode / Cursor | `greeum mcp serve` | `GREEUM_MCP_HTTP` 설정 시 워커 엔드포인트 자동 사용 |
 | HTTP (ChatGPT 등) | `greeum mcp serve -t http --host 0.0.0.0 --port 8800` | 엔드포인트: `http://127.0.0.1:8800/mcp` |
 
-> **팁**: `greeum setup`을 실행한 뒤 MCP 연결을 시도하면 초기 타임아웃을 피할 수 있습니다.
+> **팁**: 3.1.1rc8부터 `greeum setup --start-worker`가 워커와 SentenceTransformer를 자동 워밍업합니다.
 
 ## 3. 권장 프롬프트 규칙
 - 작업 시작 전에 `search_memory`로 기존 결정/요약을 확인합니다.

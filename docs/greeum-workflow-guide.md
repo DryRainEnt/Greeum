@@ -42,59 +42,39 @@ greeum-digest --limit 10
   0 9 * * * greeum-digest --limit 10 >/tmp/greeum_digest.log 2>&1
   ```
 
-## 3. Teams & Onboarding
+## 3. 팀/온보딩용 템플릿
 
 ### Codex CLI
+```toml
+[mcp_servers.greeum]
+command = "greeum"
+args    = ["mcp", "serve", "-t", "stdio"]
+env     = { "GREEUM_QUIET" = "true", "PYTORCH_ENABLE_MPS_FALLBACK" = "1" }
+```
+> `greeum setup --start-worker`를 먼저 실행하면 초기 타임아웃을 피할 수 있습니다.
 
-1. `~/.codex/config.toml`
-   ```toml
-   [mcp_servers.greeum]
-   command = "/Users/you/.local/bin/greeum"
-   args = ["mcp", "serve", "-t", "stdio"]
-   env = { "PYTORCH_ENABLE_MPS_FALLBACK" = "1", "GREEUM_QUIET" = "true" }
-   ```
-   > 설치 직후 바로 연결하면 SentenceTransformer 초기화 때문에 타임아웃이 발생할 수 있으니, **반드시 `greeum setup`을 먼저 실행**해 데이터 디렉터리와 캐시를 준비하세요.
-2. Add a checklist snippet:
-   - Start prompt: “Before coding, run `greeum-workflow search …`.”
-   - Finish prompt: “Wrap up with `greeum-workflow add …`.”
+### ClaudeCode / Cursor
+- 명령: `greeum mcp serve` (semantic 필요 시 `--semantic`)
+- 자동 워커 감지를 위해 `GREEUM_MCP_HTTP=http://127.0.0.1:8820/mcp` 환경 변수를 설정
 
-### IDEs / Editors
+### Slack/온보딩 메시지 예시
+````markdown
+1. `pipx install --pip-args "--pre" greeum`
+2. `greeum setup --start-worker`
+3. `greeum-workflow search "onboarding"`
+4. 작업 마무리 후 `greeum-workflow add 0.6 "[Day1] Learned ..."`
+````
 
-- VS Code `tasks.json`
-  ```json
-  {
-    "label": "Greeum: capture summary",
-    "type": "shell",
-    "command": "greeum-workflow",
-    "args": ["add", "0.6", "${input:summaryText}"]
-  }
-  ```
-  Use `inputs` to prompt for the summary.
-- JetBrains: add an External Tool mapped to `greeum-workflow add …` and bind it to a shortcut.
+## 4. 운영 FAQ
 
-### New teammates
-
-1. `pipx install --pip-args "--pre" greeum` (Python ≥ 3.11).
-2. `greeum setup` (pick the data directory and optionally run the warm-up now).
-3. `greeum --version` → check `3.1.1rc4.dev1` or newer.
-4. `greeum-workflow search "onboarding"` and `add` a “First-day summary”.
-5. Subscribe to the digest in Slack/email.
-
-## 4. Messaging Tone
-
-- Emphasize value: “Yesterday’s decision is one command away”, “Wrap up so the next shift continues instantly.”
-- Repeat the message across docs, Slack welcome posts, onboarding decks.
-- Keep quick-start instructions short and link back to this guide for detail.
-
-## 5. Ops & Troubleshooting
-
-- **Noise control** – `GREEUM_QUIET=true` keeps STDIO output clean; keep duplicate warnings—they protect data quality.
-- **Apple Silicon** – `PYTORCH_ENABLE_MPS_FALLBACK=1` avoids meta-tensor errors when loading sentence-transformers.
-- **Semantic mode** – run `greeum mcp warmup` and then start the server with `greeum mcp serve --semantic` once the cache is ready.
-- **Database locks** – occasional `database is locked` warnings mean two jobs overlapped; schedule heavy jobs sequentially or run `greeum migrate doctor` during low traffic.
-- **Branch index refresh** – `greeum memory reindex` rebuilds FAISS + keyword indices (add `--disable-faiss` if vector libs are missing).
-- **Fallback tuning** – adjust `GREEUM_BRANCH_FALLBACK_RATIO` (e.g., `0.4:0.6`) when you want recency to weigh more than keyword overlap in FAISS-off environments.
+| 상황 | 해결 방법 |
+|------|-----------|
+| STDIO 로그가 많다 | `export GREEUM_QUIET=true` |
+| 첫 호출이 느리다 | 워커 자동 워밍업(`greeum setup --start-worker`) |
+| DB 오류가 발생 | `greeum migrate doctor --yes` 실행 |
+| 의미 검색 활성화 | `greeum mcp warmup` → `greeum mcp serve --semantic` |
+| Slack 알림 | `GREEUM_SLACK_WEBHOOK` 설정 후 `greeum-digest` |
 
 ---
 
-With `greeum-workflow` and `greeum-digest`, the `search → work → add` rhythm becomes muscle memory. Automate the reminders, keep the messaging value-focused, and the memories keep flowing.
+`search → work → add` 루틴은 한 번 익히면 계속 유지됩니다. 워커가 항상 백그라운드에서 대기하니, 설치 직후 바로 적용해 보세요.
