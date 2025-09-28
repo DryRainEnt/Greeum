@@ -22,8 +22,9 @@ import subprocess
 import shutil
 import time
 from pathlib import Path
-from typing import Optional, Dict, Any
-from datetime import datetime
+from typing import Optional, Dict, Any, List
+from datetime import datetime, timedelta
+from collections import defaultdict
 
 from ..config_store import (
     DEFAULT_DATA_DIR,
@@ -111,12 +112,12 @@ def _ensure_database_ready(data_dir: Path, *, auto_accept: bool = False) -> None
     except sqlite3.DatabaseError as exc:
         message = str(exc).lower()
         if any(keyword in message for keyword in ("malformed", "not a database")):
-            click.echo("⚠️  Existing database appears to be corrupted or uses an unsupported schema.")
+            click.echo("[WARNING]  Existing database appears to be corrupted or uses an unsupported schema.")
             if auto_accept or click.confirm("Automatically back up the old files and rebuild a fresh database?", default=True):
                 backup_path = _backup_database_files(db_path, label="malformed")
-                click.echo(f"   • Backup saved to {backup_path}")
+                click.echo(f"   - Backup saved to {backup_path}")
                 _remove_corrupt_database(db_path)
-                click.echo("   • Removed corrupt database. A new one will be created on next run.")
+                click.echo("   - Removed corrupt database. A new one will be created on next run.")
                 return
             raise click.ClickException("Setup aborted: database schema is malformed.")
         raise click.ClickException(f"Database initialization failed: {exc}")
@@ -131,13 +132,13 @@ def _ensure_database_ready(data_dir: Path, *, auto_accept: bool = False) -> None
         manager.conn.close()
         return
 
-    click.echo("⚠️  Existing database schema is older than the current release.")
+    click.echo("[WARNING]  Existing database schema is older than the current release.")
     if not (auto_accept or click.confirm("Back up and upgrade the schema now?", default=True)):
         manager.conn.close()
         raise click.ClickException("Setup aborted: schema migration declined by user.")
 
     backup_path = _backup_database_files(db_path, label="schema")
-    click.echo(f"   • Backup saved to {backup_path}")
+    click.echo(f"   - Backup saved to {backup_path}")
 
     try:
         manager._apply_branch_migration(cursor)
@@ -148,7 +149,7 @@ def _ensure_database_ready(data_dir: Path, *, auto_accept: bool = False) -> None
         raise click.ClickException(f"Schema migration failed: {exc}")
 
     manager.conn.close()
-    click.echo("   • Schema migration completed successfully.")
+    click.echo("   - Schema migration completed successfully.")
 
 
 
@@ -238,7 +239,7 @@ def main(ctx: click.Context, verbose: bool, debug: bool, quiet: bool):
 def setup(data_dir: Optional[str], skip_warmup: bool, start_worker: bool):
     """Interactive first-time setup (data dir + optional warm-up)."""
 
-    click.echo("🛠️  Greeum setup wizard")
+    click.echo("[TOOLS]  Greeum setup wizard")
     config = load_config()
 
     default_dir = data_dir or config.data_dir or str(DEFAULT_DATA_DIR)
@@ -267,7 +268,7 @@ def setup(data_dir: Optional[str], skip_warmup: bool, start_worker: bool):
     else:
         default_confirm = not config.semantic_ready
         if click.confirm("Run SentenceTransformer warm-up now?", default=default_confirm):
-            click.echo(f"📦 Downloading {DEFAULT_ST_MODEL} …")
+            click.echo(f"[PACKAGE] Downloading {DEFAULT_ST_MODEL} ...")
             try:
                 cache_dir = _download_sentence_transformer(DEFAULT_ST_MODEL)
             except ImportError as exc:
@@ -277,7 +278,7 @@ def setup(data_dir: Optional[str], skip_warmup: bool, start_worker: bool):
                 click.echo(f"[ERROR] Warm-up failed: {exc}", err=True)
                 semantic_ready = False
             else:
-                click.echo(f"✅ Warm-up complete. Model cached at {cache_dir}.")
+                click.echo(f"[OK] Warm-up complete. Model cached at {cache_dir}.")
                 semantic_ready = True
                 warmup_performed = True
         else:
@@ -295,7 +296,7 @@ def setup(data_dir: Optional[str], skip_warmup: bool, start_worker: bool):
     worker_endpoint = None
     worker_log = None
     if start_worker:
-        click.echo("\n🚀 Launching background worker…")
+        click.echo("\n[ROCKET] Launching background worker...")
         try:
             endpoint = ensure_http_worker(
                 data_dir=Path(target_dir),
@@ -309,25 +310,25 @@ def setup(data_dir: Optional[str], skip_warmup: bool, start_worker: bool):
         except Exception as exc:  # noqa: BLE001 - show warning only
             click.echo(f"[WARN] Failed to launch worker automatically: {exc}")
         else:
-            click.echo(f"   • Worker endpoint: {worker_endpoint}")
+            click.echo(f"   - Worker endpoint: {worker_endpoint}")
             if worker_log:
-                click.echo(f"   • Worker log: {worker_log}")
+                click.echo(f"   - Worker log: {worker_log}")
             else:
-                click.echo("   • Worker log: <not recorded>")
+                click.echo("   - Worker log: <not recorded>")
 
     click.echo("\nSetup summary:")
-    click.echo(f"   • Data directory: {target_dir}")
+    click.echo(f"   - Data directory: {target_dir}")
     click.echo(
-        "   • Semantic embeddings: "
+        "   - Semantic embeddings: "
         + ("ready" if semantic_ready else "hash fallback (run warmup to enable)")
     )
     if start_worker and worker_endpoint:
-        click.echo("   • Worker: running (auto-start)")
+        click.echo("   - Worker: running (auto-start)")
     elif start_worker:
-        click.echo("   • Worker: failed to start (use 'greeum worker serve' later)")
+        click.echo("   - Worker: failed to start (use 'greeum worker serve' later)")
     else:
-        click.echo("   • Worker: skipped (use 'greeum worker serve' when needed)")
-    click.echo("   • Next step: run 'greeum memory add ""Your first note""' to test the connection")
+        click.echo("   - Worker: skipped (use 'greeum worker serve' when needed)")
+    click.echo("   - Next step: run 'greeum memory add ""Your first note""' to test the connection")
 @main.group()
 def memory():
     """Memory management commands (STM/LTM)"""
@@ -414,7 +415,7 @@ def doctor(check: bool, fix: bool, force: bool, no_backup: bool, db_path: str):
         # 백업
         if (fix or force) and not no_backup:
             backup_path = doctor_instance.backup_database()
-            click.echo(f"📦 백업 생성: {backup_path}")
+            click.echo(f"[PACKAGE] 백업 생성: {backup_path}")
 
         # 진단
         health = doctor_instance.check_health()
@@ -430,19 +431,19 @@ def doctor(check: bool, fix: bool, force: bool, no_backup: bool, db_path: str):
 
             fixes = doctor_instance.fix_issues(force)
             if fixes:
-                click.echo(f"\n✅ 복구 완료: {len(fixes)}개 문제 해결")
+                click.echo(f"\n[OK] 복구 완료: {len(fixes)}개 문제 해결")
                 for fix_msg in fixes:
-                    click.echo(f"  • {fix_msg}")
+                    click.echo(f"  - {fix_msg}")
 
             # 재진단
-            click.echo("\n🔄 복구 후 재진단...")
+            click.echo("\n[LOOP] 복구 후 재진단...")
             health = doctor_instance.check_health()
             click.echo(f"\n최종 상태: 점수 {health['total_score']:.0f}/100")
 
         sys.exit(0 if health['total_score'] >= 70 else 1)
 
     except Exception as e:
-        click.echo(f"❌ 오류 발생: {e}")
+        click.echo(f"[ERROR] 오류 발생: {e}")
         sys.exit(1)
 
 
@@ -579,7 +580,7 @@ def add(content: str, importance: float, tags: Optional[str], slot: Optional[str
                 return
             data = worker_response.get("data") or {}
             block_id = data.get("block_index", data.get("id", "unknown"))
-            click.echo(f"✅ Memory added via worker (Block #{block_id})")
+            click.echo(f"[OK] Memory added via worker (Block #{block_id})")
             return
 
         if slot:
@@ -592,7 +593,7 @@ def add(content: str, importance: float, tags: Optional[str], slot: Optional[str
                 policy={'importance': importance, 'tags': tags}
             )
             
-            click.echo(f"✅ Memory added near anchor {slot} (Block #{result})")
+            click.echo(f"[OK] Memory added near anchor {slot} (Block #{result})")
             
         else:
             # Use traditional write
@@ -619,7 +620,7 @@ def add(content: str, importance: float, tags: Optional[str], slot: Optional[str
             
             if block:
                 # block is now just the block_index (int) instead of a dict
-                click.echo(f"✅ Memory added (Block #{block})")
+                click.echo(f"[OK] Memory added (Block #{block})")
             else:
                 click.echo("[ERROR] Failed to add memory")
             
@@ -693,20 +694,20 @@ def search(query: str, count: int, threshold: float, slot: str, radius: int, no_
         if blocks:
             # Display search info
             if slot:
-                search_type = f"🎯 Anchor-based search (slot {slot})"
+                search_type = f"[TARGET] Anchor-based search (slot {slot})"
                 if metadata.get('fallback_used'):
-                    search_type += " → [PROCESS] Global fallback"
+                    search_type += " -> [PROCESS] Global fallback"
                 click.echo(search_type)
                 click.echo(f"   Hit rate: {metadata.get('local_hit_rate', 0):.1%}")
                 click.echo(f"   Avg hops: {metadata.get('avg_hops', 0)}")
             else:
-                click.echo("🔍 Global semantic search")
+                click.echo("[SEARCH] Global semantic search")
             
             # Display timing
             total_ms = sum(timing.values())
             click.echo(f"   Search time: {total_ms:.1f}ms")
             
-            click.echo(f"\n📋 Found {len(blocks)} memories:")
+            click.echo(f"\n[CLIPBOARD] Found {len(blocks)} memories:")
             for i, block in enumerate(blocks, 1):
                 timestamp = block.get('timestamp', 'Unknown')
                 content = block.get('context', 'No content')[:80]
@@ -747,12 +748,12 @@ def memory_reindex(data_dir: Optional[str], disable_faiss: bool) -> None:
     else:
         manager = DatabaseManager()
 
-    click.echo('🔄 Rebuilding branch indices...')
+    click.echo('[LOOP] Rebuilding branch indices...')
     try:
         branch_manager = BranchIndexManager(manager)
         stats = branch_manager.get_stats()
         click.echo(
-            "✅ Rebuilt {count} branches ({mode}, vectorized={vectorized}).".format(
+            "[OK] Rebuilt {count} branches ({mode}, vectorized={vectorized}).".format(
                 count=stats['branch_count'],
                 mode=stats['mode'],
                 vectorized=stats['vectorized_branches'],
@@ -785,7 +786,7 @@ def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quie
     # 로깅 레벨 결정 (새로운 정책: 기본은 조용함)
     if debug:
         log_level = 'debug'
-        click.echo(f"🔍 Starting Greeum MCP server ({transport}) - DEBUG mode...")
+        click.echo(f"[DEBUG] Starting Greeum MCP server ({transport})...")
     elif verbose:
         log_level = 'verbose'
         click.echo(f"[NOTE] Starting Greeum MCP server ({transport}) - VERBOSE mode...")
@@ -796,9 +797,9 @@ def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quie
     # --quiet 플래그 호환성 경고
     if quiet:
         if verbose or debug:
-            click.echo("⚠️  Warning: --quiet is deprecated and conflicts with --verbose/--debug")
+            click.echo("Warning: --quiet is deprecated and conflicts with --verbose/--debug")
         else:
-            click.echo("⚠️  Warning: --quiet is deprecated. Default behavior is now quiet.")
+            click.echo("Warning: --quiet is deprecated. Default behavior is now quiet.")
     
     if transport == 'stdio':
         ensure_data_dir(config.data_dir)
@@ -924,7 +925,7 @@ def worker_serve(host: str, port: int, semantic: bool, stdio: bool) -> None:
 def warmup_embeddings(model: str):
     """Download the semantic embedding model so --semantic starts instantly."""
 
-    click.echo(f"📦 Downloading {model} …")
+    click.echo(f"[PACKAGE] Downloading {model} ...")
 
     try:
         cache_dir = _download_sentence_transformer(model)
@@ -938,7 +939,7 @@ def warmup_embeddings(model: str):
         sys.exit(1)
 
     mark_semantic_ready(True)
-    click.echo(f"✅ Warm-up complete. Model cached at {cache_dir}.")
+    click.echo(f"[OK] Warm-up complete. Model cached at {cache_dir}.")
     click.echo("   Use 'greeum mcp serve --semantic' to enable semantic embeddings.")
 
 
@@ -948,7 +949,7 @@ def warmup_embeddings(model: str):
 @click.option('--host', '-h', default='localhost', help='Server host')
 def serve(port: int, host: str):
     """Start REST API server"""
-    click.echo(f"🌐 Starting Greeum API server on {host}:{port}...")
+    click.echo(f"[GLOBE] Starting Greeum API server on {host}:{port}...")
     
     try:
         from ..api.memory_api import app
@@ -958,75 +959,266 @@ def serve(port: int, host: str):
         click.echo("[ERROR] API server dependencies not installed. Try: pip install greeum[api]")
         sys.exit(1)
     except KeyboardInterrupt:
-        click.echo("\n👋 API server stopped")
+        click.echo("\n[HELLO] API server stopped")
 
 # LTM 서브명령어들
 @ltm.command()
-@click.option('--trends', is_flag=True, help='Analyze emotional and topic trends')
-@click.option('--period', '-p', default='6m', help='Analysis period (e.g., 6m, 1y)')
+@click.option('--trends', is_flag=True, help='(Reserved for compatibility)')
+@click.option('--period', '-p', default='7d', help='(Reserved for compatibility)')
 @click.option('--output', '-o', default='text', help='Output format (text/json)')
 def analyze(trends: bool, period: str, output: str):
-    """Analyze long-term memory patterns and trends"""
-    click.echo(f"🔍 Analyzing LTM patterns...")
-    
-    if trends:
-        click.echo(f"📊 Trend analysis for period: {period}")
-    
+    """Summarize branch-based long-term memory activity."""
+
+    from ..core import BlockManager, DatabaseManager
+
+    click.echo("== STM Slot Overview ==")
+
     try:
-        from ..core import BlockManager, DatabaseManager
-        import json
-        from datetime import datetime, timedelta
-        
-        # 기간 파싱
-        period_map = {'m': 'months', 'y': 'years', 'd': 'days', 'w': 'weeks'}
-        period_num = int(period[:-1])
-        period_unit = period_map.get(period[-1], 'months')
-        
         db_manager = DatabaseManager()
         block_manager = BlockManager(db_manager)
-        
-        # 전체 블록 조회
-        all_blocks = block_manager.get_blocks()
-        
-        analysis = {
-            "total_blocks": len(all_blocks),
-            "analysis_period": period,
-            "analysis_date": datetime.now().isoformat(),
-            "summary": f"Analyzed {len(all_blocks)} memory blocks"
-        }
-        
-        if trends:
-            # 키워드 빈도 분석
-            keyword_freq = {}
-            for block in all_blocks:
-                keywords = block.get('keywords', [])
-                for keyword in keywords:
-                    keyword_freq[keyword] = keyword_freq.get(keyword, 0) + 1
-            
-            # 상위 키워드
-            top_keywords = sorted(keyword_freq.items(), key=lambda x: x[1], reverse=True)[:10]
-            analysis["top_keywords"] = top_keywords
-        
-        if output == 'json':
-            click.echo(json.dumps(analysis, indent=2, ensure_ascii=False))
-        else:
-            click.echo(f"[IMPROVE] Analysis Results:")
-            click.echo(f"  • Total memories: {analysis['total_blocks']}")
-            click.echo(f"  • Period: {analysis['analysis_period']}")
-            if trends and 'top_keywords' in analysis:
-                click.echo(f"  • Top keywords:")
-                for keyword, freq in analysis['top_keywords'][:5]:
-                    click.echo(f"    - {keyword}: {freq} times")
-                    
-    except Exception as e:
-        click.echo(f"[ERROR] Analysis failed: {e}")
+    except Exception as exc:
+        click.echo(f"[ERROR] Failed to initialize database: {exc}")
         sys.exit(1)
+
+    cursor = db_manager.conn.cursor()
+
+    # Discover available block columns once for conditional queries.
+    cursor.execute("PRAGMA table_info(blocks)")
+    block_columns = {row[1] for row in cursor.fetchall()}
+    has_branch_created = 'branch_created_at' in block_columns
+
+    anchor_store = get_anchor_store()
+    slots = anchor_store.get_slots()
+
+    branch_slot_map: Dict[str, List[str]] = defaultdict(list)
+    slot_rows: List[str] = []
+
+    def _shorten(text: Optional[str], limit: int = 80) -> str:
+        if not text:
+            return ''
+        text = text.strip().replace('\n', ' ')
+        return text if len(text) <= limit else text[: limit - 3] + '...'
+
+    slot_order = ["A", "B", "C"]
+    for slot_name in slot_order:
+        slot_info = slots.get(slot_name)
+        if not slot_info or not slot_info.anchor_block:
+            slot_rows.append(f"[{slot_name}] empty")
+            continue
+
+        block_data = block_manager._get_block_by_hash(slot_info.anchor_block)
+        if not block_data:
+            slot_rows.append(f"[{slot_name}] head missing (hash {slot_info.anchor_block[:8]})")
+            continue
+
+        branch_root = block_data.get('root') or '(unassigned)'
+        branch_slot_map[branch_root].append(slot_name)
+
+        timestamp = block_data.get('timestamp') or 'unknown'
+        context_preview = _shorten(block_data.get('context'))
+        block_index = block_data.get('block_index', 'n/a')
+        slot_rows.append(
+            f"[{slot_name}] root={branch_root[:8]} block={block_index} time={timestamp}"
+        )
+        if context_preview:
+            slot_rows.append(f"    {context_preview}")
+
+    for line in slot_rows:
+        click.echo(line)
+
+    # ------------------------------------------------------------------
+    # Branch statistics
+    # ------------------------------------------------------------------
+    click.echo("\n== Branch Structure ==")
+
+    try:
+        cursor.execute(
+            """
+            SELECT root,
+                   MIN(timestamp) AS first_ts,
+                   MAX(timestamp) AS last_ts,
+                   COUNT(*) AS node_count
+            FROM blocks
+            WHERE root IS NOT NULL AND root <> ''
+            GROUP BY root
+            ORDER BY last_ts DESC
+            """
+        )
+    except sqlite3.OperationalError as exc:
+        click.echo(f"[ERROR] Branch columns unavailable: {exc}")
+        sys.exit(1)
+
+    branch_stats: Dict[str, Dict[str, Any]] = {}
+    branches = cursor.fetchall()
+
+    # Pre-compute keyword label, parent branch, and representative snippets.
+    keyword_stmt = (
+        "SELECT bk.keyword, COUNT(*) AS cnt "
+        "FROM block_keywords bk JOIN blocks b ON bk.block_index = b.block_index "
+        "WHERE b.root = ? GROUP BY bk.keyword ORDER BY cnt DESC LIMIT 3"
+    )
+
+    first_block_stmt = (
+        "SELECT block_index, context, timestamp, before, hash "
+        "FROM blocks WHERE root = ? "
+        + ("ORDER BY branch_created_at ASC, block_index ASC " if has_branch_created else "ORDER BY timestamp ASC, block_index ASC ")
+        + "LIMIT 1"
+    )
+
+    recent_block_stmt = (
+        "SELECT context FROM blocks WHERE root = ? ORDER BY timestamp DESC, block_index DESC LIMIT 1"
+    )
+
+    for root, first_ts, last_ts, node_count in branches:
+        stats: Dict[str, Any] = {
+            'root': root,
+            'count': node_count,
+            'first_ts': first_ts,
+            'last_ts': last_ts,
+            'slots': branch_slot_map.get(root, []),
+        }
+
+        # Keywords
+        cursor.execute(keyword_stmt, (root,))
+        keywords = [row[0] for row in cursor.fetchall()]
+        stats['keywords'] = keywords
+
+        # First block / parent branch inference
+        cursor.execute(first_block_stmt, (root,))
+        first_row = cursor.fetchone()
+        parent_root = None
+        first_context = ''
+        if first_row:
+            _, first_context, _, before_hash, first_hash = first_row
+            if before_hash:
+                parent_block = block_manager._get_block_by_hash(before_hash)
+                if parent_block and parent_block.get('root') and parent_block.get('root') != root:
+                    parent_root = parent_block.get('root')
+        stats['parent_root'] = parent_root
+        stats['first_context'] = first_context
+
+        cursor.execute(recent_block_stmt, (root,))
+        latest_row = cursor.fetchone()
+        stats['recent_context'] = latest_row[0] if latest_row else ''
+
+        # Derive human-readable label
+        if keywords:
+            stats['label'] = '/'.join(keywords)
+        elif first_context:
+            stats['label'] = _shorten(first_context, limit=40)
+        else:
+            stats['label'] = root[:12]
+
+        branch_stats[root] = stats
+
+    if not branch_stats:
+        click.echo("No branch data available yet.")
+    else:
+        # Build parent->children mapping
+        children: Dict[Optional[str], List[str]] = defaultdict(list)
+        for root, stats in branch_stats.items():
+            children[stats.get('parent_root')].append(root)
+
+        def parse_ts(ts: Optional[str]) -> datetime:
+            if not ts:
+                return datetime.min
+            try:
+                return datetime.fromisoformat(ts)
+            except ValueError:
+                try:
+                    return datetime.strptime(ts.split('.')[0], '%Y-%m-%dT%H:%M:%S')
+                except Exception:
+                    return datetime.min
+
+        def fmt_date(ts: Optional[str]) -> str:
+            if not ts:
+                return 'unknown'
+            dt = parse_ts(ts)
+            if dt == datetime.min:
+                return 'unknown'
+            return dt.strftime('%Y-%m-%d')
+
+        def slot_tag(slots: List[str]) -> str:
+            return '[' + ','.join(sorted(slots)) + ']' if slots else '[-]'
+
+        printed: set[str] = set()
+
+        def branch_line(root_id: str, depth: int = 0) -> None:
+            stats = branch_stats[root_id]
+            indent = '  ' * depth
+            tag = slot_tag(stats['slots'])
+            span = f"{fmt_date(stats['first_ts'])} -> {fmt_date(stats['last_ts'])}"
+            parent_root = stats.get('parent_root')
+            parent_label = branch_stats[parent_root]['label'] if parent_root in branch_stats else '-'
+            click.echo(f"{indent}{tag} {stats['label']} (nodes={stats['count']}, span={span})")
+            click.echo(f"{indent}  root={root_id[:12]} parent={parent_label}")
+            recent_preview = _shorten(stats['recent_context'])
+            if recent_preview:
+                click.echo(f"{indent}  latest: {recent_preview}")
+            printed.add(root_id)
+            for child_root in sorted(children.get(root_id, []), key=lambda r: parse_ts(branch_stats[r]['last_ts']), reverse=True):
+                branch_line(child_root, depth + 1)
+
+        top_level = sorted(children.get(None, []), key=lambda r: parse_ts(branch_stats[r]['last_ts']), reverse=True)
+        for root in top_level:
+            branch_line(root, 0)
+
+        # Output any orphan branches that reference missing parents
+        for root_id in sorted(branch_stats.keys(), key=lambda r: parse_ts(branch_stats[r]['last_ts']), reverse=True):
+            if root_id not in printed:
+                click.echo("-- detached branch --")
+                branch_line(root_id, 0)
+
+    # ------------------------------------------------------------------
+    # Recent usage statistics
+    # ------------------------------------------------------------------
+    click.echo("\n== Activity (Last 7 Days) ==")
+
+    today = datetime.utcnow().date()
+    days = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+    cutoff = (today - timedelta(days=6)).strftime('%Y-%m-%d')
+
+    cursor.execute(
+        """
+        SELECT substr(timestamp, 1, 10) AS day, COUNT(*)
+        FROM blocks
+        WHERE timestamp >= ?
+        GROUP BY day
+        """,
+        (cutoff,),
+    )
+    rows = cursor.fetchall()
+    day_counts = {row[0]: row[1] for row in rows}
+
+    total = 0
+    for day in days:
+        key = day.strftime('%Y-%m-%d')
+        count = day_counts.get(key, 0)
+        total += count
+        bar = '#' * min(40, count) if count else ''
+        click.echo(f"{key} | {count:3d} {bar}")
+
+    avg = total / 7 if days else 0
+    click.echo(f"Average per day: {avg:.2f}")
+    click.echo(f"Total nodes added (7d): {total}")
+
+    if output == 'json':
+        summary = {
+            'slots': slot_rows,
+            'branches': branch_stats,
+            'recent_activity': {day.strftime('%Y-%m-%d'): day_counts.get(day.strftime('%Y-%m-%d'), 0) for day in days},
+            'average_per_day': avg,
+            'total_7d': total,
+        }
+        import json
+
+        click.echo(json.dumps(summary, indent=2, ensure_ascii=True))
 
 @ltm.command()
 @click.option('--repair', is_flag=True, help='Attempt to repair integrity issues')
 def verify(repair: bool):
     """Verify blockchain-like LTM integrity"""
-    click.echo("🔍 Verifying LTM blockchain integrity...")
+    click.echo("[SEARCH] Verifying LTM blockchain integrity...")
     
     try:
         from ..core import BlockManager, DatabaseManager
@@ -1063,15 +1255,15 @@ def verify(repair: bool):
         
         # 결과 출력
         total_blocks = len(all_blocks)
-        click.echo(f"✅ Verified {verified_count}/{total_blocks} blocks")
+        click.echo(f"[OK] Verified {verified_count}/{total_blocks} blocks")
         
         if issues:
-            click.echo(f"⚠️  Found {len(issues)} integrity issues:")
+            click.echo(f"[WARNING]  Found {len(issues)} integrity issues:")
             for issue in issues[:10]:  # 최대 10개만 표시
-                click.echo(f"  • {issue}")
+                click.echo(f"  - {issue}")
             
             if repair:
-                click.echo("🔨 Repair functionality not implemented yet")
+                click.echo("[HAMMER] Repair functionality not implemented yet")
         else:
             click.echo("[SUCCESS] All blocks verified successfully!")
                     
@@ -1085,7 +1277,7 @@ def verify(repair: bool):
 @click.option('--limit', '-l', type=int, help='Limit number of blocks')
 def export(format: str, output: str, limit: int):
     """Export LTM data in various formats"""
-    click.echo(f"📤 Exporting LTM data (format: {format})...")
+    click.echo(f"[OUTBOX] Exporting LTM data (format: {format})...")
     
     try:
         from ..core import BlockManager, DatabaseManager
@@ -1133,8 +1325,8 @@ def export(format: str, output: str, limit: int):
                     writer.writeheader()
                     writer.writerows(all_blocks)
         
-        click.echo(f"✅ Exported {len(all_blocks)} blocks to: {output_path}")
-        click.echo(f"📄 File size: {output_path.stat().st_size} bytes")
+        click.echo(f"[OK] Exported {len(all_blocks)} blocks to: {output_path}")
+        click.echo(f"[PAGE] File size: {output_path.stat().st_size} bytes")
                     
     except Exception as e:
         click.echo(f"[ERROR] Export failed: {e}")
@@ -1184,7 +1376,7 @@ def add(content: str, ttl: str, importance: float):
         result = stm_manager.add_memory(memory_data)
         
         if result:
-            click.echo(f"✅ Added to STM (expires: {expiry_time.strftime('%Y-%m-%d %H:%M:%S')})")
+            click.echo(f"[OK] Added to STM (expires: {expiry_time.strftime('%Y-%m-%d %H:%M:%S')})")
         else:
             click.echo("[ERROR] Failed to add to STM")
             sys.exit(1)
@@ -1198,7 +1390,7 @@ def add(content: str, ttl: str, importance: float):
 @click.option('--dry-run', is_flag=True, help='Show what would be promoted without doing it')
 def promote(threshold: float, dry_run: bool):
     """Promote important STM entries to LTM"""
-    click.echo(f"🔝 Promoting STM → LTM (threshold: {threshold})...")
+    click.echo(f"[TOP] Promoting STM -> LTM (threshold: {threshold})...")
     
     try:
         from ..core import STMManager, BlockManager, DatabaseManager
@@ -1217,17 +1409,17 @@ def promote(threshold: float, dry_run: bool):
                 candidates.append(entry)
         
         if not candidates:
-            click.echo(f"📭 No STM entries above threshold {threshold}")
+            click.echo(f"[MAILBOX] No STM entries above threshold {threshold}")
             return
         
-        click.echo(f"🎯 Found {len(candidates)} candidates for promotion:")
+        click.echo(f"[TARGET] Found {len(candidates)} candidates for promotion:")
         
         promoted_count = 0
         for entry in candidates:
             content = entry.get('content', '')
             importance = entry.get('importance', 0)
             
-            click.echo(f"  • {content[:50]}... (importance: {importance:.2f})")
+            click.echo(f"  - {content[:50]}... (importance: {importance:.2f})")
             
             if not dry_run:
                 # LTM으로 승격
@@ -1252,9 +1444,9 @@ def promote(threshold: float, dry_run: bool):
                     promoted_count += 1
         
         if dry_run:
-            click.echo(f"🔍 Dry run: {len(candidates)} entries would be promoted")
+            click.echo(f"[SEARCH] Dry run: {len(candidates)} entries would be promoted")
         else:
-            click.echo(f"✅ Promoted {promoted_count}/{len(candidates)} entries to LTM")
+            click.echo(f"[OK] Promoted {promoted_count}/{len(candidates)} entries to LTM")
                     
     except Exception as e:
         click.echo(f"[ERROR] Promotion failed: {e}")
@@ -1266,7 +1458,7 @@ def promote(threshold: float, dry_run: bool):
 @click.option('--threshold', '-t', default=0.2, help='Remove entries below this importance')
 def cleanup(smart: bool, expired: bool, threshold: float):
     """Clean up short-term memory entries"""
-    click.echo("🧹 Cleaning up STM...")
+    click.echo("[BROOM] Cleaning up STM...")
     
     try:
         from ..core import STMManager, DatabaseManager
@@ -1277,13 +1469,13 @@ def cleanup(smart: bool, expired: bool, threshold: float):
         stm_entries = stm_manager.get_recent_memories(count=1000)
         
         if not stm_entries:
-            click.echo("📭 STM is already empty")
+            click.echo("[MAILBOX] STM is already empty")
             return
         
         removed_count = 0
         total_count = len(stm_entries)
         
-        click.echo(f"📊 Total STM entries: {total_count}")
+        click.echo(f"[CHART] Total STM entries: {total_count}")
         
         for entry in stm_entries:
             should_remove = False
@@ -1315,11 +1507,11 @@ def cleanup(smart: bool, expired: bool, threshold: float):
                 content = entry.get('content', '')[:30]
                 
                 if stm_manager.remove_memory(entry_id):
-                    click.echo(f"  🗑️  Removed: {content}... ({reason})")
+                    click.echo(f"  [TRASH]  Removed: {content}... ({reason})")
                     removed_count += 1
         
-        click.echo(f"✅ Cleanup complete: {removed_count}/{total_count} entries removed")
-        click.echo(f"📊 Remaining STM entries: {total_count - removed_count}")
+        click.echo(f"[OK] Cleanup complete: {removed_count}/{total_count} entries removed")
+        click.echo(f"[CHART] Remaining STM entries: {total_count - removed_count}")
                     
     except Exception as e:
         click.echo(f"[ERROR] Cleanup failed: {e}")
@@ -1354,7 +1546,7 @@ def status():
                 is_anchor = slot_info['is_anchor']
                 
                 # 슬롯 타입별 아이콘
-                type_icon = {"context": "🎯", "anchor": "⚓", "buffer": "📋"}.get(slot_type, "🔹")
+                type_icon = {"context": "[TARGET]", "anchor": "[ANCHOR]", "buffer": "[CLIPBOARD]"}.get(slot_type, "[BLUE_DIAMOND]")
                 
                 click.echo(f"\n{type_icon} {slot_name.upper()} Slot ({slot_type})")
                 click.echo(f"   Content: {content}")
@@ -1365,22 +1557,22 @@ def status():
                     click.echo(f"   [LINK] LTM Anchor: Block #{slot_info['anchor_block']}")
                     
             else:
-                click.echo(f"\n⭕ {slot_name.upper()} Slot: Empty")
+                click.echo(f"\n[CIRCLE] {slot_name.upper()} Slot: Empty")
         
         click.echo("\n" + "=" * 50)
-        click.echo("💡 Use 'greeum slots set <content>' to add to slots")
-        click.echo("💡 Use 'greeum slots clear <slot_name>' to clear specific slot")
+        click.echo("[IDEA] Use 'greeum slots set <content>' to add to slots")
+        click.echo("[IDEA] Use 'greeum slots clear <slot_name>' to clear specific slot")
                     
     except Exception as e:
         click.echo(f"[ERROR] Error reading slots status: {e}")
         sys.exit(1)
 
-@slots.command()
+@slots.command(name='set')
 @click.argument('content')
 @click.option('--importance', '-i', default=0.5, help='Importance score (0.0-1.0)')
 @click.option('--ltm-anchor', type=int, help='LTM block ID for anchoring')
 @click.option('--radius', default=5, help='Search radius for LTM anchor')
-def set(content: str, importance: float, ltm_anchor: int, radius: int):
+def set_slot(content: str, importance: float, ltm_anchor: int, radius: int):
     """Add content to AI Context Slots with smart allocation"""
     click.echo(f"[MEMORY] Adding content to AI Context Slots...")
     
@@ -1404,9 +1596,9 @@ def set(content: str, importance: float, ltm_anchor: int, radius: int):
         used_slot = slots_instance.ai_decide_usage(content, context)
         
         # 결과 출력
-        click.echo(f"✅ Content added to {used_slot.upper()} slot")
+        click.echo(f"[OK] Content added to {used_slot.upper()} slot")
         click.echo(f"[NOTE] Content: {content[:80]}{'...' if len(content) > 80 else ''}")
-        click.echo(f"🎯 AI chose {used_slot} slot based on content analysis")
+        click.echo(f"[TARGET] AI chose {used_slot} slot based on content analysis")
         
         if ltm_anchor:
             click.echo(f"[LINK] LTM Anchor: Block #{ltm_anchor} (radius: {radius})")
@@ -1419,7 +1611,7 @@ def set(content: str, importance: float, ltm_anchor: int, radius: int):
 @click.argument('slot_name', type=click.Choice(['active', 'anchor', 'buffer', 'all']))
 def clear(slot_name: str):
     """Clear specific slot or all slots"""
-    click.echo(f"🗑️  Clearing {slot_name} slot(s)...")
+    click.echo(f"[TRASH]  Clearing {slot_name} slot(s)...")
     
     try:
         from ..core.working_memory import AIContextualSlots
@@ -1434,14 +1626,14 @@ def clear(slot_name: str):
                 if slots_instance.clear_slot(slot):
                     cleared_count += 1
             
-            click.echo(f"✅ Cleared {cleared_count} slots")
+            click.echo(f"[OK] Cleared {cleared_count} slots")
             
         else:
             # 특정 슬롯 비우기
             if slots_instance.clear_slot(slot_name):
-                click.echo(f"✅ Cleared {slot_name.upper()} slot")
+                click.echo(f"[OK] Cleared {slot_name.upper()} slot")
             else:
-                click.echo(f"⚠️  {slot_name.upper()} slot was already empty")
+                click.echo(f"[WARNING]  {slot_name.upper()} slot was already empty")
         
     except Exception as e:
         click.echo(f"[ERROR] Failed to clear slot: {e}")
@@ -1452,7 +1644,7 @@ def clear(slot_name: str):
 @click.option('--limit', '-l', default=5, help='Maximum number of results')
 def search(query: str, limit: int):
     """Search using AI Context Slots integration"""
-    click.echo(f"🔍 Searching with AI Context Slots: '{query}'")
+    click.echo(f"[SEARCH] Searching with AI Context Slots: '{query}'")
     
     try:
         from greeum.core import DatabaseManager
@@ -1469,7 +1661,7 @@ def search(query: str, limit: int):
         )
         
         if results:
-            click.echo(f"📋 Found {len(results)} results:")
+            click.echo(f"[CLIPBOARD] Found {len(results)} results:")
             
             for i, result in enumerate(results, 1):
                 source = result.get('source', 'unknown')
@@ -1478,11 +1670,11 @@ def search(query: str, limit: int):
                 
                 if source == 'working_memory':
                     slot_type = result.get('slot_type', 'unknown')
-                    type_icon = {"context": "🎯", "anchor": "⚓", "buffer": "📋"}.get(slot_type, "🔹")
+                    type_icon = {"context": "[TARGET]", "anchor": "[ANCHOR]", "buffer": "[CLIPBOARD]"}.get(slot_type, "[BLUE_DIAMOND]")
                     click.echo(f"{i}. {type_icon} [{slot_type.upper()} SLOT] {content}...")
                 else:
                     block_index = result.get('block_index', '?')
-                    click.echo(f"{i}. 📚 [LTM #{block_index}] {content}...")
+                    click.echo(f"{i}. [BOOKS] [LTM #{block_index}] {content}...")
                 
                 click.echo(f"   Importance: {importance:.2f}")
         else:
@@ -1498,7 +1690,7 @@ def search(query: str, limit: int):
 @click.option('--force', is_flag=True, help='Force migration even if already v2.5.3')
 def check(data_dir: str, force: bool):
     """Check database schema version and trigger migration if needed"""
-    click.echo("🔍 Checking Greeum database schema version...")
+    click.echo("[SEARCH] Checking Greeum database schema version...")
     
     try:
         from pathlib import Path
@@ -1515,9 +1707,9 @@ def check(data_dir: str, force: bool):
             manager._apply_branch_migration(cursor)
             manager._initialize_branch_structures(cursor)
             manager.conn.commit()
-            click.echo("\n✅ Branch schema migration applied.")
+            click.echo("\n[OK] Branch schema migration applied.")
         else:
-            click.echo("\n✅ Branch schema already up to date.")
+            click.echo("\n[OK] Branch schema already up to date.")
 
         manager.conn.close()
         sys.exit(0)
@@ -1530,7 +1722,7 @@ def check(data_dir: str, force: bool):
 @click.option('--data-dir', default='data', help='Data directory path')
 def status(data_dir: str):
     """Check current migration status and schema version"""
-    click.echo("📊 Greeum Database Migration Status")
+    click.echo("[CHART] Greeum Database Migration Status")
     click.echo("=" * 40)
     
     try:
@@ -1539,7 +1731,7 @@ def status(data_dir: str):
         db_path = Path(data_dir).expanduser() / "memory.db"
 
         if not db_path.exists():
-            click.echo("📂 Database Status: Not found")
+            click.echo("[OPEN_FOLDER] Database Status: Not found")
             click.echo("   This appears to be a new installation")
             return
 
@@ -1560,19 +1752,19 @@ def status(data_dir: str):
             for slot_name, slot_data in anchor_store.get_slots().items()
         ]
 
-        click.echo(f"📂 Database Size: {db_path.stat().st_size} bytes")
-        click.echo(f"📋 Branch Columns Present: {'yes' if branch_ready else 'no'}")
+        click.echo(f"[OPEN_FOLDER] Database Size: {db_path.stat().st_size} bytes")
+        click.echo(f"[CLIPBOARD] Branch Columns Present: {'yes' if branch_ready else 'no'}")
 
         if slot_rows:
-            click.echo("\n🎯 STM Slots:")
+            click.echo("\n[TARGET] STM Slots:")
             for slot_name, block_hash in slot_rows:
                 head = block_hash[:8] + '...' if block_hash else 'None'
-                click.echo(f"   • {slot_name}: head={head}")
+                click.echo(f"   - {slot_name}: head={head}")
         else:
-            click.echo("\n⚠️  STM anchor entries not initialized yet.")
+            click.echo("\n[WARNING]  STM anchor entries not initialized yet.")
 
         pending = BranchSchemaSQL.check_migration_needed(cursor)
-        click.echo("\n✅ Migration Status: {}".format("Ready" if not pending else "Additional migration required"))
+        click.echo("\n[OK] Migration Status: {}".format("Ready" if not pending else "Additional migration required"))
 
         manager.conn.close()
 
@@ -1594,14 +1786,14 @@ def doctor(data_dir: str, yes: bool):
         db_path = data_path / 'memory.db'
 
     if not db_path.exists():
-        click.echo(f"📂 No database found at {db_path}. Nothing to repair.")
+        click.echo(f"[OPEN_FOLDER] No database found at {db_path}. Nothing to repair.")
         return
 
     try:
         _ensure_database_ready(data_path, auto_accept=yes)
-        click.echo("✅ Schema check completed. Database is ready.")
+        click.echo("[OK] Schema check completed. Database is ready.")
     except click.ClickException as exc:
-        click.echo(f"❌ Repair aborted: {exc}")
+        click.echo(f"[ERROR] Repair aborted: {exc}")
 
 
 @migrate.command()
@@ -1616,7 +1808,7 @@ def validate(data_dir: str):
         db_path = data_path / 'memory.db'
 
     if not db_path.exists():
-        click.echo(f"📂 Database not found at {db_path}")
+        click.echo(f"[OPEN_FOLDER] Database not found at {db_path}")
         return
 
     try:
@@ -1624,13 +1816,13 @@ def validate(data_dir: str):
         result = conn.execute("PRAGMA integrity_check").fetchone()[0]
         conn.close()
     except sqlite3.DatabaseError as exc:
-        click.echo(f"❌ Integrity check failed to run: {exc}")
+        click.echo(f"[ERROR] Integrity check failed to run: {exc}")
         return
 
     if result.lower() == 'ok':
-        click.echo("✅ Integrity check OK")
+        click.echo("[OK] Integrity check OK")
     else:
-        click.echo(f"❌ Integrity issues detected: {result}")
+        click.echo(f"[ERROR] Integrity issues detected: {result}")
 
 
 @migrate.command()
@@ -1642,7 +1834,7 @@ def cleanup(data_dir: str, keep_backups: int):
     data_path = Path(data_dir).expanduser()
     backup_dir = data_path / 'backups'
     if not backup_dir.exists():
-        click.echo("📂 No backups directory found.")
+        click.echo("[OPEN_FOLDER] No backups directory found.")
         return
 
     backup_files = sorted(
@@ -1652,14 +1844,14 @@ def cleanup(data_dir: str, keep_backups: int):
     )
 
     if len(backup_files) <= keep_backups:
-        click.echo(f"✅ {len(backup_files)} backups found. Nothing to remove.")
+        click.echo(f"[OK] {len(backup_files)} backups found. Nothing to remove.")
         return
 
     to_remove = backup_files[keep_backups:]
     for path in to_remove:
         path.unlink(missing_ok=True)
 
-    click.echo(f"🧹 Removed {len(to_remove)} old backups. Kept {keep_backups} recent copies.")
+    click.echo(f"[BROOM] Removed {len(to_remove)} old backups. Kept {keep_backups} recent copies.")
 
 # v2.6.1 Backup 서브명령어들
 @backup.command()
@@ -1683,16 +1875,16 @@ def export(output: str, include_metadata: bool):
         success = backup_engine.create_backup(output, include_metadata)
         
         if success:
-            click.echo(f"✅ 백업 완료: {output}")
+            click.echo(f"[OK] 백업 완료: {output}")
             backup_path = Path(output)
             if backup_path.exists():
                 size_mb = backup_path.stat().st_size / (1024 * 1024)
-                click.echo(f"📁 파일 크기: {size_mb:.2f} MB")
+                click.echo(f"[FOLDER] 파일 크기: {size_mb:.2f} MB")
         else:
             click.echo("[ERROR] 백업 생성에 실패했습니다")
             
     except Exception as e:
-        click.echo(f"💥 백업 중 오류: {e}")
+        click.echo(f"[BURST] 백업 중 오류: {e}")
 
 
 @backup.command()
@@ -1740,12 +1932,12 @@ def auto(schedule: str, output_dir: str, max_backups: int, enable: bool):
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
             
-            click.echo(f"✅ 자동 백업 활성화됨")
+            click.echo(f"[OK] 자동 백업 활성화됨")
             click.echo(f"   [DATE] 주기: {schedule}")
-            click.echo(f"   📁 디렉토리: {output_dir}")
-            click.echo(f"   🔢 최대 백업 수: {max_backups}개")
+            click.echo(f"   [FOLDER] 디렉토리: {output_dir}")
+            click.echo(f"   [123] 최대 백업 수: {max_backups}개")
             click.echo()
-            click.echo("💡 자동 백업 실행 방법:")
+            click.echo("[IDEA] 자동 백업 실행 방법:")
             
             if schedule == 'hourly':
                 cron_expr = "0 * * * *"
@@ -1763,12 +1955,12 @@ def auto(schedule: str, output_dir: str, max_backups: int, enable: bool):
             # 자동 백업 비활성화
             if config_file.exists():
                 config_file.unlink()
-                click.echo("✅ 자동 백업이 비활성화되었습니다")
+                click.echo("[OK] 자동 백업이 비활성화되었습니다")
             else:
-                click.echo("ℹ️  자동 백업이 이미 비활성화 상태입니다")
+                click.echo("[INFO]  자동 백업이 이미 비활성화 상태입니다")
                 
     except Exception as e:
-        click.echo(f"💥 자동 백업 설정 실패: {e}")
+        click.echo(f"[BURST] 자동 백업 설정 실패: {e}")
 
 
 @backup.command()
@@ -1788,7 +1980,7 @@ def run_auto():
         config_file = backup_dir / "auto_backup_config.json"
         
         if not config_file.exists():
-            click.echo("⚠️  자동 백업이 설정되지 않았습니다. 'greeum backup auto' 명령어를 먼저 실행하세요")
+            click.echo("[WARNING]  자동 백업이 설정되지 않았습니다. 'greeum backup auto' 명령어를 먼저 실행하세요")
             return
         
         # 설정 로드
@@ -1796,7 +1988,7 @@ def run_auto():
             config = json.load(f)
         
         if not config.get('enabled', False):
-            click.echo("ℹ️  자동 백업이 비활성화되어 있습니다")
+            click.echo("[INFO]  자동 백업이 비활성화되어 있습니다")
             return
         
         schedule = config['schedule']
@@ -1820,7 +2012,7 @@ def run_auto():
                 should_backup = False
         
         if not should_backup:
-            click.echo("ℹ️  아직 백업 시간이 아닙니다")
+            click.echo("[INFO]  아직 백업 시간이 아닙니다")
             return
         
         # 백업 실행
@@ -1854,17 +2046,17 @@ def run_auto():
                 old_backups = backup_files[max_backups:]
                 for old_backup in old_backups:
                     Path(old_backup).unlink()
-                    click.echo(f"🗑️  오래된 백업 삭제: {Path(old_backup).name}")
+                    click.echo(f"[TRASH]  오래된 백업 삭제: {Path(old_backup).name}")
             
             file_size = backup_path.stat().st_size / (1024 * 1024)
-            click.echo(f"✅ 자동 백업 완료: {backup_filename} ({file_size:.2f} MB)")
-            click.echo(f"📊 보존된 백업 수: {min(len(backup_files), max_backups)}개")
+            click.echo(f"[OK] 자동 백업 완료: {backup_filename} ({file_size:.2f} MB)")
+            click.echo(f"[CHART] 보존된 백업 수: {min(len(backup_files), max_backups)}개")
             
         else:
             click.echo("[ERROR] 자동 백업 실패")
             
     except Exception as e:
-        click.echo(f"💥 자동 백업 실행 실패: {e}")
+        click.echo(f"[BURST] 자동 백업 실행 실패: {e}")
 
 
 @backup.command()
@@ -1880,48 +2072,48 @@ def status():
         config_file = backup_dir / "auto_backup_config.json"
         
         if not config_file.exists():
-            click.echo("⚪ 자동 백업: 미설정")
-            click.echo("💡 'greeum backup auto --schedule daily' 로 설정하세요")
+            click.echo("[WHITE_CIRCLE] 자동 백업: 미설정")
+            click.echo("[IDEA] 'greeum backup auto --schedule daily' 로 설정하세요")
             return
         
         with open(config_file, 'r', encoding='utf-8') as f:
             config = json.load(f)
         
-        status_emoji = "🟢" if config.get('enabled', False) else "🔴"
+        status_emoji = "[GREEN]" if config.get('enabled', False) else "[RED]"
         status_text = "활성화" if config.get('enabled', False) else "비활성화"
         
         click.echo(f"{status_emoji} 자동 백업: {status_text}")
         
         if config.get('enabled', False):
             click.echo(f"   [DATE] 주기: {config.get('schedule', 'unknown')}")
-            click.echo(f"   📁 디렉토리: {config.get('output_dir', 'unknown')}")
-            click.echo(f"   🔢 최대 보존: {config.get('max_backups', 10)}개")
+            click.echo(f"   [FOLDER] 디렉토리: {config.get('output_dir', 'unknown')}")
+            click.echo(f"   [123] 최대 보존: {config.get('max_backups', 10)}개")
             
             last_backup = config.get('last_backup')
             if last_backup:
-                click.echo(f"   🕒 마지막 백업: {last_backup}")
+                click.echo(f"   [CLOCK] 마지막 백업: {last_backup}")
             else:
-                click.echo(f"   🕒 마지막 백업: 없음")
+                click.echo(f"   [CLOCK] 마지막 백업: 없음")
         
         # 백업 파일 목록
         backup_pattern = str(backup_dir / "auto_backup_*.json")
         backup_files = sorted(glob.glob(backup_pattern), reverse=True)
         
         if backup_files:
-            click.echo(f"\n📋 백업 파일 ({len(backup_files)}개):")
+            click.echo(f"\n[CLIPBOARD] 백업 파일 ({len(backup_files)}개):")
             for backup_file in backup_files[:5]:  # 최대 5개만 표시
                 backup_path = Path(backup_file)
                 size_mb = backup_path.stat().st_size / (1024 * 1024)
                 mtime = datetime.fromtimestamp(backup_path.stat().st_mtime)
-                click.echo(f"   • {backup_path.name} ({size_mb:.2f} MB, {mtime.strftime('%Y-%m-%d %H:%M')})")
+                click.echo(f"   - {backup_path.name} ({size_mb:.2f} MB, {mtime.strftime('%Y-%m-%d %H:%M')})")
             
             if len(backup_files) > 5:
                 click.echo(f"   ... 및 {len(backup_files) - 5}개 더")
         else:
-            click.echo("\n📋 백업 파일: 없음")
+            click.echo("\n[CLIPBOARD] 백업 파일: 없음")
             
     except Exception as e:
-        click.echo(f"💥 자동 백업 상태 확인 실패: {e}")
+        click.echo(f"[BURST] 자동 백업 상태 확인 실패: {e}")
 
 
 # v2.6.1 Restore 서브명령어들
@@ -1962,14 +2154,14 @@ def from_file(
             try:
                 date_from = datetime.strptime(from_date, '%Y-%m-%d')
             except ValueError:
-                click.echo(f"⚠️ 잘못된 시작 날짜 형식: {from_date}")
+                click.echo(f"[WARNING] 잘못된 시작 날짜 형식: {from_date}")
         
         date_to = None
         if to_date:
             try:
                 date_to = datetime.strptime(to_date, '%Y-%m-%d') 
             except ValueError:
-                click.echo(f"⚠️ 잘못된 끝 날짜 형식: {to_date}")
+                click.echo(f"[WARNING] 잘못된 끝 날짜 형식: {to_date}")
         
         keyword_list = None
         if keywords:
@@ -2003,7 +2195,7 @@ def from_file(
         
         if preview:
             # 미리보기 표시
-            click.echo("🔍 복원 미리보기를 생성합니다...")
+            click.echo("[SEARCH] 복원 미리보기를 생성합니다...")
             preview_text = restore_engine.preview_restore(backup_file, filter_config)
             click.echo(preview_text)
             
@@ -2026,25 +2218,25 @@ def from_file(
             
             # 결과 표시
             if result.success:
-                click.echo("✅ 복원 완료!")
-                click.echo(f"📊 복원 결과:")
+                click.echo("[OK] 복원 완료!")
+                click.echo(f"[CHART] 복원 결과:")
                 click.echo(f"   [MEMORY] Working Memory: {result.working_count}개")
                 click.echo(f"   [FAST] STM: {result.stm_count}개") 
-                click.echo(f"   🏛️  LTM: {result.ltm_count}개")
+                click.echo(f"   [HALL]  LTM: {result.ltm_count}개")
                 click.echo(f"   [IMPROVE] 총 처리: {result.total_processed}개")
-                click.echo(f"   ⏱️  소요 시간: {result.execution_time:.2f}초")
+                click.echo(f"   [TIMER]  소요 시간: {result.execution_time:.2f}초")
                 
                 if result.error_count > 0:
-                    click.echo(f"   ⚠️  오류: {result.error_count}개")
+                    click.echo(f"   [WARNING]  오류: {result.error_count}개")
                     for error in result.errors[:5]:  # 최대 5개 오류만 표시
                         click.echo(f"      - {error}")
             else:
                 click.echo("[ERROR] 복원에 실패했습니다")
                 for error in result.errors:
-                    click.echo(f"   💥 {error}")
+                    click.echo(f"   [BURST] {error}")
                     
     except Exception as e:
-        click.echo(f"💥 복원 중 오류: {e}")
+        click.echo(f"[BURST] 복원 중 오류: {e}")
 
 
 # v2.6.2 Dashboard 서브명령어들
@@ -2067,7 +2259,7 @@ def overview(output: str, json_format: bool):
             if output:
                 with open(output, 'w', encoding='utf-8') as f:
                     f.write(json_output)
-                click.echo(f"✅ 대시보드 리포트 저장됨: {output}")
+                click.echo(f"[OK] 대시보드 리포트 저장됨: {output}")
             else:
                 click.echo(json_output)
         else:
@@ -2075,7 +2267,7 @@ def overview(output: str, json_format: bool):
             _display_dashboard_overview(overview_data)
             
     except Exception as e:
-        click.echo(f"💥 대시보드 개요 생성 실패: {e}")
+        click.echo(f"[BURST] 대시보드 개요 생성 실패: {e}")
 
 
 @dashboard.command()
@@ -2098,7 +2290,7 @@ def health(output_format: str):
             _display_health_simple(health_data)
             
     except Exception as e:
-        click.echo(f"💥 시스템 건강도 확인 실패: {e}")
+        click.echo(f"[BURST] 시스템 건강도 확인 실패: {e}")
 
 
 @dashboard.command()
@@ -2120,17 +2312,17 @@ def export(output: str, include_details: bool):
         
         if success:
             file_size = Path(output).stat().st_size / 1024  # KB
-            click.echo(f"✅ 대시보드 리포트 생성 완료: {output} ({file_size:.1f} KB)")
+            click.echo(f"[OK] 대시보드 리포트 생성 완료: {output} ({file_size:.1f} KB)")
             
             if include_details:
-                click.echo("📊 상세 계층 분석 포함")
+                click.echo("[CHART] 상세 계층 분석 포함")
             else:
-                click.echo("📋 기본 개요만 포함")
+                click.echo("[CLIPBOARD] 기본 개요만 포함")
         else:
             click.echo("[ERROR] 리포트 생성에 실패했습니다")
             
     except Exception as e:
-        click.echo(f"💥 리포트 내보내기 실패: {e}")
+        click.echo(f"[BURST] 리포트 내보내기 실패: {e}")
 
 
 # 대시보드 출력 헬퍼 함수들
@@ -2143,37 +2335,37 @@ def _display_dashboard_overview(data: dict):
     click.echo("=" * 50)
     
     # 기본 통계
-    click.echo(f"📊 전체 메모리: {stats['total_memories']}개")
+    click.echo(f"[CHART] 전체 메모리: {stats['total_memories']}개")
     click.echo(f"   [MEMORY] Working Memory: {stats['working_memory_count']}개")
     click.echo(f"   [FAST] STM: {stats['stm_count']}개")
-    click.echo(f"   🏛️  LTM: {stats['ltm_count']}개")
+    click.echo(f"   [HALL]  LTM: {stats['ltm_count']}개")
     
     click.echo()
     
     # 시스템 건강도
     health_percent = health['overall_health'] * 100
-    health_emoji = "🟢" if health_percent >= 80 else "🟡" if health_percent >= 60 else "🔴"
+    health_emoji = "[GREEN]" if health_percent >= 80 else "[YELLOW]" if health_percent >= 60 else "[RED]"
     click.echo(f"{health_emoji} 시스템 건강도: {health_percent:.1f}%")
     
     # 용량 정보
-    click.echo(f"💾 총 용량: {stats['total_size_mb']:.1f} MB")
+    click.echo(f"[DISK] 총 용량: {stats['total_size_mb']:.1f} MB")
     click.echo(f"[FAST] 평균 검색 시간: {health['avg_search_time_ms']:.1f}ms")
     
     # 경고사항
     if health['warnings']:
-        click.echo("\n⚠️  주의사항:")
+        click.echo("\n[WARNING]  주의사항:")
         for warning in health['warnings']:
-            click.echo(f"   • {warning}")
+            click.echo(f"   - {warning}")
     
     # 권장사항
     if health['recommendations']:
-        click.echo("\n💡 권장사항:")
+        click.echo("\n[IDEA] 권장사항:")
         for rec in health['recommendations']:
-            click.echo(f"   • {rec}")
+            click.echo(f"   - {rec}")
     
     # 인기 키워드
     if 'popular_keywords' in stats:
-        click.echo("\n🔥 인기 키워드:")
+        click.echo("\n[FIRE] 인기 키워드:")
         for keyword, count in stats['popular_keywords'][:5]:
             click.echo(f"   #{keyword} ({count}회)")
 
@@ -2181,16 +2373,16 @@ def _display_dashboard_overview(data: dict):
 def _display_health_simple(health):
     """간단한 건강도 출력"""
     health_percent = health.overall_health * 100
-    health_emoji = "🟢" if health_percent >= 80 else "🟡" if health_percent >= 60 else "🔴"
+    health_emoji = "[GREEN]" if health_percent >= 80 else "[YELLOW]" if health_percent >= 60 else "[RED]"
     
     click.echo(f"{health_emoji} 시스템 건강도: {health_percent:.1f}%")
     
     if health_percent >= 80:
-        click.echo("✅ 시스템이 정상적으로 작동하고 있습니다")
+        click.echo("[OK] 시스템이 정상적으로 작동하고 있습니다")
     elif health_percent >= 60:
-        click.echo("⚠️  시스템에 약간의 주의가 필요합니다")
+        click.echo("[WARNING]  시스템에 약간의 주의가 필요합니다")
     else:
-        click.echo("🔴 시스템 점검이 필요합니다")
+        click.echo("[RED] 시스템 점검이 필요합니다")
 
 
 def _display_health_detailed(health):
@@ -2202,20 +2394,20 @@ def _display_health_detailed(health):
     click.echo(f"   메모리 사용량: {health.memory_usage_mb:.1f}MB")
     click.echo(f"   데이터베이스 크기: {health.database_size_mb:.1f}MB")
     
-    click.echo(f"\n🎯 품질 지표:")
+    click.echo(f"\n[TARGET] 품질 지표:")
     click.echo(f"   평균 품질 점수: {health.avg_quality_score:.2f}")
     click.echo(f"   중복률: {health.duplicate_rate * 100:.1f}%")
     click.echo(f"   승급 성공률: {health.promotion_success_rate * 100:.1f}%")
     
     if health.warnings:
-        click.echo(f"\n⚠️  경고:")
+        click.echo(f"\n[WARNING]  경고:")
         for warning in health.warnings:
-            click.echo(f"   • {warning}")
+            click.echo(f"   - {warning}")
     
     if health.recommendations:
-        click.echo(f"\n💡 권장사항:")
+        click.echo(f"\n[IDEA] 권장사항:")
         for rec in health.recommendations:
-            click.echo(f"   • {rec}")
+            click.echo(f"   - {rec}")
 
 
 # v2.7.0: Causal Reasoning Commands
@@ -2241,7 +2433,7 @@ def relationships(block_id: int, output_format: str):
         # Get the block info
         block = db_manager.get_block(block_id)
         if not block:
-            click.echo(f"❌ Block #{block_id} not found", err=True)
+            click.echo(f"[ERROR] Block #{block_id} not found", err=True)
             return
         
         # Get causal relationships
@@ -2256,10 +2448,10 @@ def relationships(block_id: int, output_format: str):
             return
         
         if not relationships:
-            click.echo(f"🔍 No causal relationships found for block #{block_id}")
+            click.echo(f"[SEARCH] No causal relationships found for block #{block_id}")
             return
         
-        click.echo(f"🔗 Causal relationships for block #{block_id}:")
+        click.echo(f"[LINK] Causal relationships for block #{block_id}:")
         click.echo(f"   Context: {block['context'][:60]}...")
         click.echo()
         
@@ -2271,11 +2463,11 @@ def relationships(block_id: int, output_format: str):
             
             # Determine direction
             if source_id == block_id:
-                direction = "→"
+                direction = "->"
                 other_id = target_id
                 role = "Causes"
             else:
-                direction = "←"
+                direction = "<-"
                 other_id = source_id
                 role = "Caused by"
             
@@ -2283,7 +2475,7 @@ def relationships(block_id: int, output_format: str):
             other_block = db_manager.get_block(other_id)
             other_context = other_block['context'][:50] + "..." if other_block else "Unknown"
             
-            confidence_emoji = "🔥" if confidence >= 0.8 else "⚡" if confidence >= 0.6 else "💡"
+            confidence_emoji = "[FIRE]" if confidence >= 0.8 else "[POWER]" if confidence >= 0.6 else "[IDEA]"
             
             click.echo(f"{i}. {confidence_emoji} {role} Block #{other_id} ({confidence:.2f})")
             click.echo(f"   {direction} {other_context}")
@@ -2308,7 +2500,7 @@ def relationships(block_id: int, output_format: str):
             click.echo()
         
     except Exception as e:
-        click.echo(f"❌ Error analyzing relationships: {e}", err=True)
+        click.echo(f"[ERROR] Error analyzing relationships: {e}", err=True)
 
 
 @causal.command()
@@ -2328,7 +2520,7 @@ def chain(start_block_id: int, depth: int, output_format: str):
         # Get the starting block
         start_block = db_manager.get_block(start_block_id)
         if not start_block:
-            click.echo(f"❌ Start block #{start_block_id} not found", err=True)
+            click.echo(f"[ERROR] Start block #{start_block_id} not found", err=True)
             return
         
         # Find causal chain
@@ -2343,10 +2535,10 @@ def chain(start_block_id: int, depth: int, output_format: str):
             return
         
         if not chain_results:
-            click.echo(f"🔍 No causal chains found starting from block #{start_block_id}")
+            click.echo(f"[SEARCH] No causal chains found starting from block #{start_block_id}")
             return
         
-        click.echo(f"🔗 Causal chain starting from block #{start_block_id}:")
+        click.echo(f"[LINK] Causal chain starting from block #{start_block_id}:")
         click.echo(f"   Start: {start_block['context'][:60]}...")
         click.echo()
         
@@ -2367,16 +2559,16 @@ def chain(start_block_id: int, depth: int, output_format: str):
                 target_block = item['target_block']
                 target_context = target_block['context'][:50] + "..."
                 
-                confidence_emoji = "🔥" if confidence >= 0.8 else "⚡" if confidence >= 0.6 else "💡"
+                confidence_emoji = "[FIRE]" if confidence >= 0.8 else "[POWER]" if confidence >= 0.6 else "[IDEA]"
                 
-                click.echo(f"{indent}↓ {confidence_emoji} Block #{item['target_id']} ({confidence:.2f})")
+                click.echo(f"{indent}down {confidence_emoji} Block #{item['target_id']} ({confidence:.2f})")
                 click.echo(f"{indent}   {target_context}")
                 
                 if output_format == 'detailed':
                     click.echo(f"{indent}   Type: {item['relation_type']}")
         
     except Exception as e:
-        click.echo(f"❌ Error finding causal chain: {e}", err=True)
+        click.echo(f"[ERROR] Error finding causal chain: {e}", err=True)
 
 
 @causal.command()
@@ -2395,7 +2587,7 @@ def stats(output_format: str):
         statistics = block_manager.get_causal_statistics()
         
         if 'error' in statistics:
-            click.echo(f"❌ {statistics['error']}", err=True)
+            click.echo(f"[ERROR] {statistics['error']}", err=True)
             return
         
         if output_format == 'json':
@@ -2403,7 +2595,7 @@ def stats(output_format: str):
             click.echo(json.dumps(statistics, indent=2, ensure_ascii=False))
             return
         
-        click.echo("📊 Causal Reasoning Statistics")
+        click.echo("[CHART] Causal Reasoning Statistics")
         click.echo("=" * 35)
         
         # Detection summary
@@ -2411,7 +2603,7 @@ def stats(output_format: str):
         relationships_found = statistics.get('relationships_found', 0)
         accuracy_estimate = statistics.get('accuracy_estimate', 0.0)
         
-        click.echo(f"\n🔍 Detection Summary:")
+        click.echo(f"\n[SEARCH] Detection Summary:")
         click.echo(f"   Total blocks analyzed: {total_analyzed}")
         click.echo(f"   Relationships found: {relationships_found}")
         if total_analyzed > 0:
@@ -2424,15 +2616,15 @@ def stats(output_format: str):
         medium_conf = statistics.get('medium_confidence', 0)
         low_conf = statistics.get('low_confidence', 0)
         
-        click.echo(f"\n📈 Confidence Distribution:")
-        click.echo(f"   🔥 High (≥0.8): {high_conf}")
-        click.echo(f"   ⚡ Medium (0.5-0.8): {medium_conf}")
-        click.echo(f"   💡 Low (<0.5): {low_conf}")
+        click.echo(f"\n[UP] Confidence Distribution:")
+        click.echo(f"   [FIRE] High (>=0.8): {high_conf}")
+        click.echo(f"   [POWER] Medium (0.5-0.8): {medium_conf}")
+        click.echo(f"   [IDEA] Low (<0.5): {low_conf}")
         
         # Relationship types
         by_type = statistics.get('by_type', {})
         if by_type:
-            click.echo(f"\n🏷️  Relationship Types:")
+            click.echo(f"\n[LABEL]  Relationship Types:")
             for rel_type, count in by_type.items():
                 if count > 0:
                     click.echo(f"   {rel_type}: {count}")
@@ -2442,7 +2634,7 @@ def stats(output_format: str):
         stored_dist = statistics.get('stored_confidence_distribution', {})
         
         if output_format == 'detailed':
-            click.echo(f"\n💾 Storage Statistics:")
+            click.echo(f"\n[DISK] Storage Statistics:")
             click.echo(f"   Total stored relationships: {total_stored}")
             
             if stored_dist:
@@ -2451,7 +2643,7 @@ def stats(output_format: str):
                     click.echo(f"     {level}: {count}")
         
     except Exception as e:
-        click.echo(f"❌ Error getting causal statistics: {e}", err=True)
+        click.echo(f"[ERROR] Error getting causal statistics: {e}", err=True)
 
 
 # Import and register graph commands

@@ -387,7 +387,34 @@ USE FOR:
                 }
             }
         }
-    
+
+    @staticmethod
+    def get_analyze_schema() -> Dict[str, Any]:
+        """Schema for analyze tool"""
+        return {
+            "name": "analyze",
+            "description": """🧭 Summarize STM slots, branch activity, and recent memory usage for quick situational awareness.
+
+USE WHEN:
+• Starting a new session with partial context
+• Planning follow-up tasks that depend on branch history
+• Verifying slot alignment before adding new memories
+
+💡 PROVIDES: Slot assignments, branch statistics, recent activity summary""",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "days": {
+                        "type": "integer",
+                        "description": "Look-back window in days (1-90)",
+                        "default": 7,
+                        "minimum": 1,
+                        "maximum": 90
+                    }
+                }
+            }
+        }
+
     @staticmethod
     def get_analyze_causality_schema() -> Dict[str, Any]:
         """Enhanced schema for analyze_causality tool"""
@@ -453,6 +480,7 @@ USE FOR:
             cls.get_search_memory_schema(),
             cls.get_get_memory_stats_schema(),
             cls.get_usage_analytics_schema(),
+            cls.get_analyze_schema(),
             cls.get_analyze_causality_schema()
             # 제거됨: ltm_analyze, ltm_verify, ltm_export, stm_add, stm_promote, stm_cleanup
             # 안전성과 보안상의 이유로 위험한 6개 도구는 MCP에서 제거됨
@@ -466,6 +494,7 @@ USE FOR:
             "search_memory": cls.get_search_memory_schema,
             "get_memory_stats": cls.get_get_memory_stats_schema,
             "usage_analytics": cls.get_usage_analytics_schema,
+            "analyze": cls.get_analyze_schema,
             "analyze_causality": cls.get_analyze_causality_schema,
             "ltm_analyze": cls.get_ltm_analyze_schema,
             "ltm_verify": cls.get_ltm_verify_schema,

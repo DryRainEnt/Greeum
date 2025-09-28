@@ -108,7 +108,7 @@ class FastMCPAdapter(BaseAdapter):
         @self.app.tool()
         def usage_analytics(days: int = 7, report_type: str = "usage") -> str:
             """📊 Get comprehensive usage analytics and insights.
-            
+
             USE FOR:
             • Understanding memory usage patterns
             • Identifying performance bottlenecks
@@ -121,8 +121,18 @@ class FastMCPAdapter(BaseAdapter):
                 self.initialize_greeum_components()
                 
             return self.usage_analytics_tool(days, report_type)
-        
-        logger.info("✅ FastMCP tools registered: add_memory, search_memory, get_memory_stats, usage_analytics")
+
+        @self.app.tool()
+        def analyze(days: int = 7) -> str:
+            """🧭 Generate branch/slot snapshot for quick situational awareness."""
+            if not self.initialized:
+                self.initialize_greeum_components()
+
+            return self.analyze_tool(days)
+
+        logger.info(
+            "✅ FastMCP tools registered: add_memory, search_memory, get_memory_stats, usage_analytics, analyze"
+        )
     
     async def run(self):
         """FastMCP 서버 실행 - AsyncIO 안전장치 포함"""
@@ -236,7 +246,8 @@ class FastMCPAdapter(BaseAdapter):
                             }
                         },
                         {"name": "get_memory_stats", "description": "Get memory statistics"},
-                        {"name": "usage_analytics", "description": "Get usage analytics"}
+                        {"name": "usage_analytics", "description": "Get usage analytics"},
+                        {"name": "analyze", "description": "Summarize slots and branches"}
                     ]}
                 }
             elif method == "tools/call":
@@ -265,6 +276,8 @@ class FastMCPAdapter(BaseAdapter):
                         arguments.get("days", 7),
                         arguments.get("report_type", "usage")
                     )
+                elif tool_name == "analyze":
+                    result = self.analyze_tool(arguments.get("days", 7))
                 else:
                     return {
                         "jsonrpc": "2.0",

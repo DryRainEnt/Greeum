@@ -284,6 +284,22 @@ class JSONRPCProcessor:
                 }
             },
             {
+                "name": "analyze",
+                "description": "Summarize STM slots, branch activity, and recent memory usage for quick situational awareness.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "days": {
+                            "type": "integer",
+                            "description": "Look-back window for recent activity",
+                            "minimum": 1,
+                            "maximum": 90,
+                            "default": 7
+                        }
+                    }
+                }
+            },
+            {
                 "name": "system_doctor",
                 "description": "Perform comprehensive system health check and maintenance. Diagnoses database integrity, embedding consistency, dependency availability, and performance metrics. Can automatically fix issues including orphaned embeddings cleanup, database fragmentation repair, index optimization, and embedding model migration. Creates automatic backups before repairs. Returns detailed health report with scores and recommendations.",
                 "inputSchema": {

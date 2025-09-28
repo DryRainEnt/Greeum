@@ -39,24 +39,24 @@ echo "📋 4. CI 상태 확인"
 if command -v gh &> /dev/null; then
     LATEST_RUN=$(gh run list --limit 1 --json conclusion --jq '.[0].conclusion')
     if [ "$LATEST_RUN" = "success" ]; then
-        echo "✅ Latest CI run: SUCCESS"
+        echo "[OK] Latest CI run: SUCCESS"
     else
-        echo "⚠️  Latest CI run: $LATEST_RUN"
+        echo "[WARNING] Latest CI run: $LATEST_RUN"
     fi
 else
-    echo "⚠️  GitHub CLI not available, skipping CI check"
+    echo "[WARNING] GitHub CLI not available, skipping CI check"
 fi
 
 # 5. PyPI 접근성 테스트 (모의)
-echo "📋 5. PyPI 접근성 확인"
+echo "[STEP] 5. PyPI 접근성 확인"
 if curl -s https://pypi.org/pypi/greeum/json | grep -q "2.4.0rc1"; then
-    echo "✅ PyPI version available"
+    echo "[OK] PyPI version available"
 else
-    echo "⚠️  PyPI version not yet indexed (normal delay)"
+    echo "[WARNING] PyPI version not yet indexed (normal delay)"
 fi
 
-echo "🎉 배포 후 검증 완료!"
-echo "🔍 모니터링 포인트:"
+echo "[DONE] 배포 후 검증 완료!"
+echo "[CHECK] 모니터링 포인트:"
 echo "  - GitHub Issues: https://github.com/DryRainEnt/Greeum/issues"
 echo "  - PyPI Stats: https://pypi.org/project/greeum/#history"
 echo "  - CI Status: https://github.com/DryRainEnt/Greeum/actions"

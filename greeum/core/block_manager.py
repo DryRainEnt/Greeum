@@ -222,8 +222,17 @@ class BlockManager:
         branch_info = None
         if self.branch_aware_storage and embedding:
             try:
-                # Convert embedding to numpy array if needed
-                emb_array = np.array(embedding, dtype=np.float32) if embedding else None
+                emb_array = None
+                if embedding:
+                    try:
+                        emb_array = np.asarray(embedding, dtype=np.float32)
+                        if emb_array.ndim > 1:
+                            emb_array = emb_array.reshape(-1)
+                    except Exception as conv_err:
+                        logger.debug(
+                            "Embedding conversion failed for branch-aware storage: %s", conv_err
+                        )
+                        emb_array = None
                 branch_info = self.branch_aware_storage.store_with_branch_awareness(
                     content=context,
                     embedding=emb_array,

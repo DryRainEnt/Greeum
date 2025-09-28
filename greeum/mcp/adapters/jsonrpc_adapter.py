@@ -225,6 +225,22 @@ class JSONRPCAdapter(BaseAdapter):
                         }
                     }
                 }
+            },
+            {
+                "name": "analyze",
+                "description": "🧭 Summarize slots, branches, and recent activity",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "days": {
+                            "type": "integer",
+                            "description": "Look-back window in days",
+                            "minimum": 1,
+                            "maximum": 90,
+                            "default": 7
+                        }
+                    }
+                }
             }
         ]
         
@@ -269,7 +285,11 @@ class JSONRPCAdapter(BaseAdapter):
                 days = arguments.get("days", 7)
                 report_type = arguments.get("report_type", "usage")
                 result_text = self.usage_analytics_tool(days, report_type)
-                
+
+            elif tool_name == "analyze":
+                days = arguments.get("days", 7)
+                result_text = self.analyze_tool(days)
+
             else:
                 return self._error_response(request_id, -32601, f"Unknown tool: {tool_name}")
             

@@ -341,6 +341,23 @@ Please search existing memories first or provide more specific content."""
             logger.error(f"usage_analytics failed: {e}")
             return f"[ERROR] Analytics failed: {str(e)}"
 
+    def analyze_tool(self, days: int = 7) -> str:
+        """슬롯·브랜치 요약 리포트"""
+        if not self.components:
+            self.initialize_greeum_components()
+        if not self.components:
+            return "[ERROR] Greeum components not available"
+
+        try:
+            analytics_component = self.components.get('usage_analytics')
+            if analytics_component and hasattr(analytics_component, 'generate_system_report'):
+                summary = analytics_component.generate_system_report(days=days)
+                return summary or "No activity recorded yet."
+            return "[INFO] Analytics component does not provide detailed system reports."
+        except Exception as exc:
+            logger.error(f"analyze failed: {exc}")
+            return f"[ERROR] Analyze failed: {str(exc)}"
+
     def _auto_select_or_initialize_slot(self, stm_manager, content: str = None, embedding=None) -> tuple:
         """
         스마트 라우팅을 통한 자동 STM 슬롯 선택 또는 초기화

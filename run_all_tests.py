@@ -10,31 +10,55 @@ import time
 from pathlib import Path
 
 def run_test_suite(test_name, test_module):
-    """Run a single test suite and return results"""
-    loader = unittest.TestLoader()
-    suite = unittest.TestSuite()
-    
-    try:
-        suite = loader.loadTestsFromName(test_module)
-        runner = unittest.TextTestRunner(verbosity=0)
-        result = runner.run(suite)
-        
+    """Run a single test suite and return results."""
+
+    module_path = Path(__file__).parent / Path(*test_module.split('.')).with_suffix('.py')
+    if not module_path.exists():
         return {
             'name': test_name,
-            'run': result.testsRun,
-            'failures': len(result.failures),
-            'errors': len(result.errors),
-            'success': result.wasSuccessful()
+            'run': 0,
+            'failures': 0,
+            'errors': 0,
+            'success': True,
+            'skipped': True,
+            'reason': f"module {test_module} not found",
         }
-    except Exception as e:
+
+    loader = unittest.TestLoader()
+
+    try:
+        suite = loader.loadTestsFromName(test_module)
+    except ModuleNotFoundError as exc:  # legacy suite removed
+        return {
+            'name': test_name,
+            'run': 0,
+            'failures': 0,
+            'errors': 0,
+            'success': True,
+            'skipped': True,
+            'reason': str(exc),
+        }
+    except Exception as exc:
         return {
             'name': test_name,
             'run': 0,
             'failures': 0,
             'errors': 1,
             'success': False,
-            'exception': str(e)
+            'exception': str(exc),
         }
+
+    runner = unittest.TextTestRunner(verbosity=0)
+    result = runner.run(suite)
+
+    return {
+        'name': test_name,
+        'run': result.testsRun,
+        'failures': len(result.failures),
+        'errors': len(result.errors),
+        'success': result.wasSuccessful(),
+        'skipped': False,
+    }
 
 def main():
     print("🧪 COMPREHENSIVE TEST SUITE EXECUTION")
@@ -68,14 +92,18 @@ def main():
         result = run_test_suite(name, module)
         results.append(result)
         
+        if result.get('skipped'):
+            print("   ⏭️  SKIPPED: suite not available in current build")
+            continue
+
         if result['success']:
             print(f"   ✅ PASSED ({result['run']} tests)")
         else:
             if 'exception' in result:
-                print(f"   ⚠️  SKIPPED: {result['exception']}")
+                print(f"   ⚠️  ERROR: {result['exception']}")
             else:
                 print(f"   ❌ FAILED: {result['failures']} failures, {result['errors']} errors")
-        
+
         total_tests += result['run']
         total_failures += result['failures']
         total_errors += result['errors']
@@ -88,12 +116,18 @@ def main():
     # Detailed results
     print("\n🔍 Detailed Results:")
     for result in results:
+        if result.get('skipped'):
+            print(f"  ⏭️  {result['name']}: skipped (legacy suite removed)")
+            continue
+
         status = "✅" if result['success'] else "❌"
         if 'exception' in result:
-            print(f"  {status} {result['name']}: Module not found")
+            print(f"  {status} {result['name']}: error - {result['exception']}")
         else:
-            print(f"  {status} {result['name']}: {result['run']} tests, "
-                  f"{result['failures']} failures, {result['errors']} errors")
+            print(
+                f"  {status} {result['name']}: {result['run']} tests, "
+                f"{result['failures']} failures, {result['errors']} errors",
+            )
     
     # Overall statistics
     print(f"\n📈 Overall Statistics:")

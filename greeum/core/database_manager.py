@@ -7,8 +7,15 @@ import numpy as np
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple, Callable
 import logging
+
 from .branch_schema import BranchSchemaSQL, BranchBlock, BranchMeta, SearchMeta
 from .stm_anchor_store import STMAnchorStore
+from .db_integrity import (
+    backup_database_files,
+    is_corruption_error,
+    rebuild_empty_sqlite_database,
+    remove_database_files,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -111,19 +118,36 @@ class DatabaseManager:
         """데이터베이스 연결 설정"""
         if self.db_type == 'sqlite':
             timeout = float(os.getenv('GREEUM_SQLITE_TIMEOUT', '3'))
-            self.conn = sqlite3.connect(
-                self.connection_string,
-                timeout=timeout,
-            )
-            self.conn.row_factory = sqlite3.Row
-            try:
-                self.conn.execute('PRAGMA journal_mode=WAL')
-                self.conn.execute('PRAGMA synchronous=NORMAL')
-                self.conn.execute('PRAGMA temp_store=MEMORY')
-                busy_ms = int(float(os.getenv('GREEUM_SQLITE_BUSY_TIMEOUT', '1.5')) * 1000)
-                self.conn.execute(f'PRAGMA busy_timeout = {busy_ms}')
-            except sqlite3.OperationalError as pragma_error:
-                logger.debug(f"SQLite PRAGMA setup skipped: {pragma_error}")
+            attempt = 0
+            while True:
+                try:
+                    self.conn = sqlite3.connect(
+                        self.connection_string,
+                        timeout=timeout,
+                    )
+                    self.conn.row_factory = sqlite3.Row
+                    try:
+                        self.conn.execute('PRAGMA journal_mode=WAL')
+                        self.conn.execute('PRAGMA synchronous=NORMAL')
+                        self.conn.execute('PRAGMA temp_store=MEMORY')
+                        busy_ms = int(float(os.getenv('GREEUM_SQLITE_BUSY_TIMEOUT', '1.5')) * 1000)
+                        self.conn.execute(f'PRAGMA busy_timeout = {busy_ms}')
+                    except sqlite3.OperationalError as pragma_error:
+                        logger.debug("SQLite PRAGMA setup skipped: %s", pragma_error)
+
+                    self._verify_integrity()
+                    break
+                except sqlite3.DatabaseError as exc:
+                    if not (is_corruption_error(exc) and attempt == 0):
+                        raise
+                    attempt += 1
+                    logger.warning(
+                        "Detected corrupt database (%s). Automatically rebuilding %s.",
+                        exc,
+                        self.connection_string,
+                    )
+                    self._repair_corrupt_database(str(exc))
+                    continue
         elif self.db_type == 'postgres':
             try:
                 import psycopg2
@@ -222,6 +246,76 @@ class DatabaseManager:
         self._initialize_branch_structures(cursor)
 
         self.conn.commit()
+
+    def _verify_integrity(self) -> None:
+        """Run PRAGMA integrity_check and rebuild on corruption."""
+
+        if self.db_type != 'sqlite':
+            return
+
+        try:
+            row = self.conn.execute("PRAGMA integrity_check").fetchone()
+        except sqlite3.DatabaseError as exc:
+            if not is_corruption_error(exc):
+                raise
+            logger.warning(
+                "SQLite integrity check failed (%s). Rebuilding database at %s.",
+                exc,
+                self.connection_string,
+            )
+            self._repair_corrupt_database(str(exc))
+            return
+
+        if not row:
+            raise sqlite3.DatabaseError("integrity_check returned no rows")
+
+        result = (row[0] or "").lower()
+        if result != 'ok':
+            exc = sqlite3.DatabaseError(result)
+            if not is_corruption_error(exc):
+                raise exc
+            logger.warning(
+                "SQLite integrity check reported '%s'. Rebuilding database at %s.",
+                result,
+                self.connection_string,
+            )
+            self._repair_corrupt_database(result)
+
+    def _repair_corrupt_database(self, reason: str) -> None:
+        """Backup and rebuild a corrupted SQLite database."""
+
+        db_path = Path(self.connection_string)
+        try:
+            if hasattr(self, 'conn') and self.conn:
+                self.conn.close()
+        except Exception:  # pragma: no cover - best effort
+            pass
+        finally:
+            self.conn = None
+
+        backup_path = backup_database_files(db_path, label='malformed')
+        if backup_path:
+            logger.info("Backed up corrupt database to %s", backup_path)
+
+        remove_database_files(db_path)
+        rebuild_empty_sqlite_database(db_path)
+
+        timeout = float(os.getenv('GREEUM_SQLITE_TIMEOUT', '3'))
+        self.conn = sqlite3.connect(
+            self.connection_string,
+            timeout=timeout,
+        )
+        self.conn.row_factory = sqlite3.Row
+        try:
+            self.conn.execute('PRAGMA journal_mode=WAL')
+            self.conn.execute('PRAGMA synchronous=NORMAL')
+            self.conn.execute('PRAGMA temp_store=MEMORY')
+            busy_ms = int(float(os.getenv('GREEUM_SQLITE_BUSY_TIMEOUT', '1.5')) * 1000)
+            self.conn.execute(f'PRAGMA busy_timeout = {busy_ms}')
+        except sqlite3.OperationalError as pragma_error:
+            logger.debug("SQLite PRAGMA setup skipped after repair: %s", pragma_error)
+
+        logger.info("Rebuilt SQLite database after corruption (%s)", reason)
 
     def _initialize_branch_structures(self, cursor):
         """Ensure branch-specific tables and defaults exist."""

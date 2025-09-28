@@ -141,7 +141,7 @@ class BranchAwareStorage:
         self.update_slot_mapping()
 
         if not self.slot_branches:
-            logger.warning("No active slots found, using current branch")
+            logger.debug("No active slots found during branch selection; using current branch")
             return self._get_current_branch(), 0.0, "A"
 
         # Calculate centroids if needed

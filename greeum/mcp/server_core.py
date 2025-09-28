@@ -34,6 +34,12 @@ try:
     from greeum.core.duplicate_detector import DuplicateDetector
     from greeum.core.quality_validator import QualityValidator
     from greeum.core.usage_analytics import UsageAnalytics
+    from greeum.core.storage_admin import (
+        create_backup,
+        discover_storage_candidates,
+        merge_storage,
+        resolve_active_storage,
+    )
     GREEUM_AVAILABLE = True
 except ImportError:
     GREEUM_AVAILABLE = False
@@ -115,8 +121,26 @@ class GreeumMCPServer:
         def usage_analytics(days: int = 7, report_type: str = "usage") -> str:
             """📊 Get comprehensive usage analytics and insights."""
             return self._handle_usage_analytics(days, report_type)
-            
-        logger.info("All MCP tools registered: add_memory, search_memory, get_memory_stats, usage_analytics")
+
+        @self.app.tool()
+        def analyze(days: int = 7) -> str:
+            """🧭 Summarize slots, branches, and recent activity for quick situational awareness."""
+            return self._handle_analyze_memory(days)
+
+        @self.app.tool()
+        def storage_backup(data_dir: str = "", label: str = "manual") -> str:
+            """💾 Create a backup of the configured storage directory."""
+            return self._handle_storage_backup(data_dir or None, label)
+
+        @self.app.tool()
+        def storage_merge(source: str = "", target: str = "", label: str = "merge") -> str:
+            """🔄 Merge blocks from one storage directory into another."""
+            return self._handle_storage_merge(source or None, target or None, label)
+
+        logger.info(
+            "MCP tools registered: add_memory, search_memory, get_memory_stats, usage_analytics, analyze,"
+            " storage_backup, storage_merge"
+        )
     
     def _handle_add_memory(self, content: str, importance: float) -> str:
         """add_memory 도구 핸들러"""
@@ -242,7 +266,7 @@ Please search existing memories first or provide more specific content."""
                 return "ERROR: Server not properly initialized"
             
             analytics = self._components['usage_analytics'].get_usage_report(days=days, report_type=report_type)
-            
+
             return f"""**Usage Analytics Report** ({days} days)
 
 **Activity Summary**:
@@ -264,6 +288,95 @@ Please search existing memories first or provide more specific content."""
         except Exception as e:
             logger.error(f"usage_analytics failed: {e}")
             return f"ERROR: Analytics failed: {str(e)}"
+
+    def _handle_analyze_memory(self, days: int) -> str:
+        """analyze 도구 핸들러"""
+        try:
+            if not self._components:
+                return "ERROR: Server not properly initialized"
+
+            analytics_component = self._components.get('usage_analytics')
+            if not analytics_component:
+                return "Analytics component unavailable."
+
+            summary = analytics_component.generate_system_report(days=days)
+            return summary or "No activity recorded yet."
+        except Exception as e:
+            logger.error(f"analyze failed: {e}")
+            return f"ERROR: Analyze failed: {str(e)}"
+
+    def _handle_storage_backup(self, data_dir: Optional[str], label: str) -> str:
+        try:
+            active = resolve_active_storage(data_dir)
+        except FileNotFoundError as exc:
+            return f"ERROR: {exc}"
+
+        backup_info = create_backup(active.data_dir, label=label)
+        candidates = discover_storage_candidates()
+
+        lines = [
+            "📦 **Storage Backup Completed**",
+            "",
+            f"- Active directory: {active.data_dir}",
+            f"- Backup file: {backup_info['backup']}",
+        ]
+
+        sidecars = backup_info.get("sidecars") or []
+        if sidecars:
+            lines.append(f"- Sidecar files: {', '.join(sidecars)}")
+
+        others = [c for c in candidates if c.data_dir != active.data_dir]
+        if others:
+            lines.append("")
+            lines.append("Other detected storages:")
+            for candidate in others:
+                lines.append(
+                    f"• {candidate.data_dir} — {candidate.total_blocks} blocks"
+                    f" (latest: {candidate.latest_timestamp or 'n/a'})"
+                )
+
+        return "\n".join(lines)
+
+    def _handle_storage_merge(self, source_dir: Optional[str], target_dir: Optional[str], label: str) -> str:
+        if not source_dir:
+            candidates = discover_storage_candidates()
+            if not candidates:
+                return "ERROR: No storage directories detected."
+
+            lines = ["Detected storage locations (provide `source` to merge):"]
+            for candidate in candidates:
+                lines.append(
+                    f"- {candidate.data_dir} — {candidate.total_blocks} blocks"
+                    f" (latest: {candidate.latest_timestamp or 'n/a'})"
+                )
+            return "\n".join(lines)
+
+        try:
+            source = resolve_active_storage(source_dir)
+            target = resolve_active_storage(target_dir)
+        except FileNotFoundError as exc:
+            return f"ERROR: {exc}"
+
+        if source.db_path == target.db_path:
+            return "ERROR: Source and target storage must be different."
+
+        backup_info = create_backup(target.data_dir, label=f"pre_{label}")
+        merge_result = merge_storage(source.db_path, target.db_path)
+
+        lines = [
+            "🔄 **Storage Merge Completed**",
+            "",
+            f"- Source: {source.db_path}",
+            f"- Target: {target.db_path}",
+            f"- Pre-merge backup: {backup_info['backup']}",
+            f"- Blocks inserted: {merge_result.get('blocks_inserted', 0)}",
+            f"- Tables updated: {merge_result.get('tables_updated', 0)}",
+        ]
+
+        if merge_result.get("blocks_inserted", 0) == 0:
+            lines.append("\nNo new blocks were inserted (all hashes already present).")
+
+        return "\n".join(lines)
     
     def _add_memory_direct(self, content: str, importance: float) -> Dict[str, Any]:
         """직접 메모리 추가 (기존 로직 재사용)"""

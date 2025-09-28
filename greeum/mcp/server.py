@@ -13,7 +13,7 @@ import sys
 
 logger = logging.getLogger("greeummcp")
 if not logger.handlers:
-    _h = logging.StreamHandler(sys.stdout)
+    _h = logging.StreamHandler(sys.stderr)
     _h.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s %(name)s - %(message)s'))
     logger.addHandler(_h)
     logger.setLevel(logging.INFO)
@@ -28,7 +28,7 @@ def check_dependencies():
     # Check Greeum
     try:
         import greeum
-        logger.info(f"✓ Greeum version: {greeum.__version__}")
+        logger.info(f"Greeum version: {greeum.__version__}")
     except ImportError:
         errors.append("Greeum package not found. Please install with: pip install greeum>=0.6.0")
     
@@ -36,21 +36,21 @@ def check_dependencies():
     try:
         import mcp
         # MCP package doesn't have __version__ attribute
-        logger.info("✓ MCP package: installed")
+        logger.info("MCP package: installed")
     except ImportError:
         errors.append("MCP package not found. Please install with: pip install mcp>=1.0.0")
     
     # Check FastAPI (for HTTP transport)
     try:
         import fastapi
-        logger.info(f"✓ FastAPI version: {fastapi.__version__}")
+        logger.info(f"FastAPI version: {fastapi.__version__}")
     except ImportError:
         logger.warning("FastAPI not found. HTTP transport will not be available.")
     
     # Check Uvicorn (for HTTP transport)
     try:
         import uvicorn
-        logger.info(f"✓ Uvicorn version: {uvicorn.__version__}")
+        logger.info(f"Uvicorn version: {uvicorn.__version__}")
     except ImportError:
         logger.warning("Uvicorn not found. HTTP transport will not be available.")
     

@@ -94,12 +94,16 @@ class DuplicateDetector:
             from greeum.embedding_models import get_embedding
             
             embedding = get_embedding(content)
-            similar_blocks = self.db_manager.search_blocks_by_embedding(
-                embedding, top_k=10, min_similarity=0.6
-            )
-            
-            if similar_blocks:
-                return similar_blocks
+            search_fn = getattr(self.db_manager, "search_blocks_by_embedding", None)
+            if callable(search_fn):
+                try:
+                    similar_blocks = search_fn(
+                        embedding, top_k=10, min_similarity=0.6
+                    )
+                except TypeError:
+                    similar_blocks = search_fn(embedding, top_k=10)
+                if similar_blocks:
+                    return similar_blocks
                 
         except Exception as e:
             logger.debug(f"Embedding search failed, falling back to keyword search: {e}")
@@ -107,11 +111,25 @@ class DuplicateDetector:
         # 2. 키워드 기반 검색 (fallback)
         keywords = self._extract_keywords(content)
         if keywords:
-            return self.db_manager.search_blocks_by_keyword(keywords, limit=10)
+            keyword_fn = getattr(self.db_manager, "search_blocks_by_keyword", None)
+            if callable(keyword_fn):
+                try:
+                    results = keyword_fn(keywords, limit=10)
+                    if results:
+                        return results
+                except Exception as keyword_error:
+                    logger.debug("Keyword fallback failed: %s", keyword_error)
         
         # 3. 최근 메모리 기반 검색 (최후 수단)
-        cutoff_time = datetime.now() - timedelta(hours=context_window_hours)
-        return self.db_manager.get_blocks_since_time(cutoff_time.isoformat(), limit=20)
+        history_fn = getattr(self.db_manager, "get_blocks_since_time", None)
+        if callable(history_fn):
+            cutoff_time = datetime.now() - timedelta(hours=context_window_hours)
+            try:
+                return history_fn(cutoff_time.isoformat(), limit=20)
+            except Exception as history_error:
+                logger.debug("Recent-block fallback failed: %s", history_error)
+
+        return []
     
     def _extract_keywords(self, content: str) -> List[str]:
         """간단한 키워드 추출"""

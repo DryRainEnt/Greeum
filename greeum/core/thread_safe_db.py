@@ -24,6 +24,15 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple, Callable, TypeVar
 import logging
 
+from .branch_schema import BranchSchemaSQL
+from .stm_anchor_store import STMAnchorStore
+from .db_integrity import (
+    backup_database_files,
+    is_corruption_error,
+    rebuild_empty_sqlite_database,
+    remove_database_files,
+)
+
 logger = logging.getLogger(__name__)
 
 WriteResult = TypeVar("WriteResult")
@@ -52,13 +61,14 @@ class ThreadSafeDatabaseManager:
             db_type: 데이터베이스 타입 (현재는 sqlite만 지원)
         """
         self.db_type = db_type
-        self.connection_string = connection_string or os.path.join('data', 'memory.db')
+        self.connection_string = self._resolve_connection_string(connection_string)
         
         # Thread-local storage for database connections
         self.local = threading.local()
         
         # 데이터 디렉토리 생성
         self._ensure_data_dir()
+        self._ensure_anchor_env()
         
         # WAL 모드 설정 (동시 읽기 최적화)
         self._setup_wal_mode()
@@ -66,9 +76,10 @@ class ThreadSafeDatabaseManager:
         # Legacy 호환 매니저 (지연 생성)
         self._legacy_manager = None
 
-        # 초기 연결에서 스키마 생성
-        with self._get_connection() as conn:
-            self._create_schemas(conn)
+        # 초기 연결에서 무결성 확인 및 스키마 생성
+        conn = self._get_connection()
+        conn = self._ensure_integrity(conn)
+        self._create_schemas(conn)
 
         # Sequential write queue ensures SQLite writes are serialized
         self._write_queue: queue.Queue[Tuple[Optional[Callable[[sqlite3.Connection], WriteResult]], Optional[List[WriteResult]], Optional[List[BaseException]], threading.Event]] = queue.Queue()
@@ -86,6 +97,51 @@ class ThreadSafeDatabaseManager:
         data_dir = os.path.dirname(self.connection_string)
         if data_dir:
             os.makedirs(data_dir, exist_ok=True)
+
+    def _ensure_anchor_env(self) -> None:
+        """Ensure STM anchor database follows the same base directory."""
+        if "GREEUM_STM_DB" in os.environ:
+            return
+
+        try:
+            db_dir = Path(self.connection_string).expanduser().resolve().parent
+        except Exception:  # noqa: BLE001
+            return
+
+        anchor_path = db_dir / "stm_anchors.db"
+        os.environ.setdefault("GREEUM_STM_DB", str(anchor_path))
+
+    def _resolve_connection_string(self, explicit: Optional[str]) -> str:
+        """Resolve the database path, honoring environment overrides."""
+        if explicit:
+            return explicit
+
+        env_dir = os.environ.get('GREEUM_DATA_DIR')
+        if env_dir:
+            direct_path = os.path.join(env_dir, 'memory.db')
+            if os.path.exists(direct_path):
+                logger.info(f"[DB] Using environment variable path: {direct_path}")
+                return direct_path
+
+            sub_path = os.path.join(env_dir, 'data', 'memory.db')
+            if os.path.exists(sub_path):
+                logger.info(f"[DB] Using environment variable path: {sub_path}")
+                return sub_path
+
+            os.makedirs(os.path.join(env_dir, 'data'), exist_ok=True)
+            logger.info(f"[DB] Creating database at environment path: {sub_path}")
+            return sub_path
+
+        cwd = os.getcwd()
+        local_db_path = os.path.join(cwd, 'data', 'memory.db')
+        if os.path.exists(local_db_path) or 'greeum' in cwd.lower():
+            logger.info(f"[DB] Using local project database: {local_db_path}")
+            return local_db_path
+
+        home_dir = os.path.expanduser('~')
+        user_db_path = os.path.join(home_dir, '.greeum', 'memory.db')
+        logger.info(f"[DB] Using global user database: {user_db_path}")
+        return user_db_path
     
     def _setup_wal_mode(self):
         """
@@ -139,13 +195,104 @@ class ThreadSafeDatabaseManager:
                     busy_ms = int(float(os.getenv('GREEUM_SQLITE_BUSY_TIMEOUT', '0.2')) * 1000)
                     self.local.conn.execute(f'PRAGMA busy_timeout = {busy_ms}')
                 except sqlite3.OperationalError as pragma_error:
-                    logger.debug(f"Thread-safe PRAGMA setup skipped: {pragma_error}")
-                
+                    logger.debug("Thread-safe PRAGMA setup skipped: %s", pragma_error)
+                except sqlite3.DatabaseError as exc:
+                    if is_corruption_error(exc):
+                        logger.warning(
+                            "Encountered corrupt database while applying PRAGMA (%s). Rebuilding %s.",
+                            exc,
+                            self.connection_string,
+                        )
+                        return self._repair_corrupt_database(str(exc))
+                    raise
+
                 logger.debug(f"새 스레드 연결 생성: {threading.current_thread().name}")
+                self.local._integrity_checked = False
             else:
                 raise ValueError(f"지원하지 않는 데이터베이스 타입: {self.db_type}")
-        
+
+        if not getattr(self.local, '_integrity_checked', False):
+            conn = self._ensure_integrity(self.local.conn)
+            self.local.conn = conn
+            self.local._integrity_checked = True
+
         return self.local.conn
+
+    def _ensure_integrity(self, conn: sqlite3.Connection) -> sqlite3.Connection:
+        """Validate SQLite integrity and rebuild the database when corrupted."""
+
+        if self.db_type != 'sqlite':
+            return conn
+
+        try:
+            row = conn.execute("PRAGMA integrity_check").fetchone()
+        except sqlite3.DatabaseError as exc:
+            if not is_corruption_error(exc):
+                raise
+            logger.warning(
+                "Thread-safe manager detected corrupt database (%s). Rebuilding %s.",
+                exc,
+                self.connection_string,
+            )
+            return self._repair_corrupt_database(str(exc))
+
+        if not row:
+            raise sqlite3.DatabaseError("integrity_check returned no rows")
+
+        result = (row[0] or "").lower()
+        if result != 'ok':
+            exc = sqlite3.DatabaseError(result)
+            if not is_corruption_error(exc):
+                raise exc
+            logger.warning(
+                "integrity_check reported '%s'. Rebuilding database %s.",
+                result,
+                self.connection_string,
+            )
+            return self._repair_corrupt_database(result)
+
+        return conn
+
+    def _repair_corrupt_database(self, reason: str) -> sqlite3.Connection:
+        """Backup the corrupted DB, rebuild, and return a fresh connection."""
+
+        db_path = Path(self.connection_string)
+        current_conn = getattr(self.local, 'conn', None)
+        if current_conn is not None:
+            try:
+                current_conn.close()
+            except Exception:  # pragma: no cover
+                pass
+        self.local.conn = None
+
+        backup_path = backup_database_files(db_path, label='malformed')
+        if backup_path:
+            logger.info("Backed up corrupt database to %s", backup_path)
+
+        remove_database_files(db_path)
+        rebuild_empty_sqlite_database(db_path)
+
+        timeout = float(os.getenv('GREEUM_SQLITE_TIMEOUT', '10'))
+        new_conn = sqlite3.connect(
+            self.connection_string,
+            check_same_thread=False,
+            timeout=timeout,
+        )
+        new_conn.row_factory = sqlite3.Row
+        try:
+            new_conn.execute("PRAGMA foreign_keys=ON")
+            new_conn.execute("PRAGMA cache_size=10000")
+            new_conn.execute("PRAGMA journal_mode=WAL")
+            new_conn.execute("PRAGMA synchronous=NORMAL")
+            busy_ms = int(float(os.getenv('GREEUM_SQLITE_BUSY_TIMEOUT', '0.2')) * 1000)
+            new_conn.execute(f'PRAGMA busy_timeout = {busy_ms}')
+        except sqlite3.OperationalError as pragma_error:
+            logger.debug("Thread-safe PRAGMA setup skipped after repair: %s", pragma_error)
+
+        self.local.conn = new_conn
+        logger.info("Thread-safe database rebuilt after corruption (%s)", reason)
+        self.local._integrity_checked = True
+        return new_conn
 
     def _write_worker(self) -> None:
         """Background worker that serializes SQLite write operations."""
@@ -192,6 +339,124 @@ class ThreadSafeDatabaseManager:
         if threading.current_thread() is getattr(self, "_write_thread", None):
             return func()
         return self._execute_write(operation)
+
+    # ------------------------------------------------------------------
+    # Compatibility search helpers
+    # ------------------------------------------------------------------
+
+    def search_blocks_by_keyword(self, keywords: List[str], limit: int = 100) -> List[Dict[str, Any]]:
+        """Keyword-based block search compatible with DatabaseManager."""
+
+        if not keywords:
+            return []
+
+        cursor = self._get_connection().cursor()
+        block_indices: set[int] = set()
+
+        for keyword in keywords:
+            if not keyword:
+                continue
+            kw_lower = keyword.lower()
+
+            cursor.execute(
+                "SELECT DISTINCT block_index FROM block_keywords WHERE lower(keyword) LIKE ?",
+                (f"%{kw_lower}%",),
+            )
+            block_indices.update(row[0] for row in cursor.fetchall())
+
+            cursor.execute(
+                "SELECT block_index FROM blocks WHERE lower(context) LIKE ? LIMIT ?",
+                (f"%{kw_lower}%", limit),
+            )
+            block_indices.update(row[0] for row in cursor.fetchall())
+
+        results: List[Dict[str, Any]] = []
+        for index in block_indices:
+            block = self.get_block(index)
+            if block:
+                results.append(block)
+
+        return results[:limit]
+
+    def search_blocks_by_embedding(
+        self,
+        query_embedding: List[float],
+        top_k: int = 5,
+        min_similarity: float = 0.0,
+    ) -> List[Dict[str, Any]]:
+        """Embedding-based block search compatible with DatabaseManager."""
+
+        if not query_embedding:
+            return []
+
+        query_vector = np.asarray(query_embedding, dtype=np.float32)
+        if query_vector.ndim > 1:
+            query_vector = query_vector.reshape(-1)
+
+        query_norm = float(np.linalg.norm(query_vector))
+        if query_norm == 0.0:
+            return []
+
+        cursor = self._get_connection().cursor()
+        cursor.execute("SELECT block_index, embedding, embedding_dim FROM block_embeddings")
+
+        scored: List[Tuple[int, float]] = []
+        for block_index, embedding_blob, embedding_dim in cursor.fetchall():
+            if not embedding_blob:
+                continue
+
+            block_vector = np.frombuffer(embedding_blob, dtype=np.float32)
+            if embedding_dim:
+                block_vector = block_vector[:embedding_dim]
+
+            if block_vector.shape != query_vector.shape:
+                continue
+
+            block_norm = float(np.linalg.norm(block_vector))
+            if block_norm == 0.0:
+                continue
+
+            similarity = float(np.dot(query_vector, block_vector) / (query_norm * block_norm))
+            if similarity < min_similarity:
+                continue
+
+            scored.append((block_index, similarity))
+
+        scored.sort(key=lambda item: item[1], reverse=True)
+
+        results: List[Dict[str, Any]] = []
+        for block_index, similarity in scored[:top_k]:
+            block = self.get_block(block_index)
+            if block:
+                block["similarity"] = similarity
+                results.append(block)
+
+        return results
+
+    def get_blocks_since_time(self, since_timestamp: str, limit: int = 100) -> List[Dict[str, Any]]:
+        """Fetch blocks stored after the provided ISO timestamp."""
+
+        if not since_timestamp:
+            return []
+
+        cursor = self._get_connection().cursor()
+        cursor.execute(
+            """
+            SELECT block_index FROM blocks
+            WHERE timestamp >= ?
+            ORDER BY timestamp DESC
+            LIMIT ?
+            """,
+            (since_timestamp, limit),
+        )
+
+        results: List[Dict[str, Any]] = []
+        for (block_index,) in cursor.fetchall():
+            block = self.get_block(block_index)
+            if block:
+                results.append(block)
+
+        return results
 
     def _create_schemas(self, conn):
         """
@@ -271,9 +536,204 @@ class ThreadSafeDatabaseManager:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_block_keywords ON block_keywords(keyword)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_block_tags ON block_tags(tag)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_stm_timestamp ON short_term_memories(timestamp)')
-        
+
+        # Branch schema and additional tables
+        try:
+            if BranchSchemaSQL.check_migration_needed(cursor):
+                for stmt in BranchSchemaSQL.get_migration_sql():
+                    cursor.execute(stmt)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Branch schema migration skipped: {exc}")
+
+        self._create_v3_tables(cursor)
+        self._initialize_branch_structures(cursor)
+
         conn.commit()
         logger.debug("Thread-safe 데이터베이스 스키마 생성 완료")
+
+    def _initialize_branch_structures(self, cursor) -> None:
+        """Migrate legacy stm_slots table to the anchor store when present."""
+        try:
+            cursor.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='stm_slots'"
+            )
+            if not cursor.fetchone():
+                return
+
+            cursor.execute(
+                "SELECT slot_name, block_hash, branch_root, updated_at FROM stm_slots"
+            )
+            rows = cursor.fetchall()
+
+            anchor_path = Path(os.environ.get("GREEUM_STM_DB", "")).expanduser()
+            if not anchor_path:
+                anchor_path = Path(self.connection_string).expanduser().resolve().parent / "stm_anchors.db"
+
+            anchor_store = STMAnchorStore(anchor_path)
+            for slot_name, block_hash, branch_root, updated_at in rows:
+                anchor_store.upsert_slot(
+                    slot_name=slot_name,
+                    anchor_block=block_hash,
+                    topic_vec=None,
+                    summary=branch_root or "",
+                    last_seen=updated_at or 0,
+                    hysteresis=0,
+                )
+
+            try:
+                anchor_store.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+            cursor.execute("DROP TABLE IF EXISTS stm_slots")
+            logger.info("Migrated legacy stm_slots table into stm_anchors store")
+
+        except sqlite3.OperationalError as exc:
+            logger.debug(f"stm_slots migration skipped: {exc}")
+
+    def _create_v3_tables(self, cursor) -> None:
+        """Create newer association and actant tables used by the engine."""
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS memory_nodes (
+                node_id TEXT PRIMARY KEY,
+                memory_id INTEGER,
+                node_type TEXT,
+                content TEXT,
+                embedding TEXT,
+                activation_level REAL DEFAULT 0.0,
+                last_activated TEXT,
+                metadata TEXT,
+                created_at TEXT,
+                FOREIGN KEY (memory_id) REFERENCES blocks(block_index)
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS associations (
+                association_id TEXT PRIMARY KEY,
+                source_node_id TEXT,
+                target_node_id TEXT,
+                association_type TEXT,
+                strength REAL DEFAULT 0.5,
+                weight REAL DEFAULT 1.0,
+                created_at TEXT,
+                last_activated TEXT,
+                activation_count INTEGER DEFAULT 0,
+                metadata TEXT,
+                FOREIGN KEY (source_node_id) REFERENCES memory_nodes(node_id),
+                FOREIGN KEY (target_node_id) REFERENCES memory_nodes(node_id)
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS activation_history (
+                history_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                node_id TEXT,
+                activation_level REAL,
+                trigger_type TEXT,
+                trigger_source TEXT,
+                timestamp TEXT,
+                session_id TEXT,
+                FOREIGN KEY (node_id) REFERENCES memory_nodes(node_id)
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS context_sessions (
+                session_id TEXT PRIMARY KEY,
+                active_nodes TEXT,
+                activation_snapshot TEXT,
+                created_at TEXT,
+                last_updated TEXT,
+                metadata TEXT
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS memory_actants (
+                actant_id TEXT PRIMARY KEY,
+                memory_id INTEGER,
+                subject_raw TEXT,
+                subject_hash TEXT,
+                action_raw TEXT,
+                action_hash TEXT,
+                object_raw TEXT,
+                object_hash TEXT,
+                sender_raw TEXT,
+                sender_hash TEXT,
+                receiver_raw TEXT,
+                receiver_hash TEXT,
+                helper_raw TEXT,
+                helper_hash TEXT,
+                opponent_raw TEXT,
+                opponent_hash TEXT,
+                confidence REAL DEFAULT 0.5,
+                parser_version TEXT,
+                parsed_at TEXT,
+                metadata TEXT,
+                FOREIGN KEY (memory_id) REFERENCES blocks(block_index)
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS actant_entities (
+                entity_hash TEXT PRIMARY KEY,
+                entity_type TEXT,
+                canonical_form TEXT,
+                variations TEXT,
+                first_seen TEXT,
+                last_seen TEXT,
+                occurrence_count INTEGER DEFAULT 1,
+                metadata TEXT
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS actant_actions (
+                action_hash TEXT PRIMARY KEY,
+                action_type TEXT,
+                canonical_form TEXT,
+                variations TEXT,
+                tense TEXT,
+                aspect TEXT,
+                first_seen TEXT,
+                last_seen TEXT,
+                occurrence_count INTEGER DEFAULT 1,
+                metadata TEXT
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS actant_relations (
+                relation_id TEXT PRIMARY KEY,
+                source_actant_id TEXT,
+                target_actant_id TEXT,
+                relation_type TEXT,
+                strength REAL DEFAULT 0.5,
+                evidence_count INTEGER DEFAULT 1,
+                created_at TEXT,
+                last_updated TEXT,
+                metadata TEXT,
+                FOREIGN KEY (source_actant_id) REFERENCES memory_actants(actant_id),
+                FOREIGN KEY (target_actant_id) REFERENCES memory_actants(actant_id)
+            )
+        ''')
+
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_nodes_memory ON memory_nodes(memory_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_nodes_activation ON memory_nodes(activation_level)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_associations_source ON associations(source_node_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_associations_target ON associations(target_node_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_associations_strength ON associations(strength)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_activation_history_node ON activation_history(node_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_activation_history_session ON activation_history(session_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_actants_memory ON memory_actants(memory_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_actants_subject ON memory_actants(subject_hash)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_actants_action ON memory_actants(action_hash)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_actants_object ON memory_actants(object_hash)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_entities_type ON actant_entities(entity_type)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_actions_type ON actant_actions(action_type)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_relations_source ON actant_relations(source_actant_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_relations_target ON actant_relations(target_actant_id)')
     
     def close(self):
         """

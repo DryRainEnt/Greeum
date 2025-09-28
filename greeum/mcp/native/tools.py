@@ -15,6 +15,7 @@ from typing import Dict, Any, List, Optional, Union
 from datetime import datetime
 import json
 import hashlib
+from pathlib import Path
 
 try:
     import anyio
@@ -40,6 +41,13 @@ except (OSError, PermissionError):
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     logger.setLevel(logging.DEBUG)
+
+from greeum.core.storage_admin import (
+    create_backup,
+    discover_storage_candidates,
+    merge_storage,
+    resolve_active_storage,
+)
 
 class GreeumMCPTools:
     """
@@ -118,8 +126,14 @@ class GreeumMCPTools:
             return await self._handle_get_memory_stats(arguments)
         elif tool_name == "usage_analytics":
             return await self._handle_usage_analytics(arguments)
+        elif tool_name == "analyze":
+            return await self._handle_analyze(arguments)
         elif tool_name == "warmup_embeddings":
             return await self._handle_warmup_embeddings(arguments)
+        elif tool_name == "storage_backup":
+            return await self._handle_storage_backup(arguments)
+        elif tool_name == "storage_merge":
+            return await self._handle_storage_merge(arguments)
         elif tool_name == "analyze_causality":
             return await self._handle_analyze_causality(arguments)
         elif tool_name == "infer_causality":
@@ -715,18 +729,149 @@ This may indicate a transaction rollback or database issue."""
             if not usage_analytics:
                 return "ERROR: Usage analytics not available"
 
-            # 기본 분석 리포트
-            return f"""📈 **Usage Analytics ({days} days)**
+            report = usage_analytics.get_usage_report(days=days, report_type=report_type)
 
-**Report Type**: {report_type}
-**Period**: Last {days} days
-**Status**: Analytics tracking active
+            total_ops = report.get("total_operations", 0)
+            total_searches = report.get("total_searches", 0)
+            total_memories = report.get("total_memories", 0)
+            avg_search = report.get("average_search_time", 0.0)
+            growth = report.get("memory_growth_rate", 0.0)
+            generated_at = report.get("timestamp", datetime.utcnow().isoformat())
 
-*Detailed analytics implementation in progress*"""
+            lines = [
+                f"📈 **Usage Analytics ({days} days)**",
+                "",
+                f"**Report Type**: {report_type}",
+                f"**Period**: Last {days} days",
+                f"**Generated**: {generated_at}",
+                "",
+                f"- Total operations: {total_ops}",
+                f"- Searches executed: {total_searches}",
+                f"- Memories stored: {total_memories}",
+                f"- Avg search time: {avg_search:.2f} ms",
+                f"- Memory growth rate: {growth:.2f} entries/day",
+            ]
+
+            breakdown = report.get("breakdown") or report.get("details")
+            if isinstance(breakdown, dict) and breakdown:
+                lines.append("")
+                lines.append("**Breakdown**:")
+                for key, value in breakdown.items():
+                    lines.append(f"- {key}: {value}")
+
+            return "\n".join(lines)
 
         except Exception as e:
             logger.error(f"usage_analytics failed: {e}")
             return f"ERROR: Failed to get usage analytics: {str(e)}"
+
+    async def _handle_analyze(self, arguments: Dict[str, Any]) -> str:
+        """analyze 도구 처리"""
+
+        try:
+            days = arguments.get("days", 7)
+            try:
+                days = int(days)
+            except Exception:
+                days = 7
+
+            if not self._check_components():
+                return "ERROR: Greeum components not available"
+
+            usage_analytics = self.components.get('usage_analytics')
+            if not usage_analytics:
+                return "ERROR: Usage analytics not available"
+
+            summary = usage_analytics.generate_system_report(days=days)
+            return summary or "No activity recorded yet."
+
+        except Exception as exc:
+            logger.error(f"analyze failed: {exc}")
+            return f"ERROR: Failed to analyze memory system: {str(exc)}"
+
+    async def _handle_storage_backup(self, arguments: Dict[str, Any]) -> str:
+        """Create a backup of the current storage directory."""
+
+        data_dir_arg = arguments.get("data_dir")
+        label = arguments.get("label", "manual")
+
+        try:
+            active = resolve_active_storage(data_dir_arg)
+        except FileNotFoundError as exc:
+            return f"ERROR: {exc}"
+
+        backup_info = create_backup(active.data_dir, label=label)
+
+        candidates = discover_storage_candidates()
+        response_lines = [
+            "📦 **Storage Backup Completed**",
+            "",
+            f"- Active directory: {active.data_dir}",
+            f"- Backup file: {backup_info['backup']}",
+        ]
+
+        sidecars = backup_info.get("sidecars") or []
+        if sidecars:
+            response_lines.append(f"- Sidecar files: {', '.join(sidecars)}")
+
+        other_dirs = [c for c in candidates if c.data_dir != active.data_dir]
+        if other_dirs:
+            response_lines.append("")
+            response_lines.append("Other detected storages:")
+            for candidate in other_dirs:
+                response_lines.append(
+                    f"• {candidate.data_dir} — {candidate.total_blocks} blocks"
+                    f" (latest: {candidate.latest_timestamp or 'n/a'})"
+                )
+
+        return "\n".join(response_lines)
+
+    async def _handle_storage_merge(self, arguments: Dict[str, Any]) -> str:
+        """Merge two storage directories."""
+
+        source_dir = arguments.get("source")
+        target_dir = arguments.get("target")
+        label = arguments.get("label", "merge")
+
+        if not source_dir:
+            candidates = discover_storage_candidates()
+            if not candidates:
+                return "ERROR: No storage directories detected."
+
+            lines = ["Detected storage locations (provide `source` to merge):"]
+            for candidate in candidates:
+                lines.append(
+                    f"- {candidate.data_dir} — {candidate.total_blocks} blocks"
+                    f" (latest: {candidate.latest_timestamp or 'n/a'})"
+                )
+            return "\n".join(lines)
+
+        try:
+            source = resolve_active_storage(source_dir)
+            target = resolve_active_storage(target_dir)
+        except FileNotFoundError as exc:
+            return f"ERROR: {exc}"
+
+        if source.db_path == target.db_path:
+            return "ERROR: Source and target storage must be different."
+
+        backup_info = create_backup(target.data_dir, label=f"pre_{label}")
+        merge_result = merge_storage(source.db_path, target.db_path)
+
+        lines = [
+            "🔄 **Storage Merge Completed**",
+            "",
+            f"- Source: {source.db_path}",
+            f"- Target: {target.db_path}",
+            f"- Pre-merge backup: {backup_info['backup']}",
+            f"- Blocks inserted: {merge_result.get('blocks_inserted', 0)}",
+            f"- Tables updated: {merge_result.get('tables_updated', 0)}",
+        ]
+
+        if merge_result.get("blocks_inserted", 0) == 0:
+            lines.append("\nNo new blocks were inserted (all hashes already present).")
+
+        return "\n".join(lines)
 
     async def _handle_warmup_embeddings(self, arguments: Dict[str, Any]) -> str:
         """Pre-load the SentenceTransformer model for faster first use."""
