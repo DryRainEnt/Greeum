@@ -4,7 +4,13 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> Context-aware memory for AI workflows. Keep long-running conversations and project notes persistent across tools.
+> 기억의 해방 — 지긋지긋한 컨텍스트 제한에서 자유로워지세요. Greeum은 MCP 호환 도구와 CLI가 동일한 장기 기억 저장소를 사용하도록 설계된 오픈소스 모듈입니다.
+
+**왜 Greeum인가요?**
+- 한 번의 설치와 셋업으로 Codex, ClaudeCode, Cursor, ChatGPT MCP에 등록할 수 있습니다.
+- search → 작업 → add 루틴을 따라 저장된 기록을 슬롯(A/B/C)과 브랜치로 정리합니다.
+- Branch 분석 리포트와 usage 통계 도구로 최근 활동과 슬롯 상태를 조회할 수 있습니다.
+- 기본은 해시 기반 폴백 검색이며, SentenceTransformer를 설치하면 의미 검색을 추가로 사용할 수 있습니다.
 
 <p align="center">
   <a href="README.md"><strong>English</strong></a> · <a href="docs/README_ko.md">한국어</a>
@@ -18,6 +24,8 @@
 > 1. Install the package (pipx or pip)
 > 2. Run `greeum setup --start-worker` to create the data directory and launch the worker
 > 3. Connect your MCP client (Codex, ClaudeCode, Cursor, …)
+
+> ⚠️ **Platform support**: Greeum MCP는 Linux, macOS, WSL 환경에서 안정적으로 동작합니다. Windows PowerShell에서는 Codex STDIO 초기화가 반복적으로 실패할 수 있으므로 WSL을 사용하세요.
 
 👉 **Need the ultra-short version?** See [`docs/QUICKSTART.md`](docs/QUICKSTART.md) for “설치 → 셋업 → 연동” 한 페이지 요약.
 
@@ -42,6 +50,11 @@ greeum mcp warmup                          # downloads the default model
   ```bash
   greeum mcp serve --semantic -t stdio
   ```
+
+### Keep the worker running automatically
+- **macOS**: create `~/Library/LaunchAgents/com.greeum.worker.plist` that runs `greeum worker serve --host 127.0.0.1 --port 8800 --semantic` at login.
+- **Linux (systemd user)**: add a unit under `~/.config/systemd/user/greeum-worker.service` pointing to the same command and enable it with `systemctl --user enable --now greeum-worker`.
+- **Windows**: register `greeum worker serve --host 127.0.0.1 --port 8800` in 작업 스케줄러 with the “로그온 시 실행” trigger.
 
 ---
 

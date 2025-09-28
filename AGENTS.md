@@ -5,6 +5,16 @@
 ## Project Structure & Module Organization
 The core package lives in `greeum/`, providing the STM/LTM memory managers, graph index logic, and shared utilities. Command-line tooling is under `cli/`, while `api/` exposes the REST/MCP layers used by Claude and other integrations. Reusable examples and smoke assets live in `examples/` and `data/`. Automated documentation, migration notes, and design briefs live under `docs/` and the top-level `*.md` reports. Tests are grouped in `tests/` for pytest suites, with scenario-specific regression harnesses in the `test_*/` directories that mirror production incidents.
 
+## Agent Operational Workflow
+- 아래의 `greeum` MCP 도구 사용은 선택이 아닌 필수임을 명심해야 한다. 하기 조건마다 반드시 사용하여 맥락의 휘발을 상시 방지할 수 있어야 한다. 
+- Codex·Claude 환경에서는 **로컬 STDIO MCP 경로**를 기본으로 사용한다. CLI 명령 대신 `greeum` MCP 툴(add_memory, search_memory, get_memory_stats, usage_analytics, analyze 등)을 우선 호출해 작업을 기록·조회한다.
+- 세션 컨텍스트가 비어 있거나 축약돼 있을 때는 `get_memory_stats`와 `usage_analytics`로 맥락을 빠르게 복원한다.
+- 새 작업 요청이 들어오면 `search_memory`로 최신 기록을 우선 탐색하고, 이어서 팔로우업을 진행한다.
+- 작업 중간에 새로운 추론이 나오거나 완료 직후에는 `add_memory`로 즉시 경과를 남긴다(액탄트 패턴 유지).
+- 필요할 때마다 에이전트는 greeum 도구를 자율적으로 호출할 수 있으며, 사용자는 이 권한을 상시 보증한다.
+- SentenceTransformer가 필요한 경우 `greeum mcp warmup`으로 모델을 미리 로드하고, 응답 지연 시 `/tmp/greeum_codex_stdio.log`에서 원인을 확인한다.
+- CLI, REST 호출은 MCP 도구로 해결할 수 없을 때만 사용한다.
+
 ## Build, Test, and Development Commands
 - `pip install -e .[dev]`: set up an editable checkout with linting and testing extras.
 - `pytest`: run the fast unit and integration suite in `tests/`.
