@@ -28,28 +28,62 @@ class MemoryTools:
         self.temporal_reasoner = temporal_reasoner
         self.write_queue = write_queue or AsyncWriteQueue(label="mcp")
     
-    async def add_memory(self, content: str, importance: float = 0.5) -> str:
+    async def add_memory(
+        self,
+        content: str,
+        importance: float = 0.5,
+        project_tags: Optional[List[str]] = None
+    ) -> str:
         """
         Add a new memory to the long-term storage.
-        
+
+        IMPORTANT: Always provide project_tags with the current project name to ensure
+        proper memory organization and retrieval across different projects.
+
         Args:
             content: The content of the memory to store
             importance: The importance of the memory (0.0-1.0)
-        
+            project_tags: Optional list of project-related tags (e.g., ["Greeum", "v3.1"]).
+                         Strongly recommended to include current project name.
+
         Returns:
             Memory ID of the created memory
+
+        Example:
+            await add_memory(
+                content="Fixed branch selection bug",
+                importance=0.7,
+                project_tags=["Greeum", "backend"]
+            )
         """
         from greeum.text_utils import process_user_input
-        
+        import os
+
         processed = process_user_input(content)
+
+        # Merge project tags with auto-extracted tags
+        all_tags = processed.get("tags", [])
+        if project_tags:
+            all_tags.extend(project_tags)
+
+        # Auto-detect project from cwd if no tags provided (fallback)
+        if not project_tags:
+            cwd = os.getcwd()
+            project_name = os.path.basename(cwd)
+            if project_name and project_name not in ['.', '..', '']:
+                all_tags.append(f"auto:{project_name}")
 
         def _write_sync():
             block = self.block_manager.add_block(
                 context=processed.get("context", content),
                 keywords=processed.get("keywords", []),
-                tags=processed.get("tags", []),
+                tags=all_tags,
                 importance=importance,
                 embedding=processed.get("embedding", None),
+                metadata={
+                    "project_tags": project_tags or [],
+                    "auto_detected_project": os.path.basename(os.getcwd())
+                }
             )
 
             if not block:
@@ -69,31 +103,64 @@ class MemoryTools:
         # Return the block index as the memory ID
         return str(block.get("block_index", ""))
     
-    async def query_memory(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    async def query_memory(
+        self,
+        query: str,
+        limit: int = 5,
+        project_filter: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
         """
-        Search memories by query text.
-        
+        Search memories by query text with optional project filtering.
+
         Args:
             query: The search query
             limit: Maximum number of results to return
-        
+            project_filter: Optional list of project tags to filter by.
+                          If provided, only memories with these project tags will be returned.
+                          Use ["Greeum"] to get only Greeum project memories.
+
         Returns:
-            List of matching memory blocks
+            List of matching memory blocks with relevance scores
+
+        Example:
+            # Search across all projects
+            await query_memory("branch selection bug", limit=10)
+
+            # Search only in Greeum project
+            await query_memory("branch selection", limit=5, project_filter=["Greeum"])
         """
         from greeum.text_utils import process_user_input, generate_simple_embedding
-        
+
         processed = process_user_input(query)
         query_embedding = processed.get("embedding", generate_simple_embedding(query))
         query_keywords = processed.get("keywords", [])
-        
+
         # Update cache and get relevant blocks
         results = self.cache_manager.update_cache(
             user_input=query,
             query_embedding=query_embedding,
             extracted_keywords=query_keywords,
-            top_k=limit
+            top_k=limit * 3  # Get more candidates for filtering
         )
-        
+
+        # Apply project filter if specified
+        if project_filter:
+            filtered_results = []
+            for block in results:
+                tags = block.get("tags", [])
+                metadata = block.get("metadata", {})
+                project_tags = metadata.get("project_tags", [])
+
+                # Check if any project tag matches
+                all_tags = tags + project_tags
+                if any(tag in all_tags for tag in project_filter):
+                    filtered_results.append(block)
+                    if len(filtered_results) >= limit:
+                        break
+            results = filtered_results
+        else:
+            results = results[:limit]
+
         # Format results
         formatted_results = []
         for block in results:
@@ -102,9 +169,11 @@ class MemoryTools:
                 "content": block.get("context", ""),
                 "timestamp": block.get("timestamp", ""),
                 "keywords": block.get("keywords", []),
-                "importance": block.get("importance", 0.5)
+                "tags": block.get("tags", []),
+                "importance": block.get("importance", 0.5),
+                "project_tags": block.get("metadata", {}).get("project_tags", [])
             })
-        
+
         return formatted_results
     
     async def retrieve_memory(self, memory_id: str) -> Dict[str, Any]:
