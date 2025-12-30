@@ -83,5 +83,6 @@ markers = [
 
 [project.scripts]
 greeum = "greeum.cli:main"
+greeum-server = "greeum.server.__main__:main"
 greeum-workflow = "greeum.automation.workflow:workflow"
 greeum-digest = "greeum.automation.digest:digest"
