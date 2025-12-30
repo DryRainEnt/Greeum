@@ -354,6 +354,26 @@ pytest tests/ -v --tb=short
 
 ---
 
+## 핵심 결정사항 (2025-12-31)
+
+### 구조 결정
+- **서버 위치**: `greeum/server/` 신규 생성 (기존 `api/`는 유지)
+- **API 경로**: 버전 없이 `/memory`, `/search`, `/stats`
+- **하위호환**: 기존 `/v1/anchors`는 유지 (api/anchors.py import)
+
+### 오픈소스 전략: Open Core
+```
+오픈소스 (MIT 유지)           │  유료/비공개 (향후)
+──────────────────────────────┼──────────────────────
+• greeum/core/               │  • 클라우드 호스팅 서비스
+• greeum/server/             │  • 관리 대시보드
+• greeum/client/             │  • 멀티테넌트 지원
+• greeum/mcp/                │  • SLA 기술지원
+• 로컬 셀프호스팅            │  • 엔터프라이즈 기능
+```
+
+---
+
 ## 메모
 
 - **첫 사용자**: 본인 (dryrain PC를 서버로 사용)
