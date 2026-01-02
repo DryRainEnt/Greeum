@@ -53,6 +53,46 @@ except ImportError as e:
     STMWorkingSet = None
     _import_warnings.append(f"STMWorkingSet unavailable: {e}")
 
+# v5.0: Hybrid Graph Search components
+try:
+    from .bm25_index import BM25Index, HybridScorer
+except ImportError as e:
+    BM25Index = None
+    HybridScorer = None
+    _import_warnings.append(f"BM25Index/HybridScorer unavailable: {e}")
+
+try:
+    from .hybrid_graph_search import HybridGraphSearch, ProjectAnchorManager, SearchResult
+except ImportError as e:
+    HybridGraphSearch = None
+    ProjectAnchorManager = None
+    SearchResult = None
+    _import_warnings.append(f"HybridGraphSearch unavailable: {e}")
+
+# v5.0: Insight Pipeline components
+try:
+    from .insight_pipeline import InsightPipeline, PipelineResult, store_insight
+except ImportError as e:
+    InsightPipeline = None
+    PipelineResult = None
+    store_insight = None
+    _import_warnings.append(f"InsightPipeline unavailable: {e}")
+
+try:
+    from .project_manager import ProjectManager, Project
+except ImportError as e:
+    ProjectManager = None
+    Project = None
+    _import_warnings.append(f"ProjectManager unavailable: {e}")
+
+try:
+    from .insight_filter import InsightFilter, FilterResult, is_insight
+except ImportError as e:
+    InsightFilter = None
+    FilterResult = None
+    is_insight = None
+    _import_warnings.append(f"InsightFilter unavailable: {e}")
+
 # 임포트 경고 로깅 (개발 환경에서만)
 if _import_warnings:
     for warning in _import_warnings:
@@ -60,11 +100,26 @@ if _import_warnings:
 
 __all__ = [
     "BlockManager",
-    "STMManager", 
+    "STMManager",
     "CacheManager",
     "PromptWrapper",
     "DatabaseManager",
     "SearchEngine",
     "BertReranker",
-    "STMWorkingSet"
+    "STMWorkingSet",
+    # v5.0: Hybrid Graph Search
+    "BM25Index",
+    "HybridScorer",
+    "HybridGraphSearch",
+    "ProjectAnchorManager",
+    "SearchResult",
+    # v5.0: Insight Pipeline
+    "InsightPipeline",
+    "PipelineResult",
+    "store_insight",
+    "ProjectManager",
+    "Project",
+    "InsightFilter",
+    "FilterResult",
+    "is_insight"
 ]
