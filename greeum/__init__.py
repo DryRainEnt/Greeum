@@ -12,41 +12,35 @@ Features:
 
 __version__ = "5.1.0"
 
-# v3.0.0 Main Interface
+# Main Interface (v3.0+)
 from .core.context_memory import ContextMemorySystem
 
-# Legacy v2.6.4 compatibility imports
-try:
-    from .text_utils import process_user_input, extract_keywords_from_text, extract_tags_from_text, compute_text_importance, convert_numpy_types, extract_keywords_advanced
-except ImportError:
-    pass
+# Core components
+from .core.block_manager import BlockManager
+from .core.stm_manager import STMManager
+from .core.cache_manager import CacheManager
+from .core.prompt_wrapper import PromptWrapper
+from .core.database_manager import DatabaseManager
 
-# 편의를 위한 별명
-try:
-    process_text = process_user_input
-except NameError:
-    pass
+# Search engines
+from .core.smart_search_engine import SmartSearchEngine
+from .core.ltm_links_cache import LTMLinksCache, create_neighbor_link, calculate_link_weight
 
-# Core memory system (v2.0 structure with backward compatibility)
+# Anchors
+from .anchors.auto_movement import AutoAnchorMovement
+
+# Text utilities
 try:
-    from .core import (
-        BlockManager, STMManager, CacheManager, PromptWrapper,
-        DatabaseManager, SearchEngine, BertReranker, 
-        STMWorkingSet
+    from .text_utils import (
+        process_user_input, extract_keywords_from_text,
+        extract_tags_from_text, compute_text_importance,
+        convert_numpy_types, extract_keywords_advanced
     )
-    # v2.5.0 Smart Search Engine
-    from .core.smart_search_engine import SmartSearchEngine
-    from .core.ltm_links_cache import LTMLinksCache, create_neighbor_link, calculate_link_weight
-    from .anchors.auto_movement import AutoAnchorMovement
+    process_text = process_user_input  # Alias
 except ImportError:
     pass
 
-# Backward compatibility - keep old import paths working
-try:
-    from .core.database_manager import DatabaseManager
-except ImportError:
-    pass
-
+# Embedding models
 try:
     from .embedding_models import (
         SimpleEmbeddingModel,
@@ -55,6 +49,7 @@ try:
 except ImportError:
     pass
 
+# Optional modules
 try:
     from .temporal_reasoner import TemporalReasoner, evaluate_temporal_query
 except ImportError:
@@ -70,92 +65,60 @@ try:
 except ImportError:
     pass
 
-# Backward compatibility - ensure old imports still work
-try:
-    from .core.block_manager import BlockManager
-except ImportError:
-    pass
-
-try:
-    from .core.stm_manager import STMManager  
-except ImportError:
-    pass
-
-try:
-    from .core.cache_manager import CacheManager
-except ImportError:
-    pass
-
-try:
-    from .core.prompt_wrapper import PromptWrapper
-except ImportError:
-    pass
-
-# numpy 타입 변환 유틸리티를 최상위로 노출
-try:
-    from .text_utils import convert_numpy_types
-except ImportError:
-    pass
-
+# Client (legacy compatibility - will be deprecated)
 try:
     from .client import (
-        MemoryClient, SimplifiedMemoryClient, 
+        MemoryClient, SimplifiedMemoryClient,
         ClientError, ConnectionFailedError, RequestTimeoutError, APIError
     )
 except ImportError:
     pass
 
+# New client (v5.1.0+)
 try:
-    from .working_memory import STMWorkingSet
+    from .client import GreeumClient, GreeumHTTPClient
 except ImportError:
     pass
 
-try:
-    from .search_engine import SearchEngine, BertReranker
-except ImportError:
-    pass
-
-# MCP integration (v2.0 feature) - optional import
+# MCP integration - optional
 try:
     from . import mcp
-except (ImportError, AttributeError) as e:
-    # MCP is optional and may have dependency conflicts
-    # Skip MCP import for now due to httpx compatibility issues
+except (ImportError, AttributeError):
     pass
 
 __all__ = [
     "__version__",
+    "ContextMemorySystem",
+
     # Core components
     "BlockManager",
     "STMManager",
     "CacheManager",
     "PromptWrapper",
-    
-    # Database management
     "DatabaseManager",
-    
-    # LTM Links Cache (M2.3)
+
+    # Search
+    "SmartSearchEngine",
     "LTMLinksCache",
     "create_neighbor_link",
     "calculate_link_weight",
-    
-    # Auto Anchor Movement (M2.4)
+
+    # Anchors
     "AutoAnchorMovement",
-    
+
     # Embedding models
-    "EmbeddingModel",
-    "SimpleEmbeddingModel", 
-    "embedding_registry",
+    "SimpleEmbeddingModel",
+    "EmbeddingRegistry",
     "get_embedding",
     "register_embedding_model",
-    
+
     # Temporal reasoning
     "TemporalReasoner",
     "evaluate_temporal_query",
-    
+
     # Memory evolution
     "MemoryEvolutionManager",
-    
+
     # Knowledge graph
     "KnowledgeGraphManager",
 
@@ -166,8 +129,9 @@ __all__ = [
     "extract_tags_from_text",
     "compute_text_importance",
     "convert_numpy_types",
-    
-    # Client and exceptions
+    "extract_keywords_advanced",
+
+    # Client (legacy)
     "MemoryClient",
     "SimplifiedMemoryClient",
     "ClientError",
@@ -175,12 +139,7 @@ __all__ = [
     "RequestTimeoutError",
     "APIError",
 
-    # Working memory
-    "STMWorkingSet",
-
-    # Search engine
-    "SearchEngine",
-    "SmartSearchEngine",  # v2.5.0
-    "BertReranker",
-    "extract_keywords_advanced"
+    # Client (new)
+    "GreeumClient",
+    "GreeumHTTPClient",
 ] 
