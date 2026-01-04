@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "greeum"
-version = "3.1.3a1"
-description = "Context-Dependent Neural Memory System for LLMs with GraphIndex beam search, STM/LTM consolidation, and semantic tagging"
+version = "5.1.0"
+description = "LLM-Integrated Memory System with InsightJudge, HybridGraphSearch, and Branch-aware Storage"
 authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.10"

@@ -1,11 +1,16 @@
 """
-Greeum v3.1.0 - Context-Dependent Neural Memory System with Smart Routing
+Greeum v5.1.0 - LLM-Integrated Memory System with Intelligent Filtering
 
-GraphIndex beam search, context-aware memory formation, spreading activation, 
-and STM/LTM consolidation for Large Language Models with human-like memory capabilities.
+Features:
+- InsightJudge: LLM-based content filtering (no pattern matching)
+- HybridGraphSearch: BM25 + Vector search fusion
+- Branch-aware storage with LLM classification
+- GraphIndex beam search and spreading activation
+- STM/LTM consolidation for LLMs with human-like memory capabilities
+- Remote server connection with API key authentication
 """
 
-__version__ = "3.1.3a1"
+__version__ = "5.1.0"
 
 # v3.0.0 Main Interface
 from .core.context_memory import ContextMemorySystem

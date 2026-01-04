@@ -30,10 +30,17 @@ from ..config_store import (
     DEFAULT_DATA_DIR,
     DEFAULT_ST_MODEL,
     GreeumConfig,
+    RemoteConfig,
     ensure_data_dir,
     load_config,
     mark_semantic_ready,
     save_config,
+    set_remote_config,
+    set_mode,
+    clear_remote_config,
+    is_remote_mode,
+    get_remote_config,
+    CONFIG_PATH,
 )
 from ..core.database_manager import DatabaseManager
 from ..core.stm_anchor_store import get_anchor_store
@@ -232,15 +239,118 @@ def main(ctx: click.Context, verbose: bool, debug: bool, quiet: bool):
     os.environ.setdefault('GREEUM_DATA_DIR', data_dir)
 
 
+# ============================================================
+# Remote Setup Helper Functions
+# ============================================================
+
+def _prompt_connection_mode() -> str:
+    """인터랙티브 모드 선택."""
+    click.echo("\n=== 연결 모드 ===")
+    click.echo("Where will Greeum store memories?")
+    click.echo("  [1] Local (default) - Store on this computer")
+    click.echo("  [2] Remote - Connect to a Greeum server")
+
+    choice = click.prompt("Select mode", default="1", type=click.Choice(["1", "2"]))
+    return "remote" if choice == "2" else "local"
+
+
+def _test_remote_connection(url: str, api_key: str) -> tuple:
+    """원격 서버 연결 테스트. Returns (success, info_dict)."""
+    try:
+        from ..client.http_client import GreeumHTTPClient
+
+        client = GreeumHTTPClient(base_url=url, api_key=api_key)
+        health = client.health_check()
+
+        if health.get("status") == "healthy":
+            return True, {"version": health.get("version", "unknown")}
+        else:
+            return False, {"error": health.get("error", "Unhealthy status")}
+    except Exception as e:
+        return False, {"error": str(e)}
+
+
+def _setup_remote_mode(config: GreeumConfig, remote_url: Optional[str],
+                       api_key: Optional[str], project: str):
+    """원격 서버 연결 설정."""
+    click.echo("\n=== 원격 서버 설정 ===")
+
+    if not remote_url:
+        remote_url = click.prompt("서버 URL", default="http://localhost:8400")
+    else:
+        click.echo(f"서버 URL: {remote_url}")
+
+    if not api_key:
+        api_key = click.prompt("API Key", hide_input=True)
+    else:
+        click.echo(f"API Key: {'*' * 8}")
+
+    if not project:
+        project = click.prompt("기본 프로젝트 (선택, Enter로 건너뛰기)", default="", show_default=False)
+    else:
+        click.echo(f"기본 프로젝트: {project}")
+
+    # 연결 테스트
+    click.echo("\n연결 테스트 중...")
+    success, info = _test_remote_connection(remote_url, api_key)
+
+    if success:
+        click.echo(f"  ✓ 서버: {remote_url} (v{info.get('version', 'unknown')})")
+        click.echo(f"  ✓ 인증: 성공")
+        if project:
+            click.echo(f"  ✓ 프로젝트: {project}")
+
+        # 설정 저장
+        set_remote_config(
+            server_url=remote_url,
+            api_key=api_key,
+            default_project=project,
+            enabled=True,
+        )
+
+        click.echo(f"\n설정이 저장되었습니다: {CONFIG_PATH}")
+        click.echo("\nSetup summary:")
+        click.echo(f"   - Mode: remote")
+        click.echo(f"   - Server: {remote_url}")
+        click.echo(f"   - Project: {project or '(global)'}")
+        click.echo("   - Next step: MCP 서버가 자동으로 원격 설정을 사용합니다.")
+    else:
+        click.echo(f"  ✗ 연결 실패: {info.get('error', 'Unknown error')}")
+        if click.confirm("설정을 저장하시겠습니까? (나중에 서버를 시작한 후 연결할 수 있습니다)", default=False):
+            set_remote_config(
+                server_url=remote_url,
+                api_key=api_key,
+                default_project=project,
+                enabled=True,
+            )
+            click.echo(f"설정이 저장되었습니다: {CONFIG_PATH}")
+        else:
+            click.echo("설정이 저장되지 않았습니다.")
+
+
 @main.command()
 @click.option('--data-dir', type=click.Path(file_okay=False, dir_okay=True, writable=True), help='Custom data directory')
 @click.option('--skip-warmup', is_flag=True, help='Skip SentenceTransformer warm-up step')
 @click.option('--start-worker/--skip-worker', default=True, show_default=True, help='Launch background worker after setup completes')
-def setup(data_dir: Optional[str], skip_warmup: bool, start_worker: bool):
+@click.option('--remote', 'remote_url', help='Remote server URL for quick remote setup')
+@click.option('--api-key', help='API key for remote server authentication')
+@click.option('--project', help='Default project/namespace for remote server')
+def setup(data_dir: Optional[str], skip_warmup: bool, start_worker: bool,
+          remote_url: Optional[str], api_key: Optional[str], project: Optional[str]):
     """Interactive first-time setup (data dir + optional warm-up)."""
 
     click.echo("[TOOLS]  Greeum setup wizard")
     config = load_config()
+
+    # 연결 모드 선택 (--remote 옵션이 있으면 바로 원격 모드)
+    if remote_url:
+        mode = "remote"
+    else:
+        mode = _prompt_connection_mode()
+
+    if mode == "remote":
+        _setup_remote_mode(config, remote_url, api_key, project or "")
+        return
 
     default_dir = data_dir or config.data_dir or str(DEFAULT_DATA_DIR)
     if data_dir:
@@ -328,7 +438,89 @@ def setup(data_dir: Optional[str], skip_warmup: bool, start_worker: bool):
         click.echo("   - Worker: failed to start (use 'greeum worker serve' later)")
     else:
         click.echo("   - Worker: skipped (use 'greeum worker serve' when needed)")
-    click.echo("   - Next step: run 'greeum memory add ""Your first note""' to test the connection")
+    click.echo("   - Next step: run 'greeum memory add \"Your first note\"' to test the connection")
+
+
+# ============================================================
+# Config Command Group (Remote Settings Management)
+# ============================================================
+
+@main.group()
+def config():
+    """Configuration management commands."""
+    pass
+
+
+@config.command("show")
+def config_show():
+    """Show current configuration."""
+    cfg = load_config()
+
+    click.echo("=== Greeum Configuration ===")
+    click.echo(f"Mode: {cfg.mode}")
+    click.echo(f"Data directory: {cfg.data_dir}")
+    click.echo(f"Semantic ready: {cfg.semantic_ready}")
+    click.echo(f"Config file: {CONFIG_PATH}")
+
+    if cfg.remote:
+        click.echo("\n=== Remote Configuration ===")
+        click.echo(f"Enabled: {cfg.remote.enabled}")
+        click.echo(f"Server URL: {cfg.remote.server_url}")
+        # API Key 마스킹
+        if cfg.remote.api_key:
+            masked_key = '*' * 8 + cfg.remote.api_key[-4:] if len(cfg.remote.api_key) > 4 else '****'
+            click.echo(f"API Key: {masked_key}")
+        else:
+            click.echo("API Key: (not set)")
+        click.echo(f"Default Project: {cfg.remote.default_project or '(global)'}")
+    else:
+        click.echo("\n(Remote configuration not set)")
+
+
+@config.command("test")
+def config_test():
+    """Test current remote connection."""
+    cfg = load_config()
+
+    if not cfg.remote or not cfg.remote.enabled:
+        click.echo("Remote mode not configured. Run 'greeum setup' first.")
+        return
+
+    click.echo(f"Testing connection to {cfg.remote.server_url}...")
+    success, info = _test_remote_connection(cfg.remote.server_url, cfg.remote.api_key)
+
+    if success:
+        click.echo(f"  ✓ Connected successfully")
+        click.echo(f"  ✓ Server version: {info.get('version', 'unknown')}")
+    else:
+        click.echo(f"  ✗ Connection failed: {info.get('error', 'Unknown error')}")
+
+
+@config.command("mode")
+@click.argument("new_mode", type=click.Choice(["local", "remote"]))
+def config_mode(new_mode: str):
+    """Switch between local and remote mode."""
+    cfg = load_config()
+
+    if new_mode == "remote":
+        if not cfg.remote or not cfg.remote.server_url:
+            click.echo("Remote configuration not set. Run 'greeum setup --remote <url>' first.")
+            return
+
+    set_mode(new_mode)
+    click.echo(f"Mode switched to: {new_mode}")
+
+
+@config.command("clear-remote")
+def config_clear():
+    """Clear remote configuration and switch to local mode."""
+    if click.confirm("This will remove remote server configuration. Continue?"):
+        clear_remote_config()
+        click.echo("Remote configuration cleared. Mode set to local.")
+    else:
+        click.echo("Cancelled.")
+
+
 @main.group()
 def memory():
     """Memory management commands (STM/LTM)"""
