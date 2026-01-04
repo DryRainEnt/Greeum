@@ -1,0 +1,37 @@
+======================================================================
+GREEUM LLM CLASSIFIER STRESS TEST - FINAL SUMMARY
+======================================================================
+
+Test completed at: 2025-12-31T07:18:31.193584
+Total duration: 2.50 hours
+
+OVERALL STATISTICS
+----------------------------------------
+Total classifications: 80,480
+Correct: 71,807
+Incorrect: 8,421
+Edge cases: 252
+Errors: 0
+Overall accuracy: 89.50%
+
+PERFORMANCE
+----------------------------------------
+Average response time: 110.79ms
+Min response time: 65.46ms
+Max response time: 197.62ms
+Throughput: 8.94 req/sec
+
+CATEGORY-WISE ACCURACY
+----------------------------------------
+  A: 81.33% (21859/26877)
+  B: 96.44% (25880/26834)
+  C: 90.76% (24068/26517)
+
+CONSISTENCY
+----------------------------------------
+Consistency failures: 0
+
+FILES
+----------------------------------------
+Full results: /home/dryrain/Greeum/test_results/stress_test_20251231_044831.json
+Log file: /home/dryrain/Greeum/test_results/stress_test_20251231_044831.log

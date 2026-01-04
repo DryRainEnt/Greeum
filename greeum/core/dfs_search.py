@@ -17,7 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 class DFSSearchEngine:
-    """DFS-based local-first search engine with global jump capability"""
+    """DFS-based local-first search engine with global jump capability
+
+    v4.0: Added query-based optimal branch selection for improved search accuracy.
+    """
 
     def __init__(self, db_manager):
         self.db_manager = db_manager
@@ -26,6 +29,7 @@ class DFSSearchEngine:
             "local_hits": 0,
             "global_fallbacks": 0,
             "branch_index_hits": 0,  # rc6: Track branch index usage
+            "optimal_branch_hits": 0,  # v4.0: Query-based branch selection
             "total_hops": 0,
             "avg_depth": 0.0,
             "jump_count": 0,
@@ -37,6 +41,10 @@ class DFSSearchEngine:
         self.jump_optimizer = GlobalJumpOptimizer()
         self.branch_index_manager = BranchIndexManager(db_manager)  # rc6: Branch indexing
 
+        # v4.0: Cache for branch centroids (for optimal branch selection)
+        self._branch_centroids = {}
+        self._centroids_built = False
+
         # P1: Adaptive DFS pattern learning
         self.adaptive_patterns = {
             "branch_access_frequency": {},  # branch_id -> access_count
@@ -45,6 +53,83 @@ class DFSSearchEngine:
             "depth_effectiveness": {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0}
         }
         self.learning_rate = 0.1  # for exponential moving average
+
+    def _build_branch_centroids(self) -> None:
+        """Build centroid embeddings for each branch for optimal branch selection."""
+        if self._centroids_built:
+            return
+
+        cursor = self.db_manager.conn.cursor()
+
+        # Get all branches
+        cursor.execute("""
+            SELECT DISTINCT root FROM blocks WHERE root IS NOT NULL
+        """)
+        branches = [row[0] for row in cursor.fetchall()]
+
+        for branch_root in branches:
+            cursor.execute("""
+                SELECT be.embedding
+                FROM block_embeddings be
+                JOIN blocks b ON be.block_index = b.block_index
+                WHERE b.root = ? AND be.embedding IS NOT NULL
+                LIMIT 50
+            """, (branch_root,))
+
+            embeddings = []
+            for (emb_blob,) in cursor.fetchall():
+                if emb_blob:
+                    try:
+                        emb = np.frombuffer(emb_blob, dtype=np.float32)
+                        embeddings.append(emb)
+                    except:
+                        continue
+
+            if embeddings:
+                self._branch_centroids[branch_root] = np.mean(embeddings, axis=0)
+
+        self._centroids_built = True
+        logger.debug(f"Built centroids for {len(self._branch_centroids)} branches")
+
+    def _select_optimal_branch(self, query_embedding: Optional[np.ndarray]) -> Optional[str]:
+        """
+        Select the optimal branch based on query embedding similarity.
+
+        v4.0: Instead of defaulting to current branch, find the branch
+        whose centroid is most similar to the query.
+
+        Returns:
+            branch_root of the most similar branch, or None if no match
+        """
+        if query_embedding is None or len(query_embedding) == 0:
+            return None
+
+        self._build_branch_centroids()
+
+        if not self._branch_centroids:
+            return None
+
+        best_branch = None
+        best_score = -1.0
+
+        for branch_root, centroid in self._branch_centroids.items():
+            try:
+                # Cosine similarity
+                similarity = np.dot(query_embedding, centroid) / (
+                    np.linalg.norm(query_embedding) * np.linalg.norm(centroid) + 1e-8
+                )
+                if similarity > best_score:
+                    best_score = similarity
+                    best_branch = branch_root
+            except Exception as e:
+                logger.debug(f"Error computing similarity for branch {branch_root[:8]}: {e}")
+                continue
+
+        if best_branch and best_score > 0.3:  # Threshold for meaningful similarity
+            logger.info(f"Optimal branch selected: {best_branch[:8]}... (similarity: {best_score:.3f})")
+            return best_branch
+
+        return None
     
     def search_with_dfs(self,
                         query: str,
@@ -56,7 +141,9 @@ class DFSSearchEngine:
                         fallback: bool = True) -> Tuple[List[Dict], Dict]:
         """
         DFS local-first search with optional global fallback
-        
+
+        v4.0: Now includes query-based optimal branch selection when slot is not specified.
+
         Args:
             query: Search query text
             query_embedding: Query embedding vector
@@ -64,26 +151,34 @@ class DFSSearchEngine:
             depth: Maximum DFS depth (default 3)
             limit: Maximum results (default 8)
             fallback: Enable global fallback if local insufficient
-            
+
         Returns:
             (results, search_meta)
         """
         start_time = time.time()
         self.metrics["total_searches"] += 1
-        
+
+        # v4.0: Query-based optimal branch selection when slot not specified
+        optimal_branch = None
+        if slot is None and query_embedding is not None:
+            optimal_branch = self._select_optimal_branch(query_embedding)
+            if optimal_branch:
+                self.metrics["optimal_branch_hits"] += 1
+
         # Get entry point from STM slot with cursor priority
         entry_point = self._get_entry_point_with_priority(slot, entry)
         if not entry_point:
             logger.warning(f"No entry point found for slot {slot}, entry type {entry}")
             # Fallback to most recent block
             entry_point = self._get_most_recent_block()
-        
+
         # Initialize search metadata
         search_meta = {
             "search_type": "local",
             "slot": slot,
             "entry_type": entry,
             "root": None,
+            "optimal_branch": optimal_branch,  # v4.0
             "depth_used": 0,
             "hops": 0,
             "local_used": True,
@@ -91,12 +186,23 @@ class DFSSearchEngine:
             "query_time_ms": 0.0,
             "result_count": 0
         }
-        
+
         # rc6: Phase 1 - Branch Index Search (fast)
         branch_results = []
         current_branch = None
 
-        if entry_point:
+        # v4.0: Use optimal branch if found, otherwise use entry point's branch
+        if optimal_branch:
+            current_branch = optimal_branch
+            search_meta["root"] = optimal_branch
+            search_meta["search_type"] = "optimal_branch"
+
+            # Search optimal branch first
+            branch_results = self.branch_index_manager.search_branch(
+                optimal_branch, query, limit, query_embedding=query_embedding
+            )
+            logger.info(f"Optimal branch search found {len(branch_results)} results")
+        elif entry_point:
             current_branch = entry_point.get("root", entry_point.get("hash"))
             search_meta["root"] = current_branch
 
@@ -105,8 +211,9 @@ class DFSSearchEngine:
                 query, limit, query_embedding=query_embedding
             )
 
-            if len(branch_results) < 3:  # Not enough in current branch
-                # Search related branches
+        if len(branch_results) < 3:  # Not enough in current/optimal branch
+            # Search related branches
+            if current_branch:
                 related = self.branch_index_manager.get_related_branches(current_branch, 2)
                 for branch in related:
                     additional = self.branch_index_manager.search_branch(
@@ -116,10 +223,11 @@ class DFSSearchEngine:
                     if len(branch_results) >= limit:
                         break
 
-            if branch_results:
-                self.metrics["branch_index_hits"] += 1
+        if branch_results:
+            self.metrics["branch_index_hits"] += 1
+            if not optimal_branch:
                 search_meta["search_type"] = "branch_index"
-                logger.info(f"Branch index found {len(branch_results)} results")
+            logger.info(f"Branch index found {len(branch_results)} results")
 
         # Phase 2: DFS local search (if branch index insufficient)
         local_results = branch_results

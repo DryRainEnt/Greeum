@@ -2,7 +2,7 @@ import os
 import json
 import hashlib
 import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 import numpy as np
 from pathlib import Path
 from .database_manager import DatabaseManager
@@ -10,6 +10,9 @@ from .database_manager import DatabaseManager
 import logging
 
 logger = logging.getLogger(__name__)
+
+# v4.0: Similarity threshold for knowledge update vs new block creation
+KNOWLEDGE_UPDATE_THRESHOLD = float(os.environ.get("GREEUM_KNOWLEDGE_UPDATE_THRESHOLD", "0.92"))
 
 class BlockManager:
     """장기 기억 블록을 관리하는 클래스 (DatabaseManager 사용)"""
@@ -103,9 +106,314 @@ class BlockManager:
             'search_count': 0,
             'avg_response_time': 0.0,
             'local_hit_rate': 0.0,
-            'avg_hops': 0.0
+            'avg_hops': 0.0,
+            'knowledge_updates': 0,  # v4.0: Track knowledge update vs new block
+            'new_blocks': 0
         }
-        
+
+    # ------------------------------------------------------------------
+    # v4.0: Time-based Insertion & Knowledge Update
+    # ------------------------------------------------------------------
+    def _find_existing_similar_block(
+        self,
+        content: str,
+        embedding: Optional[List[float]],
+        threshold: float = KNOWLEDGE_UPDATE_THRESHOLD
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Find existing block with very high similarity for knowledge update.
+
+        v4.0: Instead of creating duplicate blocks, we can update existing
+        knowledge when the similarity is above threshold.
+
+        Args:
+            content: New memory content
+            embedding: New content embedding vector
+            threshold: Similarity threshold for update (default 0.92)
+
+        Returns:
+            Existing block dict if found with high similarity, None otherwise
+        """
+        if embedding is None:
+            return None
+
+        try:
+            # Search for similar blocks using embedding
+            similar_blocks = self.db_manager.search_blocks_by_embedding(
+                embedding, top_k=3
+            )
+
+            if not similar_blocks:
+                return None
+
+            # Check if any block exceeds the update threshold
+            for block in similar_blocks:
+                similarity = block.get('_score', block.get('similarity', 0))
+
+                if similarity >= threshold:
+                    logger.info(
+                        f"Found existing similar block #{block.get('block_index')} "
+                        f"with similarity {similarity:.3f} >= {threshold}"
+                    )
+                    return block
+
+        except Exception as e:
+            logger.debug(f"Similar block search failed: {e}")
+
+        return None
+
+    def _update_existing_block(
+        self,
+        existing_block: Dict[str, Any],
+        new_content: str,
+        new_embedding: Optional[List[float]],
+        new_importance: float,
+        new_keywords: List[str] = None,
+        new_tags: List[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Update existing block with new knowledge (knowledge evolution).
+
+        v4.0: When very similar content is detected, we merge/update the
+        existing block rather than creating a duplicate.
+
+        Strategy:
+        - Content: Append or merge based on length
+        - Importance: Take maximum
+        - Keywords/Tags: Union of both
+        - Metadata: Update visit_count and last_seen_at
+
+        Note: keywords/tags/metadata are stored in separate tables:
+        - block_keywords, block_tags, block_metadata
+
+        Args:
+            existing_block: The block to update
+            new_content: New content to merge
+            new_embedding: New embedding (will be averaged)
+            new_importance: New importance score
+            new_keywords: New keywords to add
+            new_tags: New tags to add
+
+        Returns:
+            Updated block dict if successful, None otherwise
+        """
+        import time
+
+        block_index = existing_block.get('block_index')
+        if block_index is None:
+            return None
+
+        try:
+            cursor = self.db_manager.conn.cursor()
+
+            # Get current block data from blocks table
+            cursor.execute("""
+                SELECT context, importance, visit_count, last_seen_at
+                FROM blocks WHERE block_index = ?
+            """, (block_index,))
+
+            row = cursor.fetchone()
+            if not row:
+                return None
+
+            current_context, current_importance, visit_count, last_seen_at = row
+
+            # Get current keywords from block_keywords table
+            cursor.execute(
+                "SELECT keyword FROM block_keywords WHERE block_index = ?",
+                (block_index,)
+            )
+            current_keywords = [r[0] for r in cursor.fetchall()]
+
+            # Get current tags from block_tags table
+            cursor.execute(
+                "SELECT tag FROM block_tags WHERE block_index = ?",
+                (block_index,)
+            )
+            current_tags = [r[0] for r in cursor.fetchall()]
+
+            # Get current metadata from block_metadata table
+            cursor.execute(
+                "SELECT metadata FROM block_metadata WHERE block_index = ?",
+                (block_index,)
+            )
+            meta_row = cursor.fetchone()
+            metadata = json.loads(meta_row[0]) if meta_row and meta_row[0] else {}
+
+            # Merge content - check if new content adds significant information
+            merged_context = current_context
+            if new_content and new_content not in current_context:
+                # Check if new content is sufficiently different
+                new_words = set(new_content.lower().split())
+                existing_words = set(current_context.lower().split())
+                new_info_ratio = len(new_words - existing_words) / max(len(new_words), 1)
+
+                if new_info_ratio > 0.3:  # More than 30% new information
+                    # Append new information
+                    merged_context = f"{current_context}\n[갱신] {new_content}"
+                    logger.debug(f"Appending new content with {new_info_ratio:.1%} new info")
+
+            # Update importance (take maximum)
+            updated_importance = max(current_importance or 0, new_importance)
+
+            # Merge keywords and tags
+            merged_keywords = list(set(current_keywords + (new_keywords or [])))
+            merged_tags = list(set(current_tags + (new_tags or [])))
+
+            # Update metadata
+            new_visit_count = (visit_count or 0) + 1
+            new_last_seen = time.time()
+            metadata['knowledge_updates'] = metadata.get('knowledge_updates', 0) + 1
+            metadata['last_update_time'] = datetime.datetime.now().isoformat()
+
+            # Update embedding (weighted average)
+            if new_embedding is not None:
+                try:
+                    cursor.execute("""
+                        SELECT embedding FROM block_embeddings WHERE block_index = ?
+                    """, (block_index,))
+                    emb_row = cursor.fetchone()
+
+                    if emb_row and emb_row[0]:
+                        current_emb = np.frombuffer(emb_row[0], dtype=np.float32)
+                        new_emb = np.array(new_embedding, dtype=np.float32)
+
+                        # Weighted average (favor newer information slightly)
+                        alpha = 0.3  # Weight for new embedding
+                        averaged_emb = (1 - alpha) * current_emb + alpha * new_emb
+
+                        # Normalize
+                        norm = np.linalg.norm(averaged_emb)
+                        if norm > 0:
+                            averaged_emb = averaged_emb / norm
+
+                        # Update embedding
+                        cursor.execute("""
+                            UPDATE block_embeddings SET embedding = ?
+                            WHERE block_index = ?
+                        """, (averaged_emb.tobytes(), block_index))
+
+                except Exception as emb_err:
+                    logger.debug(f"Embedding update failed: {emb_err}")
+
+            # Update blocks table (only columns that exist)
+            cursor.execute("""
+                UPDATE blocks
+                SET context = ?, importance = ?, visit_count = ?, last_seen_at = ?
+                WHERE block_index = ?
+            """, (merged_context, updated_importance, new_visit_count, new_last_seen, block_index))
+
+            # Update keywords in block_keywords table
+            for kw in (new_keywords or []):
+                if kw not in current_keywords:
+                    cursor.execute(
+                        "INSERT INTO block_keywords (block_index, keyword) VALUES (?, ?)",
+                        (block_index, kw)
+                    )
+
+            # Update tags in block_tags table
+            for tag in (new_tags or []):
+                if tag not in current_tags:
+                    cursor.execute(
+                        "INSERT INTO block_tags (block_index, tag) VALUES (?, ?)",
+                        (block_index, tag)
+                    )
+
+            # Update metadata in block_metadata table
+            cursor.execute(
+                "UPDATE block_metadata SET metadata = ? WHERE block_index = ?",
+                (json.dumps(metadata, ensure_ascii=False), block_index)
+            )
+            if cursor.rowcount == 0:
+                # Insert if not exists
+                cursor.execute(
+                    "INSERT INTO block_metadata (block_index, metadata) VALUES (?, ?)",
+                    (block_index, json.dumps(metadata, ensure_ascii=False))
+                )
+
+            self.db_manager.conn.commit()
+
+            # Update metrics
+            self.metrics['knowledge_updates'] += 1
+
+            logger.info(
+                f"Updated existing block #{block_index} with new knowledge "
+                f"(visit_count: {new_visit_count})"
+            )
+
+            return {
+                'block_index': block_index,
+                'context': merged_context,
+                'importance': updated_importance,
+                'keywords': merged_keywords,
+                'tags': merged_tags,
+                'hash': existing_block.get('hash'),
+                '_updated': True,
+                '_knowledge_update': True
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to update existing block: {e}")
+            return None
+
+    def _select_optimal_insertion_point(
+        self,
+        content: str,
+        embedding: Optional[List[float]],
+        target_block_hash: Optional[str],
+        slot: Optional[str]
+    ) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Select optimal insertion point considering temporal and semantic relevance.
+
+        v4.0: Combines branch_aware_storage result with additional temporal analysis.
+
+        Args:
+            content: New memory content
+            embedding: Content embedding
+            target_block_hash: Suggested target from LLM/semantic search
+            slot: Target slot
+
+        Returns:
+            Tuple of (root_id, before_id) for optimal insertion
+        """
+        import time
+
+        root_id = None
+        before_id = target_block_hash
+
+        # If we have a target from semantic search, use it
+        if target_block_hash:
+            try:
+                cursor = self.db_manager.conn.cursor()
+                cursor.execute("""
+                    SELECT root, block_index FROM blocks WHERE hash = ?
+                """, (target_block_hash,))
+                result = cursor.fetchone()
+                if result:
+                    root_id = result[0]
+                    logger.debug(
+                        f"Using semantic target block #{result[1]} as insertion point"
+                    )
+            except Exception as e:
+                logger.debug(f"Target block lookup failed: {e}")
+
+        # If no target, fall back to slot's head or recency-based selection
+        if not before_id and self.stm_manager:
+            head_id = self.stm_manager.get_active_head(slot)
+            if head_id:
+                before_id = head_id
+                try:
+                    cursor = self.db_manager.conn.cursor()
+                    cursor.execute("SELECT root FROM blocks WHERE hash = ?", (head_id,))
+                    result = cursor.fetchone()
+                    if result:
+                        root_id = result[0]
+                except Exception:
+                    pass
+
+        return root_id, before_id
+
     def _compute_hash(self, block_data: Dict[str, Any]) -> str:
         """블록의 해시값 계산. 해시 계산에 포함되지 않아야 할 필드는 이 함수 호출 전에 정리되어야 함."""
         block_copy = block_data.copy()
@@ -184,6 +492,7 @@ class BlockManager:
         """
         새 블록 추가 - Branch/DFS 구조로 저장
         v3.1.0rc7: Branch-aware storage with dynamic threshold
+        v4.0: Time-based insertion with knowledge update
 
         Args:
             context: 메모리 내용
@@ -198,8 +507,31 @@ class BlockManager:
         import time
         import uuid
         write_start_time = time.time()
-        
+
         logger.debug(f"add_block called: context='{context[:20]}...', slot={slot}")
+
+        # v4.0: Check for existing similar block for knowledge update
+        enable_knowledge_update = os.environ.get(
+            "GREEUM_ENABLE_KNOWLEDGE_UPDATE", "true"
+        ).lower() in ("true", "1", "yes")
+
+        if enable_knowledge_update and embedding:
+            existing_block = self._find_existing_similar_block(context, embedding)
+            if existing_block:
+                # Update existing block instead of creating new
+                updated_result = self._update_existing_block(
+                    existing_block,
+                    new_content=context,
+                    new_embedding=embedding,
+                    new_importance=importance,
+                    new_keywords=keywords,
+                    new_tags=tags
+                )
+                if updated_result:
+                    logger.info(
+                        f"Knowledge update performed on block #{existing_block.get('block_index')}"
+                    )
+                    return {'block': updated_result, 'head_update': None}
         
         # Get or create STM manager for branch head management
         if self.stm_manager:
@@ -239,11 +571,13 @@ class BlockManager:
                     importance=importance
                 )
 
-                # Override slot selection based on branch awareness
-                if branch_info and branch_info.get('selected_slot'):
-                    slot = branch_info['selected_slot']
-                    logger.info(f"Branch-aware storage selected slot {slot} "
-                              f"with similarity {branch_info.get('similarity', 0):.3f}")
+                # v4.0.1: Log branch selection (slots are STM cache only, not selected here)
+                if branch_info:
+                    if branch_info.get('create_new_branch'):
+                        logger.info(f"Branch-aware storage creating new branch: {branch_info.get('branch_root', '')[:12]}...")
+                    else:
+                        logger.info(f"Branch-aware storage selected branch {branch_info.get('branch_root', '')[:12]}... "
+                                  f"with similarity {branch_info.get('similarity', 0):.3f}")
             except Exception as e:
                 logger.warning(f"Branch-aware storage failed: {e}, falling back to default")
 
@@ -487,6 +821,9 @@ class BlockManager:
             except Exception as e:
                 logger.debug(f"Failed to record write metric: {e}")
             
+            # v4.0: Update metrics for new block creation
+            self.metrics['new_blocks'] += 1
+
             logger.info(f"Block added successfully: index={new_block_index}, hash={current_hash[:10]}...")
             return {
                 'block': block_to_store_in_db,
@@ -1593,19 +1930,29 @@ class BlockManager:
             self.metrics['local_hit_rate'] = self.metrics['graph_hits'] / self.metrics['graph_searches']
         else:
             self.metrics['local_hit_rate'] = 0.0
-            
+
         if self.metrics['search_count'] > 0:
             self.metrics['avg_hops'] = self.metrics['total_hops'] / self.metrics['search_count']
         else:
             self.metrics['avg_hops'] = 0.0
-            
+
+        # v4.0: Calculate knowledge update ratio
+        total_writes = self.metrics.get('new_blocks', 0) + self.metrics.get('knowledge_updates', 0)
+        knowledge_update_ratio = 0.0
+        if total_writes > 0:
+            knowledge_update_ratio = self.metrics.get('knowledge_updates', 0) / total_writes
+
         return {
             'total_searches': self.metrics['total_searches'],
             'graph_searches': self.metrics['graph_searches'],
             'graph_hits': self.metrics['graph_hits'],
             'local_hit_rate': round(self.metrics['local_hit_rate'], 3),
             'avg_hops': round(self.metrics['avg_hops'], 2),
-            'fallback_searches': self.metrics['fallback_searches']
+            'fallback_searches': self.metrics['fallback_searches'],
+            # v4.0: Knowledge update metrics
+            'new_blocks': self.metrics.get('new_blocks', 0),
+            'knowledge_updates': self.metrics.get('knowledge_updates', 0),
+            'knowledge_update_ratio': round(knowledge_update_ratio, 3)
         }
         
     def reset_metrics(self):
@@ -1619,7 +1966,9 @@ class BlockManager:
             'search_count': 0,
             'avg_response_time': 0.0,
             'local_hit_rate': 0.0,
-            'avg_hops': 0.0
+            'avg_hops': 0.0,
+            'knowledge_updates': 0,  # v4.0
+            'new_blocks': 0  # v4.0
         }
     
     # GraphIndex 관련 메서드들 (v3.0.0)

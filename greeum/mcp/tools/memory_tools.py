@@ -8,34 +8,75 @@ from typing import Dict, List, Any, Optional
 import asyncio
 
 from ...worker import AsyncWriteQueue
+from ...core.insight_judge import InsightJudge, get_insight_judge, StoreResult
+
+import logging
+import os
+
+logger = logging.getLogger(__name__)
+
+# Environment variable to control InsightJudge usage
+# Set GREEUM_USE_INSIGHT_FILTER=0 to disable LLM-based filtering
+_USE_INSIGHT_FILTER_DEFAULT = os.environ.get("GREEUM_USE_INSIGHT_FILTER", "1") == "1"
+
 
 class MemoryTools:
     """Memory tools for GreeumMCP."""
     
-    def __init__(self, block_manager, stm_manager, cache_manager, temporal_reasoner, write_queue: Optional[AsyncWriteQueue] = None):
+    def __init__(
+        self,
+        block_manager,
+        stm_manager,
+        cache_manager,
+        temporal_reasoner,
+        write_queue: Optional[AsyncWriteQueue] = None,
+        insight_judge: Optional[InsightJudge] = None,
+        use_insight_filter: bool = _USE_INSIGHT_FILTER_DEFAULT,
+    ):
         """
         Initialize MemoryTools with required Greeum components.
-        
+
         Args:
             block_manager: BlockManager instance
             stm_manager: STMManager instance
             cache_manager: CacheManager instance
             temporal_reasoner: TemporalReasoner instance
+            write_queue: Optional async write queue
+            insight_judge: Optional InsightJudge for LLM-based filtering
+            use_insight_filter: Whether to use LLM-based insight filtering (default: True)
         """
         self.block_manager = block_manager
         self.stm_manager = stm_manager
         self.cache_manager = cache_manager
         self.temporal_reasoner = temporal_reasoner
         self.write_queue = write_queue or AsyncWriteQueue(label="mcp")
+        self.use_insight_filter = use_insight_filter
+
+        # Initialize InsightJudge with search function
+        if insight_judge:
+            self.insight_judge = insight_judge
+        elif use_insight_filter:
+            self.insight_judge = get_insight_judge()
+            # Set up search function from block_manager
+            if hasattr(block_manager, 'search'):
+                self.insight_judge.set_search_func(
+                    lambda q, limit: block_manager.search(q, limit=limit)
+                )
+        else:
+            self.insight_judge = None
     
     async def add_memory(
         self,
         content: str,
         importance: float = 0.5,
         project_tags: Optional[List[str]] = None
-    ) -> str:
+    ) -> Dict[str, Any]:
         """
         Add a new memory to the long-term storage.
+
+        Uses LLM-based InsightJudge to filter noise and determine if content is worth storing.
+        Only stores content that has insight value (bug fixes, solutions, warnings, etc.).
+        Pure acknowledgments and casual chat are filtered out.
 
         IMPORTANT: Always provide project_tags with the current project name to ensure
         proper memory organization and retrieval across different projects.
@@ -47,18 +88,47 @@ class MemoryTools:
                          Strongly recommended to include current project name.
 
         Returns:
-            Memory ID of the created memory
+            Dict with:
+                - stored: bool - Whether content was stored
+                - block_id: str - Memory ID if stored
+                - reason: str - Why content was/wasn't stored
+                - is_insight: bool - Whether content was judged as insight
+
+        Raises:
+            RuntimeError: If LLM server is unavailable (no fallback)
 
         Example:
-            await add_memory(
+            result = await add_memory(
                 content="Fixed branch selection bug",
                 importance=0.7,
                 project_tags=["Greeum", "backend"]
             )
+            # result = {"stored": True, "block_id": "123", "reason": "Bug fix noted", "is_insight": True}
         """
         from greeum.text_utils import process_user_input
         import os
 
+        # Step 1: Use InsightJudge to determine if content is worth storing
+        if self.use_insight_filter and self.insight_judge:
+            try:
+                judgment = self.insight_judge.judge(content)
+
+                if not judgment.is_insight:
+                    logger.info(f"Content filtered by InsightJudge: {judgment.insight_reason}")
+                    return {
+                        "stored": False,
+                        "block_id": None,
+                        "reason": judgment.insight_reason or "Content filtered as noise",
+                        "is_insight": False,
+                    }
+
+                logger.info(f"Content approved by InsightJudge: {judgment.insight_reason}")
+
+            except RuntimeError as e:
+                # NO FALLBACK - explicit failure when LLM unavailable
+                raise RuntimeError(f"InsightJudge failed: {e}") from e
+
+        # Step 2: Process content for storage
         processed = process_user_input(content)
 
         # Merge project tags with auto-extracted tags
@@ -73,6 +143,26 @@ class MemoryTools:
             if project_name and project_name not in ['.', '..', '']:
                 all_tags.append(f"auto:{project_name}")
 
+        # Add insight categories as tags if available
+        if self.use_insight_filter and self.insight_judge:
+            if judgment.categories:
+                all_tags.extend([f"insight:{cat}" for cat in judgment.categories])
+
+        # Prepare metadata
+        metadata = {
+            "project_tags": project_tags or [],
+            "auto_detected_project": os.path.basename(os.getcwd())
+        }
+
+        # Add judgment metadata if available
+        if self.use_insight_filter and self.insight_judge:
+            metadata.update({
+                "insight_reason": judgment.insight_reason,
+                "branch_reason": judgment.branch_reason,
+                "categories": judgment.categories,
+                "judged_by": "InsightJudge",
+            })
+
         def _write_sync():
             block = self.block_manager.add_block(
                 context=processed.get("context", content),
@@ -80,10 +170,7 @@ class MemoryTools:
                 tags=all_tags,
                 importance=importance,
                 embedding=processed.get("embedding", None),
-                metadata={
-                    "project_tags": project_tags or [],
-                    "auto_detected_project": os.path.basename(os.getcwd())
-                }
+                metadata=metadata
             )
 
             if not block:
@@ -100,8 +187,17 @@ class MemoryTools:
 
         block = await self.write_queue.run(_write_sync)
 
-        # Return the block index as the memory ID
-        return str(block.get("block_index", ""))
+        # Return detailed result
+        reason = "Memory stored successfully"
+        if self.use_insight_filter and self.insight_judge:
+            reason = judgment.insight_reason or reason
+
+        return {
+            "stored": True,
+            "block_id": str(block.get("block_index", "")),
+            "reason": reason,
+            "is_insight": True,
+        }
     
     async def query_memory(
         self,

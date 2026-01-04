@@ -93,6 +93,20 @@ except ImportError as e:
     is_insight = None
     _import_warnings.append(f"InsightFilter unavailable: {e}")
 
+# v5.0: Unified LLM-based InsightJudge
+try:
+    from .insight_judge import (
+        InsightJudge, JudgmentResult, get_insight_judge,
+        StoreResult, store_with_judgment
+    )
+except ImportError as e:
+    InsightJudge = None
+    JudgmentResult = None
+    get_insight_judge = None
+    StoreResult = None
+    store_with_judgment = None
+    _import_warnings.append(f"InsightJudge unavailable: {e}")
+
 # 임포트 경고 로깅 (개발 환경에서만)
 if _import_warnings:
     for warning in _import_warnings:
@@ -121,5 +135,11 @@ __all__ = [
     "Project",
     "InsightFilter",
     "FilterResult",
-    "is_insight"
+    "is_insight",
+    # v5.0: Unified LLM Judge
+    "InsightJudge",
+    "JudgmentResult",
+    "get_insight_judge",
+    "StoreResult",
+    "store_with_judgment",
 ]

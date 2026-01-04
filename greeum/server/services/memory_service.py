@@ -1,7 +1,10 @@
 """
 Memory service - wraps core Greeum functionality for the API.
+
+v5.0.0: InsightJudge integration for LLM-based filtering.
 """
 
+import os
 import time
 import logging
 from typing import Optional, List, Dict, Any
@@ -10,20 +13,28 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# InsightJudge 사용 여부 (환경변수로 제어)
+_USE_INSIGHT_FILTER = os.environ.get("GREEUM_USE_INSIGHT_FILTER", "1") == "1"
+
 # Lazy-loaded components
 _service_instance: Optional["MemoryService"] = None
 
 
 class MemoryService:
-    """Service layer for memory operations."""
+    """Service layer for memory operations.
 
-    def __init__(self):
+    v5.0.0: InsightJudge integration for LLM-based content filtering.
+    """
+
+    def __init__(self, use_insight_filter: bool = _USE_INSIGHT_FILTER):
         self._initialized = False
         self._db_manager = None
         self._block_manager = None
         self._stm_manager = None
         self._duplicate_detector = None
         self._quality_validator = None
+        self._insight_judge = None
+        self.use_insight_filter = use_insight_filter
 
     def _ensure_initialized(self):
         """Lazy initialization of Greeum components."""
@@ -42,6 +53,22 @@ class MemoryService:
             self._stm_manager = STMManager(self._db_manager)
             self._duplicate_detector = DuplicateDetector(self._db_manager)
             self._quality_validator = QualityValidator()
+
+            # InsightJudge 초기화 (v5.0.0)
+            if self.use_insight_filter:
+                try:
+                    from greeum.core.insight_judge import get_insight_judge
+                    self._insight_judge = get_insight_judge()
+                    # BlockManager 검색 함수 연결
+                    if hasattr(self._block_manager, 'search'):
+                        self._insight_judge.set_search_func(
+                            lambda q, limit: self._block_manager.search(q, limit=limit)
+                        )
+                    logger.info("InsightJudge initialized successfully")
+                except Exception as e:
+                    logger.warning(f"InsightJudge initialization failed: {e}")
+                    self._insight_judge = None
+
             self._initialized = True
             logger.info("MemoryService initialized successfully")
         except Exception as e:
@@ -54,10 +81,33 @@ class MemoryService:
         importance: float = 0.5,
         tags: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        """Add a new memory block."""
+        """Add a new memory block.
+
+        v5.0.0: InsightJudge LLM-based filtering (명시적 실패 정책).
+        """
         self._ensure_initialized()
 
-        # Duplicate check
+        # Step 1: InsightJudge LLM 필터링 (v5.0.0)
+        if self.use_insight_filter and self._insight_judge:
+            try:
+                judgment = self._insight_judge.judge(content)
+                if not judgment.is_insight:
+                    return {
+                        "success": False,
+                        "block_index": -1,
+                        "storage": "LTM",
+                        "quality_score": 0.0,
+                        "duplicate_check": "skipped",
+                        "is_insight": False,
+                        "insight_reason": judgment.insight_reason,
+                        "suggestions": [],
+                    }
+            except RuntimeError as e:
+                # LLM 서버 미사용 시 명시적 실패
+                logger.error(f"InsightJudge unavailable: {e}")
+                raise RuntimeError(f"InsightJudge LLM server unavailable: {e}")
+
+        # Step 2: Duplicate check
         dup_result = self._duplicate_detector.check_duplicate(content)
         if dup_result.get("is_duplicate"):
             return {
@@ -92,13 +142,21 @@ class MemoryService:
             importance=importance,
         )
 
+        # branch_id는 core에서 'root' 또는 'slot'으로 관리됨
+        branch_id = None
+        if block_data:
+            branch_id = block_data.get("root") or block_data.get("slot")
+
         return {
             "success": True,
             "block_index": block_data.get("block_index", -1) if block_data else -1,
-            "branch_id": block_data.get("branch_id") if block_data else None,
+            "branch_id": branch_id,
+            "slot": block_data.get("slot") if block_data else None,
             "storage": "LTM",
             "quality_score": quality_result.get("quality_score", 0.0),
             "duplicate_check": "passed",
+            "is_insight": True,  # InsightJudge 통과 또는 비활성화
+            "insight_reason": None,
             "suggestions": quality_result.get("suggestions", []),
         }
 
@@ -138,12 +196,15 @@ class MemoryService:
 
         formatted_results = []
         for r in results:
+            # branch_id는 core에서 'root' 또는 'slot'으로 관리됨
+            branch_id = r.get("root") or r.get("slot")
             formatted_results.append({
                 "block_index": r.get("block_index", 0),
                 "content": r.get("context", ""),
                 "timestamp": datetime.fromisoformat(r.get("timestamp", datetime.now().isoformat())),
                 "similarity": r.get("similarity", 0.0),
-                "branch_id": r.get("branch_id"),
+                "branch_id": branch_id,
+                "slot": r.get("slot"),
                 "importance": r.get("importance", 0.5),
             })
 

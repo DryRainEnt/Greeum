@@ -28,13 +28,19 @@ class MemoryAddRequest(BaseModel):
 
 
 class MemoryAddResponse(BaseModel):
-    """Response after adding a memory."""
+    """Response after adding a memory.
+
+    v5.0.0: Added InsightJudge fields (is_insight, insight_reason).
+    """
     success: bool = Field(description="Operation success status")
     block_index: int = Field(description="Assigned block index")
     branch_id: Optional[str] = Field(default=None, description="Branch ID")
+    slot: Optional[str] = Field(default=None, description="STM slot (A, B, C)")
     storage: str = Field(default="LTM", description="Storage type")
     quality_score: float = Field(description="Content quality score")
     duplicate_check: str = Field(description="Duplicate check result")
+    is_insight: Optional[bool] = Field(default=None, description="InsightJudge result (v5.0.0)")
+    insight_reason: Optional[str] = Field(default=None, description="InsightJudge reason (v5.0.0)")
     suggestions: Optional[List[str]] = Field(default=None, description="Quality suggestions")
 
 

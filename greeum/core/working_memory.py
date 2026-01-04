@@ -394,7 +394,7 @@ class AIContextualSlots:
         if slot_name in self.slots:
             old_slot = self.slots[slot_name]
             self.slots[slot_name] = None
-            
+
             # Analytics 추적: 수동 슬롯 비우기
             if self.analytics and old_slot:
                 self.analytics.track_slots_operation(
@@ -405,9 +405,59 @@ class AIContextualSlots:
                     success=True,
                     error_message="manual_clear"
                 )
-            
+
             return True
         return False
+
+    def set_slot(
+        self,
+        slot_name: str,
+        content: str,
+        importance: float = 0.5,
+        slot_type: SlotType = SlotType.CONTEXT,
+        ltm_anchor_block: Optional[int] = None,
+        vector: Optional[List[float]] = None,
+        **kwargs
+    ) -> MemorySlot:
+        """슬롯에 메모리 직접 설정
+
+        Args:
+            slot_name: 슬롯 이름 (A, B, C)
+            content: 저장할 내용
+            importance: 중요도 점수 (0.0 ~ 1.0)
+            slot_type: 슬롯 타입
+            ltm_anchor_block: LTM 앵커 블록 인덱스 (옵션)
+            vector: 임베딩 벡터 (옵션)
+            **kwargs: 추가 메타데이터
+
+        Returns:
+            생성된 MemorySlot 객체
+        """
+        metadata = kwargs.copy()
+        if vector is not None:
+            metadata['vector'] = vector
+
+        slot = MemorySlot(
+            content=content,
+            slot_type=slot_type,
+            ltm_anchor_block=ltm_anchor_block,
+            importance_score=importance,
+            metadata=metadata
+        )
+
+        self.slots[slot_name] = slot
+
+        # Analytics 추적
+        if self.analytics:
+            self.analytics.track_slots_operation(
+                operation="set_slot",
+                slot_type=slot_type.value,
+                content=content[:100],
+                response_time_ms=0,
+                success=True
+            )
+
+        return slot
         
     def get_status(self) -> Dict[str, Any]:
         """슬롯 상태 정보 조회"""

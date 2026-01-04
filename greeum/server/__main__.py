@@ -44,20 +44,29 @@ def main():
 
     args = parser.parse_args()
 
+    auth_status = "Enabled (X-API-Key)" if config.auth_enabled else "Disabled (open access)"
+
     print(f"""
 ╔═══════════════════════════════════════════════════════════╗
 ║                    Greeum API Server                      ║
-║                       v4.0.0                              ║
+║                       v5.0.0                              ║
+╠═══════════════════════════════════════════════════════════╣
+║  Features:                                                ║
+║    • InsightJudge LLM-based filtering                     ║
+║    • API Key authentication (optional)                    ║
+║    • STM slot management                                  ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Endpoints:                                               ║
 ║    • GET  /health        - Health check                   ║
-║    • POST /memory        - Add memory                     ║
+║    • POST /memory        - Add memory (InsightJudge)      ║
 ║    • GET  /memory/{{id}}   - Get memory                    ║
 ║    • POST /search        - Search memories                ║
 ║    • GET  /stats         - Get statistics                 ║
+║    • GET  /stm/slots     - STM slot status                ║
 ║    • GET  /docs          - Swagger UI                     ║
 ╠═══════════════════════════════════════════════════════════╣
-║  Server: http://{args.host}:{args.port}                          ║
+║  Auth: {auth_status:<42}  ║
+║  Server: http://{args.host}:{args.port:<38}  ║
 ╚═══════════════════════════════════════════════════════════╝
     """)
 
