@@ -9,7 +9,6 @@ description = "LLM-Integrated Memory System with InsightJudge, HybridGraphSearch
 authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.10"
-license = "MIT"
 keywords = ["memory", "LLM", "RAG"]
 classifiers = [
   "Programming Language :: Python :: 3",
@@ -22,6 +21,7 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Operating System :: OS Independent",
+  "License :: OSI Approved :: MIT License",
 ]
 dependencies = [
     "rich>=13.4.0",
@@ -86,3 +86,6 @@ greeum = "greeum.cli:main"
 greeum-server = "greeum.server.__main__:main"
 greeum-workflow = "greeum.automation.workflow:workflow"
 greeum-digest = "greeum.automation.digest:digest"
+
+[tool.setuptools]
+license-files = []
