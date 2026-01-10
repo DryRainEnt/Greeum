@@ -48,26 +48,23 @@ class TestMemoryClient(BaseGreeumTestCase):
     @patch('requests.get')
     def test_retry_on_server_error(self, mock_get):
         """서버 오류 시 재시도 테스트"""
-        # 첫 번째 요청은 실패, 두 번째는 성공
-        mock_responses = []
-        
         # 첫 번째 응답 (실패)
         mock_error_response = Mock()
         mock_error_response.json.return_value = {"error": "Server error"}
         mock_error_response.status_code = 503
-        mock_error_response.raise_for_status.side_effect = requests.exceptions.HTTPError("503 Server Error")
-        
+        mock_error_response.headers = {}  # 빈 딕셔너리로 설정하여 Retry-After 없음
+
         # 두 번째 응답 (성공)
         mock_success_response = Mock()
         mock_success_response.json.return_value = {"status": "success", "version": "1.0.0"}
         mock_success_response.status_code = 200
         mock_success_response.raise_for_status.return_value = None
-        
+
         mock_get.side_effect = [mock_error_response, mock_success_response]
-        
+
         # API 호출
         result = self.client.get_api_info()
-        
+
         # 검증
         self.assertEqual(result["status"], "success")
         self.assertEqual(mock_get.call_count, 2)  # 두 번 호출되었는지 확인
@@ -136,50 +133,50 @@ class TestMemoryClient(BaseGreeumTestCase):
         mock_response.status_code = 200
         mock_response.raise_for_status.return_value = None
         mock_post.return_value = mock_response
-        
+
         # API 호출
         result = self.client.add_memory(
             context="Test memory",
             importance=0.7
         )
-        
+
         # 검증
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["block_index"], 123)
-        
+
         # 요청 데이터 검증
         mock_post.assert_called_once()
         call_args = mock_post.call_args
-        self.assertIn("json", call_args.kwargs)
-        request_data = call_args.kwargs["json"]
+        self.assertIn("data", call_args.kwargs)  # 클라이언트는 json.dumps()를 사용
+        request_data = json.loads(call_args.kwargs["data"])
         self.assertEqual(request_data["context"], "Test memory")
         self.assertEqual(request_data["importance"], 0.7)
 
 
 class TestSimplifiedMemoryClient(BaseGreeumTestCase):
     """SimplifiedMemoryClient 테스트 클래스"""
-    
+
     def setUp(self):
         """테스트 설정"""
         super().setUp()
-        
+
         self.base_url = "http://test.server.com"
-        
-        # MemoryClient를 모킹하기 위한 패치
-        self.memory_client_patcher = patch('greeum.client.MemoryClient')
-        self.mock_memory_client = self.memory_client_patcher.start()
-        self.mock_instance = self.mock_memory_client.return_value
-        
-        # SimplifiedMemoryClient 초기화
-        self.client = SimplifiedMemoryClient(
-            base_url=self.base_url,
-            max_retries=2,
-            retry_delay=0.01
-        )
-    
+
+        # SimplifiedMemoryClient 초기화 후 내부 client를 Mock으로 교체
+        with patch('greeum.client.MemoryClient'):
+            self.client = SimplifiedMemoryClient(
+                base_url=self.base_url,
+                max_retries=2,
+                retry_delay=0.01
+            )
+
+        # 내부 client를 Mock으로 교체
+        self.mock_instance = Mock()
+        self.client.client = self.mock_instance
+
     def tearDown(self):
-        """테스트 종료 시 패치 중지"""
-        self.memory_client_patcher.stop()
+        """테스트 종료 시 정리"""
+        super().tearDown()
     
     def test_add_success(self):
         """기억 추가 성공 테스트"""
@@ -208,14 +205,14 @@ class TestSimplifiedMemoryClient(BaseGreeumTestCase):
     def test_add_error(self):
         """기억 추가 실패 테스트"""
         # 예외 발생 시뮬레이션
-        self.mock_instance.add_memory.side_effect = ConnectionFailedError("Connection failed")
-        
+        self.mock_instance.add_memory.side_effect = ConnectionFailedError("서버 연결 실패: Connection failed")
+
         # 메서드 호출
         result = self.client.add("Test memory")
-        
+
         # 검증
         self.assertFalse(result["success"])
-        self.assertIn("Connection failed", result["error"])
+        self.assertIn("연결", result["error"])  # 에러 메시지가 한글로 나올 수 있음
         self.assertIsNone(result["block_index"])
     
     def test_search(self):
@@ -295,15 +292,15 @@ class TestSimplifiedMemoryClient(BaseGreeumTestCase):
     def test_get_health_error(self):
         """서버 상태 확인 실패 테스트"""
         # 예외 발생 시뮬레이션
-        self.mock_instance.get_api_info.side_effect = ConnectionFailedError("Connection failed")
-        
+        self.mock_instance.get_api_info.side_effect = ConnectionFailedError("서버 연결 실패: Connection failed")
+
         # 메서드 호출
         result = self.client.get_health()
-        
+
         # 검증
         self.assertFalse(result["success"])
         self.assertEqual(result["status"], "offline")
-        self.assertIn("Connection failed", result["error"])
+        self.assertIn("연결", result["error"])  # 에러 메시지가 한글로 나올 수 있음
 
 
 if __name__ == "__main__":

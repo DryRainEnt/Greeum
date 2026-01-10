@@ -216,7 +216,7 @@ class SimpleEmbeddingModel(EmbeddingModel):
 
     def _encode_without_cache(self, text: str) -> List[float]:
         # Deterministic hash-based vector generation (no global RNG mutation)
-        bytes_needed = self.dimension * 4  # use 32-bit signed ints for range coverage
+        bytes_needed = self.dimension  # one byte per dimension (uint8)
         buffer = bytearray()
         counter = 0
         text_bytes = text.encode("utf-8", "ignore")
