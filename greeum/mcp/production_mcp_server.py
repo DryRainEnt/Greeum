@@ -78,22 +78,26 @@ class NativeMCPServer:
     
     def create_success_response(self, request_id: Any, result: Any) -> Dict[str, Any]:
         """성공 응답 생성 - MCP 표준 준수"""
-        return {
+        response = {
             "jsonrpc": "2.0",
-            "id": request_id,
             "result": result
         }
+        if request_id is not None:
+            response["id"] = request_id
+        return response
     
     def create_error_response(self, request_id: Any, code: int, message: str) -> Dict[str, Any]:
         """에러 응답 생성 - MCP 표준 준수"""
-        return {
+        response = {
             "jsonrpc": "2.0",
-            "id": request_id,
             "error": {
                 "code": code,
                 "message": message
             }
         }
+        if request_id is not None:
+            response["id"] = request_id
+        return response
     
     def handle_initialize(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """MCP Initialize 처리"""
@@ -321,7 +325,7 @@ class NativeMCPServer:
         """요청 처리 - MCP 메서드 라우팅"""
         method = request.get("method")
         request_id = request.get("id")
-        
+
         if method == "initialize":
             return self.handle_initialize(request)
         elif method == "tools/list":
@@ -330,7 +334,55 @@ class NativeMCPServer:
             return self.handle_tools_call(request)
         else:
             return self.create_error_response(request_id, -32601, f"Unknown method: {method}")
-    
+
+    @staticmethod
+    def _read_jsonrpc_message() -> Optional[str]:
+        """STDIO에서 JSON-RPC 메시지 읽기 (Content-Length 및 라인 기반 모두 지원)"""
+        stdin_buffer = sys.stdin.buffer
+
+        while True:
+            line = stdin_buffer.readline()
+            if not line:
+                return None  # EOF
+
+            line_str = line.decode("utf-8").strip()
+            if not line_str:
+                continue
+
+            # Content-Length 헤더 감지
+            if line_str.lower().startswith("content-length:"):
+                try:
+                    content_length = int(line_str.split(":", 1)[1].strip())
+                except ValueError:
+                    logger.warning(f"Invalid Content-Length value: {line_str}")
+                    continue
+
+                # 추가 헤더 건너뛰기
+                while True:
+                    header_line = stdin_buffer.readline()
+                    if not header_line:
+                        return None
+                    if header_line.strip() == b"":
+                        break
+
+                if content_length <= 0:
+                    logger.warning(f"Ignoring non-positive Content-Length: {content_length}")
+                    continue
+
+                payload = stdin_buffer.read(content_length)
+                if not payload:
+                    return None
+
+                return payload.decode("utf-8")
+
+            # Content-Length 헤더가 없으면 그대로 JSON 라인으로 처리
+            return line_str
+
+    @staticmethod
+    def _write_jsonrpc_message(message: Dict[str, Any]) -> None:
+        """JSON-RPC 메시지를 STDOUT으로 전송 (라인 기반)"""
+        print(json.dumps(message, ensure_ascii=False), flush=True)
+
     def run_stdio(self):
         """stdin/stdout 직접 처리 - asyncio 없음, BrokenPipe 처리"""
         logger.info("🚀 Starting Native MCP server on stdio...")
@@ -346,69 +398,72 @@ class NativeMCPServer:
         try:
             while True:
                 try:
-                    line = sys.stdin.readline()
-                    if not line:  # EOF
+                    raw_message = self._read_jsonrpc_message()
+                    if raw_message is None:
                         logger.info("🛑 EOF received - shutting down")
                         break
-                        
-                    line = line.strip()
-                    if not line:
-                        continue
-                    
+
                     try:
                         # JSON-RPC 요청 파싱
-                        request = json.loads(line)
-                        
+                        request = json.loads(raw_message)
+                        request_id = request.get("id")
+                        method = request.get("method")
+                        logger.debug(
+                            "Received request %s (id=%s): %s",
+                            method,
+                            request_id,
+                            raw_message[:200],
+                        )
+
                         # 요청 처리
                         response = self.process_request(request)
-                        
+
+                        # Notifications (id 없음) 는 응답하지 않음
+                        if request_id is None:
+                            continue
+
                         # JSON-RPC 응답 전송
                         try:
-                            print(json.dumps(response), flush=True)
+                            self._write_jsonrpc_message(response)
+                            logger.debug(
+                                "Sent response for id=%s: %s",
+                                request_id,
+                                json.dumps(response, ensure_ascii=False)[:200],
+                            )
                         except BrokenPipeError:
                             logger.info("🛑 Client disconnected")
                             break
-                            
+
                     except json.JSONDecodeError as e:
                         # JSON 파싱 에러
-                        error_response = {
-                            "jsonrpc": "2.0",
-                            "id": None,
-                            "error": {
-                                "code": -32700,
-                                "message": f"Parse error: {str(e)}"
-                            }
-                        }
+                        logger.warning("Parse error decoding message: %s", raw_message[:200])
+                        error_response = self.create_error_response(None, -32700, f"Parse error: {str(e)}")
                         try:
-                            print(json.dumps(error_response), flush=True)
+                            self._write_jsonrpc_message(error_response)
                         except BrokenPipeError:
                             logger.info("🛑 Client disconnected during error response")
                             break
-                        
+
                     except Exception as e:
                         # 일반 에러
                         logger.error(f"Request processing error: {e}")
-                        error_response = {
-                            "jsonrpc": "2.0",
-                            "id": request.get("id") if 'request' in locals() else None,
-                            "error": {
-                                "code": -32603,
-                                "message": f"Internal error: {str(e)}"
-                            }
-                        }
+                        request_id = request.get("id") if 'request' in locals() else None
+                        if request_id is None:
+                            continue
+                        error_response = self.create_error_response(request_id, -32603, f"Internal error: {str(e)}")
                         try:
-                            print(json.dumps(error_response), flush=True)
+                            self._write_jsonrpc_message(error_response)
                         except BrokenPipeError:
                             logger.info("🛑 Client disconnected during error response")
                             break
-                            
+
                 except EOFError:
                     logger.info("🛑 EOFError - client disconnected")
                     break
                 except BrokenPipeError:
                     logger.info("🛑 BrokenPipe - client disconnected") 
                     break
-                    
+
         except KeyboardInterrupt:
             logger.info("🛑 Server shutdown requested (Ctrl+C)")
         except Exception as e:
