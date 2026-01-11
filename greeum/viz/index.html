@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greeum Memory Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 사이드바 */
+        .sidebar {
+            width: 280px;
+            background: #161b22;
+            border-right: 1px solid #30363d;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #58a6ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            font-size: 28px;
+        }
+
+        /* 통계 카드 */
+        .stats-card {
+            background: #21262d;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .stats-card h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #8b949e;
+            margin-bottom: 12px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: #8b949e;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #58a6ff;
+        }
+
+        /* 슬롯 범례 */
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .legend-item:hover {
+            background: #30363d;
+        }
+
+        .legend-item.active {
+            background: #30363d;
+        }
+
+        .legend-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .slot-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .slot-theme {
+            font-size: 11px;
+            color: #58a6ff;
+            margin-top: 4px;
+            margin-left: 22px;
+            font-weight: 500;
+        }
+
+        .slot-keywords {
+            font-size: 10px;
+            color: #6e7681;
+            margin-top: 2px;
+            margin-left: 22px;
+            line-height: 1.4;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .slot-a { background: #f85149; }
+        .slot-b { background: #58a6ff; }
+        .slot-c { background: #3fb950; }
+        .slot-d { background: #d29922; }
+        .slot-none { background: #8b949e; }
+
+        /* 컨트롤 */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            accent-color: #58a6ff;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #238636;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2ea043;
+        }
+
+        .btn-secondary {
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+        }
+
+        .btn-secondary:hover {
+            background: #30363d;
+        }
+
+        /* 메인 영역 */
+        .main {
+            flex: 1;
+            position: relative;
+        }
+
+        #graph {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 노드 스타일 */
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: #30363d;
+            stroke-width: 2px;
+            transition: all 0.2s;
+        }
+
+        .node:hover circle {
+            stroke: #58a6ff;
+            stroke-width: 3px;
+        }
+
+        .node text {
+            font-size: 10px;
+            fill: #8b949e;
+            pointer-events: none;
+        }
+
+        /* 링크 스타일 */
+        .link {
+            stroke-opacity: 0.4;
+            transition: stroke-opacity 0.2s;
+        }
+
+        .link.tree {
+            stroke: #58a6ff;
+        }
+
+        .link.semantic {
+            stroke: #3fb950;
+            stroke-dasharray: 4, 2;
+        }
+
+        .link.temporal {
+            stroke: #d29922;
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8;
+        }
+
+        /* 툴팁 */
+        .tooltip {
+            position: fixed;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 13px;
+            max-width: 300px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-title {
+            font-weight: bold;
+            color: #58a6ff;
+            margin-bottom: 8px;
+        }
+
+        .tooltip-content {
+            color: #c9d1d9;
+            line-height: 1.4;
+        }
+
+        .tooltip-meta {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #8b949e;
+        }
+
+        /* 기억 상세 모달 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.visible {
+            display: flex;
+        }
+
+        .modal {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: modalSlideIn 0.2s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid #30363d;
+            background: #21262d;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #58a6ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #8b949e;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: #30363d;
+            color: #c9d1d9;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .memory-content {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .memory-meta {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .meta-item {
+            background: #21262d;
+            border-radius: 6px;
+            padding: 10px 12px;
+        }
+
+        .meta-label {
+            font-size: 11px;
+            color: #8b949e;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 14px;
+            color: #c9d1d9;
+        }
+
+        .meta-value.slot-a { color: #f85149; }
+        .meta-value.slot-b { color: #58a6ff; }
+        .meta-value.slot-c { color: #3fb950; }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .tag {
+            background: #30363d;
+            color: #8b949e;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .tag.keyword {
+            background: #1f3a5f;
+            color: #58a6ff;
+        }
+
+        .connected-section h4 {
+            font-size: 13px;
+            color: #8b949e;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .connected-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .connected-item {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .connected-item:hover {
+            background: #30363d;
+            border-color: #58a6ff;
+        }
+
+        .connected-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* 뷰 모드 토글 */
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+            background: #21262d;
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .view-toggle button {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: #8b949e;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .view-toggle button.active {
+            background: #30363d;
+            color: #c9d1d9;
+        }
+
+        /* 로딩 */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #30363d;
+            border-top-color: #58a6ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 검색 */
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #c9d1d9;
+            font-size: 14px;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">🌳</span>
+                <span>Greeum</span>
+            </div>
+
+            <div class="search-box">
+                <input type="text" id="search" placeholder="Search memories...">
+            </div>
+
+            <div class="view-toggle">
+                <button id="btn-tree" class="active">Tree</button>
+                <button id="btn-graph">Graph</button>
+                <button id="btn-combined">All</button>
+                <button id="btn-hierarchy">Hierarchy</button>
+            </div>
+
+            <div class="stats-card">
+                <h3>Statistics</h3>
+                <div class="stat-row">
+                    <span class="stat-label">Total Memories</span>
+                    <span class="stat-value" id="stat-total">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Connections</span>
+                    <span class="stat-value" id="stat-links">-</span>
+                </div>
+            </div>
+
+            <div class="stats-card">
+                <h3>Slots</h3>
+                <div class="legend">
+                    <div class="legend-item active" data-slot="A">
+                        <div class="slot-header">
+                            <span class="legend-dot slot-a"></span>
+                            <span>Slot A</span>
+                            <span class="stat-value" id="slot-a-count">-</span>
+                        </div>
+                        <div class="slot-theme" id="slot-a-theme"></div>
+                        <div class="slot-keywords" id="slot-a-keywords"></div>
+                    </div>
+                    <div class="legend-item active" data-slot="B">
+                        <div class="slot-header">
+                            <span class="legend-dot slot-b"></span>
+                            <span>Slot B</span>
+                            <span class="stat-value" id="slot-b-count">-</span>
+                        </div>
+                        <div class="slot-theme" id="slot-b-theme"></div>
+                        <div class="slot-keywords" id="slot-b-keywords"></div>
+                    </div>
+                    <div class="legend-item active" data-slot="C">
+                        <div class="slot-header">
+                            <span class="legend-dot slot-c"></span>
+                            <span>Slot C</span>
+                            <span class="stat-value" id="slot-c-count">-</span>
+                        </div>
+                        <div class="slot-theme" id="slot-c-theme"></div>
+                        <div class="slot-keywords" id="slot-c-keywords"></div>
+                    </div>
+                    <div class="legend-item active" data-slot="D">
+                        <div class="slot-header">
+                            <span class="legend-dot slot-d"></span>
+                            <span>Slot D</span>
+                            <span class="stat-value" id="slot-d-count">-</span>
+                        </div>
+                        <div class="slot-theme" id="slot-d-theme"></div>
+                        <div class="slot-keywords" id="slot-d-keywords"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label>Node Limit: <span id="limit-value">100</span></label>
+                    <input type="range" id="limit-slider" min="20" max="300" value="100">
+                </div>
+                <div class="control-group">
+                    <label>Link Strength: <span id="strength-value">0.5</span></label>
+                    <input type="range" id="strength-slider" min="0" max="100" value="50">
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="btn-reload">Reload Data</button>
+            <button class="btn btn-secondary" id="btn-reset">Reset View</button>
+        </aside>
+
+        <main class="main">
+            <svg id="graph"></svg>
+            <div class="tooltip" id="tooltip">
+                <div class="tooltip-title"></div>
+                <div class="tooltip-content"></div>
+                <div class="tooltip-meta"></div>
+            </div>
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <p style="margin-top: 12px;">Loading memories...</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- 기억 상세 모달 -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>⭐</span>
+                    <span id="modal-title-text">Memory #0</span>
+                </div>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="memory-content" id="modal-content">
+                    Loading...
+                </div>
+                <div class="memory-meta" id="modal-meta">
+                    <!-- 메타 정보가 여기에 동적으로 추가됨 -->
+                </div>
+                <div class="tags-container" id="modal-tags">
+                    <!-- 태그/키워드가 여기에 동적으로 추가됨 -->
+                </div>
+                <div class="connected-section" id="modal-connected">
+                    <h4>Connected Memories</h4>
+                    <div class="connected-list" id="modal-connected-list">
+                        <!-- 연결된 기억들이 여기에 동적으로 추가됨 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 설정
+        const CONFIG = {
+            apiBase: window.location.origin,
+            colors: {
+                1: '#f85149', // Slot A
+                2: '#58a6ff', // Slot B
+                3: '#3fb950', // Slot C
+                4: '#d29922', // Slot D
+                0: '#8b949e'  // None
+            },
+            linkColors: {
+                tree: '#58a6ff',
+                semantic: '#3fb950',
+                temporal: '#d29922'
+            }
+        };
+
+        // 상태
+        let state = {
+            viewMode: 'tree',
+            limit: 100,
+            linkStrength: 0.5,
+            activeSlots: new Set(['A', 'B', 'C', 'D', '']),
+            searchQuery: '',
+            data: null
+        };
+
+        // SVG 설정
+        const svg = d3.select('#graph');
+        const tooltip = d3.select('#tooltip');
+        let simulation = null;
+
+        // 초기화
+        async function init() {
+            setupEventListeners();
+            await loadData();
+        }
+
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            // 뷰 모드 토글
+            document.getElementById('btn-tree').addEventListener('click', () => setViewMode('tree'));
+            document.getElementById('btn-graph').addEventListener('click', () => setViewMode('graph'));
+            document.getElementById('btn-combined').addEventListener('click', () => setViewMode('combined'));
+            document.getElementById('btn-hierarchy').addEventListener('click', () => setViewMode('hierarchy'));
+
+            // 슬롯 필터
+            document.querySelectorAll('.legend-item').forEach(item => {
+                item.addEventListener('click', () => toggleSlot(item.dataset.slot));
+            });
+
+            // 슬라이더
+            document.getElementById('limit-slider').addEventListener('input', (e) => {
+                state.limit = parseInt(e.target.value);
+                document.getElementById('limit-value').textContent = state.limit;
+            });
+            document.getElementById('limit-slider').addEventListener('change', loadData);
+
+            document.getElementById('strength-slider').addEventListener('input', (e) => {
+                state.linkStrength = e.target.value / 100;
+                document.getElementById('strength-value').textContent = state.linkStrength.toFixed(2);
+                updateSimulation();
+            });
+
+            // 버튼
+            document.getElementById('btn-reload').addEventListener('click', loadData);
+            document.getElementById('btn-reset').addEventListener('click', resetView);
+
+            // 검색
+            document.getElementById('search').addEventListener('input', (e) => {
+                state.searchQuery = e.target.value.toLowerCase();
+                updateHighlight();
+            });
+
+            // 창 크기 변경
+            window.addEventListener('resize', () => {
+                if (state.data) render(state.data);
+            });
+        }
+
+        // 데이터 로드
+        async function loadData() {
+            showLoading(true);
+
+            try {
+                // hierarchy 모드는 tree 데이터를 사용
+                const dataMode = state.viewMode === 'hierarchy' ? 'tree' : state.viewMode;
+                const endpoint = `/viz/data/${dataMode}?limit=${state.limit}`;
+                const response = await fetch(endpoint);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                state.data = await response.json();
+                render(state.data);
+                await loadStats();
+            } catch (error) {
+                console.error('Failed to load data:', error);
+                // 데모 데이터로 폴백
+                state.data = generateDemoData();
+                render(state.data);
+            }
+
+            showLoading(false);
+        }
+
+        // 통계 로드
+        async function loadStats() {
+            try {
+                const response = await fetch('/viz/stats');
+                if (response.ok) {
+                    const stats = await response.json();
+                    document.getElementById('stat-total').textContent = stats.total_memories || '-';
+                    document.getElementById('stat-links').textContent = stats.total_links || '-';
+
+                    const slots = stats.slot_distribution || {};
+                    document.getElementById('slot-a-count').textContent = slots['A'] || 0;
+                    document.getElementById('slot-b-count').textContent = slots['B'] || 0;
+                    document.getElementById('slot-c-count').textContent = slots['C'] || 0;
+                    document.getElementById('slot-d-count').textContent = slots['D'] || 0;
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+
+            // 슬롯 분석도 함께 로드
+            await loadSlotAnalysis();
+        }
+
+        // 슬롯 분석 로드
+        async function loadSlotAnalysis() {
+            try {
+                const response = await fetch('/viz/slots/analysis');
+                if (response.ok) {
+                    const analysis = await response.json();
+
+                    for (const slot of ['A', 'B', 'C', 'D']) {
+                        const data = analysis[slot];
+                        if (data) {
+                            // 테마 표시
+                            const themeEl = document.getElementById(`slot-${slot.toLowerCase()}-theme`);
+                            if (themeEl) {
+                                themeEl.textContent = data.theme || '';
+                            }
+
+                            // 상위 키워드 표시
+                            const keywordsEl = document.getElementById(`slot-${slot.toLowerCase()}-keywords`);
+                            if (keywordsEl && data.keywords && data.keywords.length > 0) {
+                                const topKeywords = data.keywords.slice(0, 3).map(k => k.keyword).join(', ');
+                                keywordsEl.textContent = topKeywords;
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load slot analysis:', error);
+            }
+        }
+
+        // 데모 데이터 생성 (API 실패 시)
+        function generateDemoData() {
+            const slots = ['A', 'B', 'C', 'D'];
+            const nodes = [];
+            const links = [];
+
+            for (let i = 0; i < 50; i++) {
+                nodes.push({
+                    id: String(i),
+                    label: `Memory #${i}`,
+                    slot: slots[i % 4],
+                    importance: 0.3 + Math.random() * 0.7,
+                    timestamp: new Date(Date.now() - i * 3600000).toISOString(),
+                    group: (i % 4) + 1
+                });
+
+                if (i > 0) {
+                    links.push({
+                        source: String(i - 1),
+                        target: String(i),
+                        type: 'tree',
+                        strength: 1.0
+                    });
+                }
+
+                // 일부 semantic/temporal 연결
+                if (i > 5 && Math.random() > 0.7) {
+                    links.push({
+                        source: String(Math.floor(Math.random() * i)),
+                        target: String(i),
+                        type: Math.random() > 0.5 ? 'semantic' : 'temporal',
+                        strength: 0.3 + Math.random() * 0.7
+                    });
+                }
+            }
+
+            return { nodes, links };
+        }
+
+        // 계층형 트리 렌더링 (세로 방향: 위→아래)
+        function renderHierarchy(data) {
+            const width = svg.node().parentElement.clientWidth;
+            const height = svg.node().parentElement.clientHeight;
+
+            svg.selectAll('*').remove();
+
+            // 줌 설정
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on('zoom', (event) => g.attr('transform', event.transform));
+
+            svg.call(zoom);
+
+            const g = svg.append('g')
+                .attr('transform', `translate(40, 60)`);
+
+            // 필터링된 데이터
+            const filteredNodes = data.nodes.filter(n =>
+                state.activeSlots.has(n.slot) || state.activeSlots.has('')
+            );
+            const nodeIds = new Set(filteredNodes.map(n => n.id));
+            const filteredLinks = data.links.filter(l =>
+                nodeIds.has(l.source.id || l.source) && nodeIds.has(l.target.id || l.target)
+            );
+
+            // 플랫 데이터를 계층 구조로 변환
+            const hierarchyData = buildHierarchy(filteredNodes, filteredLinks);
+
+            if (!hierarchyData) {
+                g.append('text')
+                    .attr('x', width / 2 - 80)
+                    .attr('y', height / 2)
+                    .attr('fill', '#8b949e')
+                    .text('No tree structure found');
+                return;
+            }
+
+            // d3.hierarchy로 변환
+            const root = d3.hierarchy(hierarchyData);
+            const totalNodes = root.descendants().length;
+
+            // 트리 레이아웃 - 노드 수에 따라 크기 동적 조정
+            const dynamicWidth = Math.max(width - 100, totalNodes * 12);
+            const dynamicHeight = Math.max(height - 150, root.height * 45);
+
+            const treeLayout = d3.tree()
+                .size([dynamicWidth, dynamicHeight])
+                .separation((a, b) => {
+                    // 분기점에서 약간 더 넓은 간격
+                    if (a.parent === b.parent) {
+                        const siblings = a.parent ? a.parent.children.length : 1;
+                        return siblings > 2 ? 1.2 : 1;
+                    }
+                    return 1.5;
+                });
+
+            treeLayout(root);
+
+            // 링크 렌더링 (세로 곡선)
+            g.selectAll('.hierarchy-link')
+                .data(root.links())
+                .join('path')
+                .attr('class', 'hierarchy-link')
+                .attr('d', d3.linkVertical()
+                    .x(d => d.x)
+                    .y(d => d.y))
+                .attr('fill', 'none')
+                .attr('stroke', '#58a6ff')
+                .attr('stroke-opacity', 0.5)
+                .attr('stroke-width', 1.5);
+
+            // 노드 렌더링
+            const node = g.selectAll('.hierarchy-node')
+                .data(root.descendants())
+                .join('g')
+                .attr('class', 'hierarchy-node')
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+
+            node.append('circle')
+                .attr('r', d => 6 + (d.data.importance || 0.5) * 6)
+                .attr('fill', d => CONFIG.colors[d.data.group] || '#8b949e')
+                .attr('stroke', '#30363d')
+                .attr('stroke-width', 2)
+                .style('cursor', 'pointer')
+                .on('mouseover', (event, d) => showTooltipHierarchy(event, d.data))
+                .on('mouseout', hideTooltip)
+                .on('click', (event, d) => {
+                    event.stopPropagation();
+                    openMemoryModal(d.data.id);
+                });
+
+            // 텍스트 라벨 추가 (기본 숨김)
+            node.append('text')
+                .attr('class', 'node-label')
+                .attr('dy', d => 6 + (d.data.importance || 0.5) * 6 + 14)
+                .attr('text-anchor', 'middle')
+                .attr('fill', '#c9d1d9')
+                .attr('font-size', '9px')
+                .style('opacity', d => {
+                    // 분기 노드(자식 2개 이상)는 항상 표시
+                    if (d.children && d.children.length >= 2) return 1;
+                    // 루트 노드 표시
+                    if (!d.parent) return 1;
+                    return 0;
+                })
+                .text(d => d.data.label ? d.data.label.substring(0, 18) : '');
+
+            // 커서 근처 노드 라벨 표시 기능
+            const PROXIMITY_RADIUS = 80; // 픽셀 단위
+
+            svg.on('mousemove', function(event) {
+                const [mouseX, mouseY] = d3.pointer(event, g.node());
+
+                g.selectAll('.node-label').each(function(d) {
+                    const label = d3.select(this);
+                    const dx = d.x - mouseX;
+                    const dy = d.y - mouseY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    // 분기 노드는 항상 표시 유지
+                    if (d.children && d.children.length >= 2) {
+                        label.style('opacity', 1);
+                    } else if (!d.parent) {
+                        // 루트 노드
+                        label.style('opacity', 1);
+                    } else if (distance < PROXIMITY_RADIUS) {
+                        // 커서 근처 노드
+                        const opacity = 1 - (distance / PROXIMITY_RADIUS) * 0.5;
+                        label.style('opacity', opacity);
+                    } else {
+                        label.style('opacity', 0);
+                    }
+                });
+            });
+        }
+
+        // 플랫 데이터를 계층 구조로 변환
+        function buildHierarchy(nodes, links) {
+            if (nodes.length === 0) return null;
+
+            // 노드 맵 생성
+            const nodeMap = new Map();
+            nodes.forEach(n => {
+                nodeMap.set(n.id, { ...n, children: [] });
+            });
+
+            // 부모-자식 관계 구축 (links의 source가 부모, target이 자식)
+            const childIds = new Set();
+            links.forEach(link => {
+                const sourceId = link.source.id || link.source;
+                const targetId = link.target.id || link.target;
+                const parent = nodeMap.get(sourceId);
+                const child = nodeMap.get(targetId);
+
+                if (parent && child && sourceId !== targetId) {
+                    parent.children.push(child);
+                    childIds.add(targetId);
+                }
+            });
+
+            // 루트 노드 찾기 (부모가 없는 노드들)
+            const roots = [];
+            nodeMap.forEach((node, id) => {
+                if (!childIds.has(id)) {
+                    roots.push(node);
+                }
+            });
+
+            // 루트가 여러 개면 가상 루트 생성
+            if (roots.length === 0) {
+                // 순환 구조인 경우 첫 번째 노드를 루트로
+                return nodeMap.values().next().value;
+            } else if (roots.length === 1) {
+                return roots[0];
+            } else {
+                // 여러 루트를 하나의 가상 루트 아래로
+                return {
+                    id: 'virtual-root',
+                    label: 'Memories',
+                    slot: '',
+                    importance: 1,
+                    group: 0,
+                    children: roots
+                };
+            }
+        }
+
+        // 계층형 뷰용 툴팁
+        function showTooltipHierarchy(event, d) {
+            tooltip.select('.tooltip-title').text(`Memory #${d.id}`);
+            tooltip.select('.tooltip-content').text(d.label || '');
+            tooltip.select('.tooltip-meta').text(
+                `Slot: ${d.slot || 'None'} | Importance: ${((d.importance || 0.5) * 100).toFixed(0)}%`
+            );
+
+            // 커서 바로 옆에 표시
+            tooltip
+                .style('left', (event.clientX + 10) + 'px')
+                .style('top', (event.clientY + 10) + 'px')
+                .classed('visible', true);
+        }
+
+        // 렌더링
+        function render(data) {
+            // hierarchy 모드는 별도 렌더링
+            if (state.viewMode === 'hierarchy') {
+                renderHierarchy(data);
+                return;
+            }
+
+            const width = svg.node().parentElement.clientWidth;
+            const height = svg.node().parentElement.clientHeight;
+
+            svg.selectAll('*').remove();
+
+            // 줌 설정
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on('zoom', (event) => g.attr('transform', event.transform));
+
+            svg.call(zoom);
+
+            const g = svg.append('g');
+
+            // 필터링된 데이터
+            const filteredNodes = data.nodes.filter(n =>
+                state.activeSlots.has(n.slot) || state.activeSlots.has('')
+            );
+            const nodeIds = new Set(filteredNodes.map(n => n.id));
+            const filteredLinks = data.links.filter(l =>
+                nodeIds.has(l.source.id || l.source) && nodeIds.has(l.target.id || l.target)
+            );
+
+            // 시뮬레이션
+            simulation = d3.forceSimulation(filteredNodes)
+                .force('link', d3.forceLink(filteredLinks)
+                    .id(d => d.id)
+                    .distance(80)
+                    .strength(state.linkStrength))
+                .force('charge', d3.forceManyBody().strength(-200))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(30));
+
+            // 링크 렌더링
+            const link = g.append('g')
+                .selectAll('line')
+                .data(filteredLinks)
+                .join('line')
+                .attr('class', d => `link ${d.type}`)
+                .attr('stroke', d => CONFIG.linkColors[d.type] || '#8b949e')
+                .attr('stroke-width', d => Math.max(1, d.strength * 3));
+
+            // 노드 렌더링
+            const node = g.append('g')
+                .selectAll('.node')
+                .data(filteredNodes)
+                .join('g')
+                .attr('class', 'node')
+                .call(drag(simulation));
+
+            node.append('circle')
+                .attr('r', d => 8 + d.importance * 10)
+                .attr('fill', d => CONFIG.colors[d.group])
+                .on('mouseover', showTooltip)
+                .on('mouseout', hideTooltip)
+                .on('click', (event, d) => {
+                    event.stopPropagation();
+                    openMemoryModal(d.id);
+                });
+
+            node.append('text')
+                .attr('dx', 15)
+                .attr('dy', 4)
+                .text(d => d.label.substring(0, 20));
+
+            // 시뮬레이션 틱
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                node.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+
+            updateHighlight();
+        }
+
+        // 드래그 핸들러
+        function drag(simulation) {
+            return d3.drag()
+                .on('start', (event, d) => {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
+                })
+                .on('drag', (event, d) => {
+                    d.fx = event.x;
+                    d.fy = event.y;
+                })
+                .on('end', (event, d) => {
+                    if (!event.active) simulation.alphaTarget(0);
+                    d.fx = null;
+                    d.fy = null;
+                });
+        }
+
+        // 툴팁
+        function showTooltip(event, d) {
+            tooltip.select('.tooltip-title').text(`Memory #${d.id}`);
+            tooltip.select('.tooltip-content').text(d.label);
+            tooltip.select('.tooltip-meta').text(
+                `Slot: ${d.slot || 'None'} | Importance: ${(d.importance * 100).toFixed(0)}%`
+            );
+
+            // 커서 바로 옆에 표시
+            tooltip
+                .style('left', (event.clientX + 10) + 'px')
+                .style('top', (event.clientY + 10) + 'px')
+                .classed('visible', true);
+        }
+
+        function hideTooltip() {
+            tooltip.classed('visible', false);
+        }
+
+        // 연결된 노드 하이라이트
+        function highlightConnected(d) {
+            const connectedIds = new Set([d.id]);
+
+            state.data.links.forEach(link => {
+                const sourceId = link.source.id || link.source;
+                const targetId = link.target.id || link.target;
+                if (sourceId === d.id) connectedIds.add(targetId);
+                if (targetId === d.id) connectedIds.add(sourceId);
+            });
+
+            svg.selectAll('.node circle')
+                .attr('opacity', n => connectedIds.has(n.id) ? 1 : 0.2);
+
+            svg.selectAll('.link')
+                .attr('opacity', l => {
+                    const sourceId = l.source.id || l.source;
+                    const targetId = l.target.id || l.target;
+                    return sourceId === d.id || targetId === d.id ? 1 : 0.1;
+                });
+
+            // 클릭하면 리셋
+            setTimeout(() => {
+                svg.selectAll('.node circle').attr('opacity', 1);
+                svg.selectAll('.link').attr('opacity', 1);
+            }, 3000);
+        }
+
+        // 검색 하이라이트
+        function updateHighlight() {
+            if (!state.searchQuery) {
+                svg.selectAll('.node circle').attr('opacity', 1);
+                svg.selectAll('.node text').attr('opacity', 1);
+                return;
+            }
+
+            svg.selectAll('.node')
+                .each(function(d) {
+                    const matches = d.label.toLowerCase().includes(state.searchQuery);
+                    d3.select(this).select('circle').attr('opacity', matches ? 1 : 0.2);
+                    d3.select(this).select('text').attr('opacity', matches ? 1 : 0.2);
+                });
+        }
+
+        // 뷰 모드 변경
+        function setViewMode(mode) {
+            state.viewMode = mode;
+            document.querySelectorAll('.view-toggle button').forEach(btn => {
+                btn.classList.toggle('active', btn.id === `btn-${mode}`);
+            });
+            loadData();
+        }
+
+        // 슬롯 토글
+        function toggleSlot(slot) {
+            const item = document.querySelector(`.legend-item[data-slot="${slot}"]`);
+
+            if (state.activeSlots.has(slot)) {
+                state.activeSlots.delete(slot);
+                item.classList.remove('active');
+            } else {
+                state.activeSlots.add(slot);
+                item.classList.add('active');
+            }
+
+            if (state.data) render(state.data);
+        }
+
+        // 시뮬레이션 업데이트
+        function updateSimulation() {
+            if (simulation) {
+                simulation.force('link').strength(state.linkStrength);
+                simulation.alpha(0.3).restart();
+            }
+        }
+
+        // 뷰 리셋
+        function resetView() {
+            svg.transition().duration(500).call(
+                d3.zoom().transform,
+                d3.zoomIdentity
+            );
+        }
+
+        // 로딩 표시
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // ===== 모달 관련 함수 =====
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalClose = document.getElementById('modal-close');
+
+        // 모달 열기
+        async function openMemoryModal(memoryId) {
+            modalOverlay.classList.add('visible');
+            document.getElementById('modal-title-text').textContent = `Memory #${memoryId}`;
+            document.getElementById('modal-content').textContent = 'Loading...';
+            document.getElementById('modal-meta').innerHTML = '';
+            document.getElementById('modal-tags').innerHTML = '';
+            document.getElementById('modal-connected-list').innerHTML = '';
+
+            try {
+                const response = await fetch(`/viz/memory/${memoryId}`);
+                if (!response.ok) throw new Error('Failed to fetch memory');
+
+                const data = await response.json();
+                renderModalContent(data);
+            } catch (error) {
+                console.error('Failed to load memory detail:', error);
+                document.getElementById('modal-content').textContent = 'Failed to load memory details.';
+            }
+        }
+
+        // 모달 내용 렌더링
+        function renderModalContent(data) {
+            // 내용
+            document.getElementById('modal-content').textContent = data.content || '(No content)';
+
+            // 메타 정보
+            const slotClass = data.slot ? `slot-${data.slot.toLowerCase()}` : '';
+            const timestamp = data.timestamp ? new Date(data.timestamp).toLocaleString('ko-KR') : '-';
+            const importance = data.importance ? `${(data.importance * 100).toFixed(0)}%` : '-';
+
+            document.getElementById('modal-meta').innerHTML = `
+                <div class="meta-item">
+                    <div class="meta-label">Slot</div>
+                    <div class="meta-value ${slotClass}">${data.slot || 'None'}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Importance</div>
+                    <div class="meta-value">${importance}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Timestamp</div>
+                    <div class="meta-value">${timestamp}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Branch</div>
+                    <div class="meta-value">${data.root || '-'}</div>
+                </div>
+            `;
+
+            // 키워드 & 태그
+            const tagsHtml = [
+                ...(data.keywords || []).map(k => `<span class="tag keyword">${k}</span>`),
+                ...(data.tags || []).map(t => `<span class="tag">${t}</span>`)
+            ].join('');
+            document.getElementById('modal-tags').innerHTML = tagsHtml || '<span class="tag">No tags</span>';
+
+            // 연결된 기억
+            const connectedHtml = (data.connected || []).map(conn => {
+                const dotClass = conn.slot ? `slot-${conn.slot.toLowerCase()}` : 'slot-none';
+                return `
+                    <div class="connected-item" onclick="openMemoryModal(${conn.id})">
+                        <span class="connected-dot ${dotClass}"></span>
+                        <span>#${conn.id}: ${conn.label || '(No content)'}</span>
+                    </div>
+                `;
+            }).join('');
+
+            if (connectedHtml) {
+                document.getElementById('modal-connected').style.display = 'block';
+                document.getElementById('modal-connected-list').innerHTML = connectedHtml;
+            } else {
+                document.getElementById('modal-connected').style.display = 'none';
+            }
+        }
+
+        // 모달 닫기
+        function closeModal() {
+            modalOverlay.classList.remove('visible');
+        }
+
+        // 모달 이벤트 리스너
+        modalClose.addEventListener('click', closeModal);
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) closeModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // 시작
+        init();
+    </script>
+</body>
+</html>
