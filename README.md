@@ -1,16 +1,12 @@
 # Greeum
 
 [![PyPI version](https://badge.fury.io/py/greeum.svg)](https://badge.fury.io/py/greeum)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> 기억의 해방 — 지긋지긋한 컨텍스트 제한에서 자유로워지세요. Greeum은 MCP 호환 도구와 CLI가 동일한 장기 기억 저장소를 사용하도록 설계된 오픈소스 모듈입니다.
+**Persistent memory for AI agents** — no more context loss between sessions.
 
-**왜 Greeum인가요?**
-- 한 번의 설치와 셋업으로 Codex, ClaudeCode, Cursor, ChatGPT MCP에 등록할 수 있습니다.
-- search → 작업 → add 루틴을 따라 저장된 기록을 슬롯(A/B/C)과 브랜치로 정리합니다.
-- Branch 분석 리포트와 usage 통계 도구로 최근 활동과 슬롯 상태를 조회할 수 있습니다.
-- 기본은 해시 기반 폴백 검색이며, SentenceTransformer를 설치하면 의미 검색을 추가로 사용할 수 있습니다.
+Greeum is an open-source memory module that gives LLM agents long-term memory. Store memories on your own workstation, access them from anywhere, and never lose context again.
 
 <p align="center">
   <a href="README.md"><strong>English</strong></a> · <a href="docs/README_ko.md">한국어</a>
@@ -18,133 +14,186 @@
 
 ---
 
-## 1. Installation & Setup
-
-> **First run checklist**
-> 1. Install the package (pipx or pip)
-> 2. Run `greeum setup --start-worker` to create the data directory and launch the worker
-> 3. Connect your MCP client (Codex, ClaudeCode, Cursor, …)
-
-> ⚠️ **Platform support**: Greeum MCP는 Linux, macOS, WSL 환경에서 안정적으로 동작합니다. Windows PowerShell에서는 Codex STDIO 초기화가 반복적으로 실패할 수 있으므로 WSL을 사용하세요.
-
-👉 **Need the ultra-short version?** See [`docs/QUICKSTART.md`](docs/QUICKSTART.md) for “설치 → 셋업 → 연동” 한 페이지 요약.
+## Quick Start
 
 ```bash
-# Recommended (isolated) install
-pipx install --pip-args "--pre" greeum
+# Install
+pip install greeum
 
-# or standard pip
-pip install --upgrade "greeum"
+# Setup (interactive wizard)
+greeum setup
 
-# initialise data directory, choose where memories live
-greeum setup --start-worker
+# Test
+greeum memory add "My first memory"
+greeum memory search "first"
 ```
 
-### Optional: enable semantic embeddings
-```bash
-pip install sentence-transformers          # once per machine
-greeum mcp warmup                          # downloads the default model
-```
-- MCP/CLI run with **hash fallback by default** for fast startup.
-- Add `--semantic` (or unset `GREEUM_DISABLE_ST`) when you want the SentenceTransformer-enabled search:
-  ```bash
-  greeum mcp serve --semantic -t stdio
-  ```
-
-### Keep the worker running automatically
-- **macOS**: create `~/Library/LaunchAgents/com.greeum.worker.plist` that runs `greeum worker serve --host 127.0.0.1 --port 8800 --semantic` at login.
-- **Linux (systemd user)**: add a unit under `~/.config/systemd/user/greeum-worker.service` pointing to the same command and enable it with `systemctl --user enable --now greeum-worker`.
-- **Windows**: register `greeum worker serve --host 127.0.0.1 --port 8800` in 작업 스케줄러 with the “로그온 시 실행” trigger.
+That's it. Greeum is ready to use with your MCP client.
 
 ---
 
-## 2. MCP Integration
+## Setup Modes
 
-### Codex (STDIO)
-1. Ensure `greeum setup` has been run at least once.
-2. `~/.codex/config.toml`
-   ```toml
-   [mcp_servers.greeum]
-   command = "greeum"
-   args    = ["mcp", "serve", "-t", "stdio"]
-   env     = { "GREEUM_QUIET" = "true", "PYTORCH_ENABLE_MPS_FALLBACK" = "1" }
-   ```
-3. Optional semantic mode:
-   ```toml
-   args = ["mcp", "serve", "-t", "stdio", "--semantic"]
-   ```
-   > First run may take longer while the model loads. Warm-up before enabling for smoother startup.
+`greeum setup` provides three modes depending on your use case:
 
-### ClaudeCode / Cursor (native MCP)
+### Local (default)
+
+Store memories on this computer only.
+
 ```bash
-greeum mcp serve
+greeum setup
+# Select [1] Local
 ```
-- Add the command above to the client’s MCP configuration.
-- Semantic mode: `greeum mcp serve --semantic`
 
-### HTTP / URL-based MCP (e.g. ChatGPT)
+### Server
+
+Turn this computer into a Greeum server accessible from anywhere.
+Handles API key generation, Tailscale networking, and auto-start on boot.
+
 ```bash
-greeum mcp serve -t http --host 0.0.0.0 --port 8800
+greeum setup --server
 ```
-Then register `http://127.0.0.1:8800/mcp` as the endpoint.
+
+```
+[1/5] Data directory        ~/.greeum  ✓
+[2/5] Embedding model       ready  ✓
+[3/5] API server             port 8400, key generated  ✓
+[4/5] Tailscale network     connected  ✓
+[5/5] System service        auto-start enabled  ✓
+```
+
+### Remote
+
+Connect to an existing Greeum server — one command.
+
+```bash
+greeum setup --remote http://my-server:8400 --api-key grm_xxxxx
+```
+
+All MCP tools and CLI commands will use the remote server automatically.
 
 ---
 
-## 3. LLM Prompting Guidelines
-- **Always close sessions with a summary**: “Call `add_memory` summarising decisions before ending the shift.”
-- **Retrieve before writing**: run `search_memory` with the task keywords before starting work.
-- **Use anchor slots (A/B/C)** for hot contexts:
-  ```json
-  {
-    "name": "search_memory",
-    "arguments": { "query": "login flow", "limit": 5, "slot": "A" }
+## MCP Integration
+
+Once `greeum setup` is complete, connect your MCP client:
+
+### Claude Code
+
+```bash
+claude mcp add greeum -- greeum mcp serve -t stdio
+```
+
+### Cursor
+
+Add to MCP settings:
+```json
+{
+  "greeum": {
+    "command": "greeum",
+    "args": ["mcp", "serve", "-t", "stdio"]
   }
-  ```
-- Encourage agents to log important facts with `importance` ≥ 0.6 so team hand‑offs stay seamless.
-
----
-
-## 4. CLI Essentials
-
-```bash
-# Add context
-greeum memory add "Legal copy updated for release"
-
-# Search (global fallback enabled by default)
-greeum memory search "release notes" --count 5
-
-# Anchor-based search (slot-aware)
-greeum memory search "translations" --slot B --radius 2
-
-# Rebuild branch indices (FAISS + keyword or keyword-only)
-greeum memory reindex             # uses FAISS if available
-greeum memory reindex --disable-faiss
-
-# Reuse the long-running worker (avoids cold-start on each CLI call)
-greeum worker serve --host 127.0.0.1 --port 8800   # terminal 1
-export GREEUM_MCP_HTTP="http://127.0.0.1:8800/mcp" # terminal 2
-greeum memory add "Sprint hand-off" --use-worker
-greeum memory search "hand-off" --use-worker
+}
 ```
 
-Other useful commands:
-- `greeum anchors status` / `set A <block>` / `pin A`
-- `greeum workflow search "<topic>"` for scripted MCP calls
-- `greeum mcp warmup` to cache the embedding model before enabling semantic mode
+### Codex
+
+`~/.codex/config.toml`:
+```toml
+[mcp_servers.greeum]
+command = "greeum"
+args    = ["mcp", "serve", "-t", "stdio"]
+```
+
+> Greeum MCP is supported on Linux, macOS, and WSL. On Windows, use WSL.
 
 ---
 
-## 5. Documentation
+## MCP Tools
+
+Greeum provides these tools to your AI agent via MCP:
+
+| Tool | Description |
+|------|-------------|
+| `add_memory` | Store a memory with optional importance score |
+| `search_memory` | Semantic search across all memories |
+| `get_memory_stats` | View memory count, slots, and system health |
+| `usage_analytics` | Analyze usage patterns over time |
+| `system_doctor` | Run diagnostics and auto-repair |
+| `analyze` | Summarize recent activity and slot status |
+
+### How agents use Greeum
+
+1. **Search** before starting work — retrieve relevant context
+2. **Work** on the task with full context
+3. **Add** a summary when done — preserve decisions and outcomes
+
+```json
+{ "name": "search_memory", "arguments": { "query": "auth refactor", "limit": 5 } }
+{ "name": "add_memory", "arguments": { "content": "Switched to JWT tokens for auth", "importance": 0.7 } }
+```
+
+---
+
+## CLI Reference
+
+```bash
+# Memory operations
+greeum memory add "context to remember"
+greeum memory add "important note" --importance 0.8
+greeum memory search "keyword" --count 5
+
+# Slot management
+greeum slots status
+greeum slots set A 123      # Pin memory #123 to slot A
+
+# Server management
+greeum config show           # View current configuration
+greeum config mode local     # Switch to local mode
+greeum config mode remote    # Switch to remote mode
+greeum config test           # Test remote connection
+
+# Maintenance
+greeum doctor                # System diagnostics
+greeum mcp warmup            # Pre-download embedding model
+```
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│               Your Workstation               │
+│                                             │
+│  greeum api serve (:8400)                   │
+│  ├── Semantic Search (sentence-transformers)│
+│  ├── STM Slots (A/B/C context anchors)     │
+│  ├── Branch-aware LTM storage (SQLite)     │
+│  └── API Key authentication                │
+│                                             │
+│  Accessible via Tailscale from anywhere     │
+└─────────────────────────────────────────────┘
+        ▲               ▲               ▲
+        │               │               │
+   Claude Code       Cursor          Codex
+   (MCP/STDIO)     (MCP/STDIO)    (MCP/STDIO)
+```
+
+---
+
+## Documentation
+
+- [Quick Start Guide](docs/QUICKSTART.md)
 - [Getting Started](docs/get-started.md)
-- [MCP Integration Details](docs/mcp-integration.md)
-- [Automation Workflow Guide](docs/greeum-workflow-guide.md)
+- [Anchors Guide](docs/anchors-guide.md)
 - [API Reference](docs/api-reference.md)
+- [Troubleshooting](docs/troubleshooting.md)
 
 ---
 
-## 6. License
+## License
+
 MIT License — see [LICENSE](LICENSE).
 
----
-
-**Greeum** · Persistent memory for AI—built and maintained by the community.
+**Greeum** · Persistent memory for AI — built and maintained by the community.

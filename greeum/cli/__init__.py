@@ -249,9 +249,14 @@ def _prompt_connection_mode() -> str:
     click.echo("Where will Greeum store memories?")
     click.echo("  [1] Local (default) - Store on this computer")
     click.echo("  [2] Remote - Connect to a Greeum server")
+    click.echo("  [3] Server - Make this computer a Greeum server")
 
-    choice = click.prompt("Select mode", default="1", type=click.Choice(["1", "2"]))
-    return "remote" if choice == "2" else "local"
+    choice = click.prompt("Select mode", default="1", type=click.Choice(["1", "2", "3"]))
+    if choice == "2":
+        return "remote"
+    elif choice == "3":
+        return "server"
+    return "local"
 
 
 def _test_remote_connection(url: str, api_key: str) -> tuple:
@@ -328,6 +333,299 @@ def _setup_remote_mode(config: GreeumConfig, remote_url: Optional[str],
             click.echo("설정이 저장되지 않았습니다.")
 
 
+def _generate_api_key() -> str:
+    """Generate a secure API key with grm_ prefix."""
+    import secrets
+    return f"grm_{secrets.token_urlsafe(24)}"
+
+
+def _check_tailscale_installed() -> bool:
+    """Check if Tailscale is installed."""
+    return shutil.which("tailscale") is not None
+
+
+def _install_tailscale() -> bool:
+    """Install Tailscale via official script. Requires sudo."""
+    click.echo("      Tailscale 설치 중...")
+    try:
+        # Download install script first
+        dl = subprocess.run(
+            ["curl", "-fsSL", "-o", "/tmp/tailscale-install.sh", "https://tailscale.com/install.sh"],
+            capture_output=True, text=True, timeout=30,
+        )
+        if dl.returncode != 0:
+            click.echo("      [WARN] 설치 스크립트 다운로드 실패")
+            return False
+
+        # Run with sudo (will prompt for password in interactive terminal)
+        result = subprocess.run(
+            ["sudo", "sh", "/tmp/tailscale-install.sh"],
+            timeout=120,
+        )
+        return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        click.echo("      [WARN] 설치 시간 초과")
+        return False
+    except FileNotFoundError:
+        click.echo("      [WARN] curl을 찾을 수 없습니다")
+        return False
+
+
+def _tailscale_up() -> bool:
+    """Start Tailscale and wait for authentication."""
+    try:
+        # Check if already connected
+        status = subprocess.run(
+            ["tailscale", "status", "--json"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if status.returncode == 0:
+            import json as _json
+            status_data = _json.loads(status.stdout)
+            if status_data.get("BackendState") == "Running":
+                click.echo("      Tailscale: 이미 연결됨")
+                return True
+
+        # Start tailscale up (this may open a browser for login)
+        click.echo("      브라우저에서 Tailscale 로그인이 열립니다...")
+        result = subprocess.run(
+            ["sudo", "tailscale", "up"],
+            timeout=180,
+        )
+        return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        click.echo("      [WARN] Tailscale 로그인 시간 초과")
+        return False
+    except FileNotFoundError:
+        return False
+
+
+def _get_tailscale_hostname() -> Optional[str]:
+    """Get this machine's Tailscale hostname."""
+    try:
+        import json as _json
+        result = subprocess.run(
+            ["tailscale", "status", "--json"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0:
+            data = _json.loads(result.stdout)
+            self_node = data.get("Self", {})
+            dns_name = self_node.get("DNSName", "")
+            # DNSName ends with a dot, remove it
+            if dns_name.endswith("."):
+                dns_name = dns_name[:-1]
+            return dns_name or self_node.get("HostName")
+        return None
+    except Exception:
+        return None
+
+
+def _get_tailscale_ip() -> Optional[str]:
+    """Get this machine's Tailscale IP."""
+    try:
+        result = subprocess.run(
+            ["tailscale", "ip", "-4"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+        return None
+    except Exception:
+        return None
+
+
+def _create_systemd_service(api_key: str, port: int, data_dir: str) -> bool:
+    """Create and enable systemd service for Greeum API server."""
+    python_bin = sys.executable or shutil.which("python3") or "/usr/bin/python3"
+    user = os.environ.get("USER", "dryrain")
+
+    service_content = f"""[Unit]
+Description=Greeum API Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={user}
+Environment=GREEUM_API_KEY={api_key}
+Environment=GREEUM_DATA_DIR={data_dir}
+ExecStart={python_bin} -m greeum.server --port {port} --host 0.0.0.0
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+    service_path = "/etc/systemd/system/greeum-api.service"
+    try:
+        # Write service file via sudo
+        proc = subprocess.run(
+            ["sudo", "tee", service_path],
+            input=service_content, capture_output=True, text=True, timeout=30,
+        )
+        if proc.returncode != 0:
+            return False
+
+        # Reload, enable, and start
+        subprocess.run(["sudo", "systemctl", "daemon-reload"], timeout=30, check=True)
+        subprocess.run(["sudo", "systemctl", "enable", "greeum-api"], timeout=30, check=True)
+        subprocess.run(["sudo", "systemctl", "start", "greeum-api"], timeout=30, check=True)
+        return True
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return False
+
+
+def _setup_server_mode(config: GreeumConfig, data_dir: Optional[str],
+                       skip_warmup: bool, port: int = 8400):
+    """서버 모드 설정: 이 컴퓨터를 Greeum 서버로 구성."""
+    click.echo("\n=== 서버 모드 설정 ===")
+    click.echo("이 컴퓨터를 Greeum 서버로 설정합니다.\n")
+
+    # Step 1: Data directory
+    click.echo("[1/5] 데이터 디렉토리 설정")
+    default_dir = data_dir or config.data_dir or str(DEFAULT_DATA_DIR)
+    chosen_dir = click.prompt(
+        "      데이터 디렉토리",
+        default=str(Path(default_dir).expanduser()),
+    )
+    target_dir = ensure_data_dir(chosen_dir)
+    os.environ['GREEUM_DATA_DIR'] = str(target_dir)
+    try:
+        _ensure_database_ready(Path(target_dir))
+    except click.ClickException as exc:
+        click.echo(f"      [ERROR] {exc}")
+        sys.exit(1)
+    click.echo(f"      {target_dir}  ✓")
+
+    # Step 2: Embedding warmup
+    click.echo("\n[2/5] 임베딩 모델 설정")
+    semantic_ready = config.semantic_ready
+    if skip_warmup:
+        click.echo("      건너뜀 (hash fallback)")
+    elif not semantic_ready:
+        click.echo(f"      {DEFAULT_ST_MODEL} 다운로드 중...")
+        try:
+            cache_dir = _download_sentence_transformer(DEFAULT_ST_MODEL)
+            semantic_ready = True
+            click.echo(f"      모델 준비 완료  ✓")
+        except Exception as exc:
+            click.echo(f"      [WARN] 모델 다운로드 실패: {exc}")
+            click.echo("      hash fallback으로 진행합니다.")
+    else:
+        click.echo("      이미 준비됨  ✓")
+
+    # Step 3: API key generation
+    click.echo("\n[3/5] API 서버 설정")
+    port = click.prompt("      포트", default=port, type=int)
+
+    existing_key = os.environ.get("GREEUM_API_KEY")
+    if existing_key:
+        if click.confirm(f"      기존 API Key 사용? ({existing_key[:12]}...)", default=True):
+            api_key = existing_key
+        else:
+            api_key = _generate_api_key()
+            click.echo(f"      새 API Key: {api_key}")
+    else:
+        api_key = _generate_api_key()
+        click.echo(f"      API Key: {api_key}")
+    click.echo(f"      포트: {port}  ✓")
+
+    # Step 4: Tailscale
+    click.echo("\n[4/5] Tailscale 네트워크 설정")
+    ts_hostname = None
+    ts_ip = None
+    ts_skipped = False
+
+    if _check_tailscale_installed():
+        click.echo("      Tailscale 설치됨  ✓")
+    else:
+        if click.confirm("      Tailscale이 설치되어 있지 않습니다. 설치할까요? (sudo 필요)", default=True):
+            if _install_tailscale():
+                click.echo("      설치 완료  ✓")
+            else:
+                click.echo("      [WARN] 설치 실패. 수동 설치: https://tailscale.com/download")
+                ts_skipped = True
+        else:
+            click.echo("      건너뜀 (로컬 네트워크에서만 접속 가능)")
+            ts_skipped = True
+
+    if not ts_skipped and _check_tailscale_installed():
+        if _tailscale_up():
+            ts_hostname = _get_tailscale_hostname()
+            ts_ip = _get_tailscale_ip()
+            if ts_hostname:
+                click.echo(f"      호스트명: {ts_hostname}")
+            if ts_ip:
+                click.echo(f"      IP: {ts_ip}")
+            click.echo("      Tailscale 연결됨  ✓")
+        else:
+            click.echo("      [WARN] Tailscale 연결 실패. 나중에 'sudo tailscale up'으로 연결하세요.")
+
+    # Step 5: systemd service
+    click.echo("\n[5/5] 시스템 서비스 등록")
+    if click.confirm("      부팅 시 자동 시작하도록 등록할까요? (sudo 필요)", default=True):
+        if _create_systemd_service(api_key, port, str(target_dir)):
+            click.echo("      greeum-api.service 등록됨  ✓")
+            click.echo("      부팅 시 자동 시작  ✓")
+        else:
+            click.echo(f"      [WARN] 서비스 등록 실패. 수동 실행: greeum api serve -p {port}")
+    else:
+        click.echo(f"      건너뜀 (수동 실행: greeum api serve -p {port})")
+
+    # Save config
+    config.data_dir = str(target_dir)
+    config.semantic_ready = semantic_ready
+    save_config(config)
+    if semantic_ready:
+        mark_semantic_ready(True)
+
+    # Summary
+    server_url = f"http://{ts_hostname}:{port}" if ts_hostname else f"http://{ts_ip}:{port}" if ts_ip else f"http://localhost:{port}"
+    local_ip = _get_local_ip()
+    lan_url = f"http://{local_ip}:{port}" if local_ip else None
+
+    click.echo("\n" + "=" * 55)
+    click.echo("  Greeum 서버 설정 완료!")
+    click.echo("=" * 55)
+    click.echo(f"\n  데이터:     {target_dir}")
+    click.echo(f"  임베딩:     {'ready' if semantic_ready else 'hash fallback'}")
+    click.echo(f"  API Key:    {api_key}")
+    click.echo(f"  포트:       {port}")
+    if ts_hostname:
+        click.echo(f"  Tailscale:  {server_url}")
+    if lan_url:
+        click.echo(f"  LAN:        {lan_url}")
+
+    click.echo(f"\n  다른 기기에서 연결:")
+    connect_url = server_url if ts_hostname else (lan_url or f"http://localhost:{port}")
+    click.echo(f"  greeum setup --remote {connect_url} --api-key {api_key}")
+    click.echo("")
+
+    # Save API key to env file for reference
+    env_file = Path(target_dir) / ".server.env"
+    env_file.write_text(
+        f"GREEUM_API_KEY={api_key}\n"
+        f"GREEUM_PORT={port}\n"
+        f"GREEUM_SERVER_URL={connect_url}\n"
+    )
+    click.echo(f"  서버 정보 저장: {env_file}")
+
+
+def _get_local_ip() -> Optional[str]:
+    """Get local network IP address."""
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return None
+
+
 @main.command()
 @click.option('--data-dir', type=click.Path(file_okay=False, dir_okay=True, writable=True), help='Custom data directory')
 @click.option('--skip-warmup', is_flag=True, help='Skip SentenceTransformer warm-up step')
@@ -335,21 +633,29 @@ def _setup_remote_mode(config: GreeumConfig, remote_url: Optional[str],
 @click.option('--remote', 'remote_url', help='Remote server URL for quick remote setup')
 @click.option('--api-key', help='API key for remote server authentication')
 @click.option('--project', help='Default project/namespace for remote server')
+@click.option('--server', is_flag=True, help='Quick server mode setup')
 def setup(data_dir: Optional[str], skip_warmup: bool, start_worker: bool,
-          remote_url: Optional[str], api_key: Optional[str], project: Optional[str]):
+          remote_url: Optional[str], api_key: Optional[str], project: Optional[str],
+          server: bool):
     """Interactive first-time setup (data dir + optional warm-up)."""
 
     click.echo("[TOOLS]  Greeum setup wizard")
     config = load_config()
 
-    # 연결 모드 선택 (--remote 옵션이 있으면 바로 원격 모드)
+    # 연결 모드 선택 (--remote/--server 옵션이 있으면 바로 해당 모드)
     if remote_url:
         mode = "remote"
+    elif server:
+        mode = "server"
     else:
         mode = _prompt_connection_mode()
 
     if mode == "remote":
         _setup_remote_mode(config, remote_url, api_key, project or "")
+        return
+
+    if mode == "server":
+        _setup_server_mode(config, data_dir, skip_warmup)
         return
 
     default_dir = data_dir or config.data_dir or str(DEFAULT_DATA_DIR)
