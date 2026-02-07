@@ -237,6 +237,181 @@ def _create_restore_filter(
 
 
 # 메인 CLI에 명령어 그룹 등록을 위한 함수들
+@backup.command()
+@click.option('--merge/--replace', default=True, help='병합 모드 (기본: 병합, 중복 건너뜀)')
+def push(merge: bool):
+    """로컬 메모리를 원격 서버에 백업
+
+    Examples:
+        greeum backup push
+        greeum backup push --replace
+    """
+    from ..config_store import is_remote_mode, get_remote_config
+
+    if is_remote_mode():
+        click.echo("[WARN] 현재 원격 모드입니다. 로컬 → 원격 백업은 로컬 모드에서 실행하세요.")
+        click.echo("       또는 다른 원격 서버로 백업하려면 --remote 옵션을 사용하세요.")
+        return
+
+    # 1. 로컬 메모리 내보내기
+    click.echo("[1/3] 로컬 메모리 내보내기 중...")
+    import tempfile
+    import json
+
+    try:
+        system = get_context_system()
+        backup_engine = MemoryBackupEngine(system)
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            tmp_path = f.name
+
+        success = backup_engine.create_backup(tmp_path, include_metadata=True)
+        if not success:
+            click.echo("[ERROR] 로컬 백업 생성 실패")
+            return
+
+        backup_data = json.loads(Path(tmp_path).read_text(encoding='utf-8'))
+        total = backup_data.get('metadata', {}).get('total_memories', 0)
+        click.echo(f"      {total}개 메모리 준비 완료")
+
+        Path(tmp_path).unlink(missing_ok=True)
+    except Exception as e:
+        click.echo(f"[ERROR] 내보내기 실패: {e}")
+        return
+
+    # 2. 원격 서버 정보 확인
+    click.echo("[2/3] 원격 서버 연결 중...")
+    server_env = Path.home() / ".greeum" / ".server.env"
+    remote_url = None
+    api_key = None
+
+    if server_env.exists():
+        for line in server_env.read_text().strip().split('\n'):
+            if line.startswith('GREEUM_SERVER_URL='):
+                remote_url = line.split('=', 1)[1]
+            elif line.startswith('GREEUM_API_KEY='):
+                api_key = line.split('=', 1)[1]
+
+    if not remote_url:
+        remote_url = click.prompt("원격 서버 URL", default="http://localhost:8400")
+    if not api_key:
+        api_key = click.prompt("API Key", hide_input=True)
+
+    click.echo(f"      서버: {remote_url}")
+
+    # 3. 업로드
+    click.echo("[3/3] 업로드 중...")
+    try:
+        from ..client.http_client import GreeumHTTPClient
+        client = GreeumHTTPClient(base_url=remote_url, api_key=api_key)
+        result = client.backup_push(backup_data, merge=merge)
+
+        if result.get('success'):
+            click.echo(f"\n  백업 완료!")
+            click.echo(f"  전체: {result.get('total', 0)}개")
+            click.echo(f"  복원: {result.get('restored', 0)}개")
+            click.echo(f"  건너뜀: {result.get('skipped', 0)}개 (중복)")
+            click.echo(f"  오류: {result.get('errors', 0)}개")
+        else:
+            click.echo(f"[ERROR] 업로드 실패: {result}")
+    except Exception as e:
+        click.echo(f"[ERROR] 업로드 실패: {e}")
+
+
+@backup.command()
+@click.option('--output', '-o', help='다운로드한 백업을 파일로 저장 (미지정 시 바로 복원)')
+@click.option('--merge/--replace', default=True, help='병합 모드 (기본: 병합)')
+def pull(output: Optional[str], merge: bool):
+    """원격 서버에서 메모리를 로컬로 가져오기
+
+    Examples:
+        greeum backup pull                    # 바로 로컬에 복원
+        greeum backup pull -o remote.json     # 파일로만 저장
+    """
+    from ..config_store import is_remote_mode, get_remote_config
+
+    # 1. 원격 서버 정보
+    click.echo("[1/3] 원격 서버 연결 중...")
+
+    remote_conf = get_remote_config()
+    if remote_conf and remote_conf.enabled:
+        remote_url = remote_conf.server_url
+        api_key = remote_conf.api_key
+    else:
+        server_env = Path.home() / ".greeum" / ".server.env"
+        remote_url = None
+        api_key = None
+        if server_env.exists():
+            for line in server_env.read_text().strip().split('\n'):
+                if line.startswith('GREEUM_SERVER_URL='):
+                    remote_url = line.split('=', 1)[1]
+                elif line.startswith('GREEUM_API_KEY='):
+                    api_key = line.split('=', 1)[1]
+
+    if not remote_url:
+        remote_url = click.prompt("원격 서버 URL", default="http://localhost:8400")
+    if not api_key:
+        api_key = click.prompt("API Key", hide_input=True)
+
+    click.echo(f"      서버: {remote_url}")
+
+    # 2. 다운로드
+    click.echo("[2/3] 다운로드 중...")
+    try:
+        from ..client.http_client import GreeumHTTPClient
+        client = GreeumHTTPClient(base_url=remote_url, api_key=api_key)
+        backup_data = client.backup_pull()
+        total = backup_data.get('metadata', {}).get('total_memories', 0)
+        click.echo(f"      {total}개 메모리 수신 완료")
+    except Exception as e:
+        click.echo(f"[ERROR] 다운로드 실패: {e}")
+        return
+
+    # 파일로 저장만 하는 경우
+    if output:
+        import json
+        Path(output).write_text(
+            json.dumps(backup_data, ensure_ascii=False, indent=2),
+            encoding='utf-8',
+        )
+        click.echo(f"\n  저장 완료: {output}")
+        size_mb = Path(output).stat().st_size / (1024 * 1024)
+        click.echo(f"  파일 크기: {size_mb:.2f} MB")
+        return
+
+    # 3. 로컬에 복원
+    click.echo("[3/3] 로컬에 복원 중...")
+    try:
+        import tempfile
+        import json
+
+        with tempfile.NamedTemporaryFile(
+            mode='w', suffix='.json', delete=False, encoding='utf-8'
+        ) as f:
+            json.dump(backup_data, f, ensure_ascii=False, indent=2)
+            tmp_path = f.name
+
+        system = get_context_system()
+        restore_engine = MemoryRestoreEngine(system)
+
+        result = restore_engine.restore_from_backup(
+            backup_path=tmp_path,
+            merge=merge,
+        )
+
+        Path(tmp_path).unlink(missing_ok=True)
+
+        if result.get('success'):
+            click.echo(f"\n  복원 완료!")
+            click.echo(f"  복원: {result.get('restored_count', 0)}개")
+            click.echo(f"  건너뜀: {result.get('skipped_count', 0)}개")
+        else:
+            click.echo(f"[ERROR] 복원 실패: {result.get('error', 'unknown')}")
+
+    except Exception as e:
+        click.echo(f"[ERROR] 복원 실패: {e}")
+
+
 def register_backup_commands(cli_group):
     """백업 명령어들을 메인 CLI에 등록"""
     cli_group.add_command(backup)

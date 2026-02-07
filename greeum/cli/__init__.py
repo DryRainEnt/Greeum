@@ -2614,6 +2614,167 @@ def status():
         click.echo(f"[BURST] 자동 백업 상태 확인 실패: {e}")
 
 
+@backup.command()
+@click.option('--merge/--replace', default=True, help='Merge mode (default: merge, skip duplicates)')
+def push(merge: bool):
+    """Push local memories to a remote Greeum server
+
+    Examples:
+        greeum backup push
+        greeum backup push --replace
+    """
+    import json as _json
+    import tempfile
+
+    # 1. Export local memories
+    click.echo("[1/3] Exporting local memories...")
+    try:
+        from ..core.database_manager import DatabaseManager
+        from ..core.backup_restore import MemoryBackupEngine
+
+        db_manager = DatabaseManager()
+        backup_engine = MemoryBackupEngine(db_manager)
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            tmp_path = f.name
+
+        success = backup_engine.create_backup(tmp_path, include_metadata=True)
+        if not success:
+            click.echo("      [ERROR] Local backup creation failed")
+            return
+
+        backup_data = _json.loads(Path(tmp_path).read_text(encoding='utf-8'))
+        total = backup_data.get('metadata', {}).get('total_memories', 0)
+        click.echo(f"      {total} memories ready")
+
+        Path(tmp_path).unlink(missing_ok=True)
+    except Exception as e:
+        click.echo(f"      [ERROR] Export failed: {e}")
+        return
+
+    # 2. Resolve remote server
+    click.echo("[2/3] Connecting to remote server...")
+    remote_url, api_key = _resolve_remote_server()
+    if not remote_url:
+        return
+    click.echo(f"      Server: {remote_url}")
+
+    # 3. Upload
+    click.echo("[3/3] Uploading...")
+    try:
+        from ..client.http_client import GreeumHTTPClient
+        client = GreeumHTTPClient(base_url=remote_url, api_key=api_key)
+        result = client.backup_push(backup_data, merge=merge)
+
+        if result.get('success'):
+            click.echo(f"\n      Push complete!")
+            click.echo(f"      Total:    {result.get('total', 0)}")
+            click.echo(f"      Restored: {result.get('restored', 0)}")
+            click.echo(f"      Skipped:  {result.get('skipped', 0)} (duplicates)")
+            click.echo(f"      Errors:   {result.get('errors', 0)}")
+        else:
+            click.echo(f"      [ERROR] Upload failed: {result}")
+    except Exception as e:
+        click.echo(f"      [ERROR] Upload failed: {e}")
+
+
+@backup.command()
+@click.option('--output', '-o', help='Save backup to file instead of restoring')
+def pull(output: Optional[str]):
+    """Pull memories from a remote Greeum server to local
+
+    Examples:
+        greeum backup pull                     # Restore directly
+        greeum backup pull -o remote.json      # Save to file only
+    """
+    import json as _json
+
+    # 1. Resolve remote server
+    click.echo("[1/3] Connecting to remote server...")
+    remote_url, api_key = _resolve_remote_server()
+    if not remote_url:
+        return
+    click.echo(f"      Server: {remote_url}")
+
+    # 2. Download
+    click.echo("[2/3] Downloading...")
+    try:
+        from ..client.http_client import GreeumHTTPClient
+        client = GreeumHTTPClient(base_url=remote_url, api_key=api_key)
+        backup_data = client.backup_pull()
+        total = backup_data.get('metadata', {}).get('total_memories', 0)
+        click.echo(f"      {total} memories received")
+    except Exception as e:
+        click.echo(f"      [ERROR] Download failed: {e}")
+        return
+
+    # Save to file only
+    if output:
+        Path(output).write_text(
+            _json.dumps(backup_data, ensure_ascii=False, indent=2),
+            encoding='utf-8',
+        )
+        size_mb = Path(output).stat().st_size / (1024 * 1024)
+        click.echo(f"\n      Saved: {output} ({size_mb:.2f} MB)")
+        return
+
+    # 3. Restore locally
+    click.echo("[3/3] Restoring to local...")
+    try:
+        import tempfile
+        with tempfile.NamedTemporaryFile(
+            mode='w', suffix='.json', delete=False, encoding='utf-8'
+        ) as f:
+            _json.dump(backup_data, f, ensure_ascii=False, indent=2)
+            tmp_path = f.name
+
+        from ..core.database_manager import DatabaseManager
+        from ..core.backup_restore import MemoryRestoreEngine
+
+        db_manager = DatabaseManager()
+        restore_engine = MemoryRestoreEngine(db_manager)
+
+        result = restore_engine.restore_from_backup(
+            backup_path=tmp_path,
+            merge=True,
+        )
+
+        Path(tmp_path).unlink(missing_ok=True)
+
+        if result.get('success'):
+            click.echo(f"\n      Pull complete!")
+            click.echo(f"      Restored: {result.get('restored_count', 0)}")
+            click.echo(f"      Skipped:  {result.get('skipped_count', 0)}")
+        else:
+            click.echo(f"      [ERROR] Restore failed: {result.get('error', 'unknown')}")
+    except Exception as e:
+        click.echo(f"      [ERROR] Restore failed: {e}")
+
+
+def _resolve_remote_server():
+    """Resolve remote server URL and API key from config or .server.env."""
+    remote_conf = get_remote_config()
+    if remote_conf and remote_conf.enabled and remote_conf.server_url:
+        return remote_conf.server_url, remote_conf.api_key
+
+    server_env = Path.home() / ".greeum" / ".server.env"
+    remote_url = None
+    api_key = None
+    if server_env.exists():
+        for line in server_env.read_text().strip().split('\n'):
+            if line.startswith('GREEUM_SERVER_URL='):
+                remote_url = line.split('=', 1)[1]
+            elif line.startswith('GREEUM_API_KEY='):
+                api_key = line.split('=', 1)[1]
+
+    if not remote_url:
+        remote_url = click.prompt("Remote server URL", default="http://localhost:8400")
+    if not api_key:
+        api_key = click.prompt("API Key", hide_input=True)
+
+    return remote_url, api_key
+
+
 # v2.6.1 Restore 서브명령어들
 @restore.command()
 @click.argument('backup_file', type=click.Path(exists=True))

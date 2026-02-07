@@ -1,5 +1,5 @@
 """
-Greeum v5.2.0 - LLM-Integrated Memory System with Intelligent Filtering
+Greeum v5.2.1 - LLM-Integrated Memory System with Intelligent Filtering
 
 Features:
 - InsightJudge: LLM-based content filtering (no pattern matching)
@@ -10,7 +10,7 @@ Features:
 - Remote server connection with API key authentication
 """
 
-__version__ = "5.2.0"
+__version__ = "5.2.1"
 
 # Main Interface (v3.0+)
 from .core.context_memory import ContextMemorySystem

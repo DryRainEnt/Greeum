@@ -10,6 +10,7 @@ from .search import router as search_router
 from .admin import router as admin_router
 from .stm import router as stm_router
 from .branch import router as branch_router
+from .backup import router as backup_router
 
 __all__ = [
     "health_router",
@@ -18,4 +19,5 @@ __all__ = [
     "admin_router",
     "stm_router",
     "branch_router",
+    "backup_router",
 ]

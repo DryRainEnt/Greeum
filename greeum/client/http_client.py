@@ -178,6 +178,34 @@ class GreeumHTTPClient:
             logger.error(f"Failed to get stats: {e}")
             raise ConnectionError(f"API request failed: {e}") from e
 
+    def backup_push(self, backup_data: Dict[str, Any], merge: bool = True) -> Dict[str, Any]:
+        """로컬 백업 데이터를 원격 서버에 업로드"""
+        payload = {**backup_data, "merge": merge}
+        try:
+            response = self._get_session().post(
+                self._make_url("/backup/upload"),
+                json=payload,
+                timeout=(15, 300),  # 대량 업로드는 5분까지
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            logger.error(f"Backup push failed: {e}")
+            raise ConnectionError(f"Backup push failed: {e}") from e
+
+    def backup_pull(self) -> Dict[str, Any]:
+        """원격 서버에서 백업 데이터 다운로드"""
+        try:
+            response = self._get_session().get(
+                self._make_url("/backup/export"),
+                timeout=(15, 300),  # 대량 다운로드는 5분까지
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            logger.error(f"Backup pull failed: {e}")
+            raise ConnectionError(f"Backup pull failed: {e}") from e
+
     def close(self) -> None:
         """세션 종료"""
         if self._session:

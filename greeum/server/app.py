@@ -21,6 +21,7 @@ from .routes import (
     admin_router,
     stm_router,
     branch_router,
+    backup_router,
 )
 
 # Configure logging
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_router)
     app.include_router(stm_router)  # v5.0.0: STM slot management
     app.include_router(branch_router)  # v5.0.0: Branch exploration
+    app.include_router(backup_router)  # v5.2.0: Remote backup push/pull
 
     # Include legacy anchors router if available
     try:
