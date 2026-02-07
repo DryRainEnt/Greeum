@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class GreeumHTTPClient:
     """Greeum API 서버와 통신하는 HTTP 클라이언트"""
 
-    DEFAULT_TIMEOUT = 30  # seconds
+    DEFAULT_TIMEOUT = 60  # seconds
     DEFAULT_RETRIES = 3
     DEFAULT_BACKOFF = 0.5
 
@@ -42,7 +42,7 @@ class GreeumHTTPClient:
         """
         self.base_url = base_url.rstrip("/")
         self._api_key = api_key
-        self.timeout = timeout
+        self.timeout = (min(timeout, 15), timeout)  # (connect_timeout, read_timeout)
         self._session: Optional[requests.Session] = None
         self._retries = retries
         self._backoff_factor = backoff_factor
@@ -85,7 +85,7 @@ class GreeumHTTPClient:
         try:
             response = self._get_session().get(
                 self._make_url("/health"),
-                timeout=5,  # 헬스체크는 짧은 타임아웃
+                timeout=15,  # 원격 연결 고려한 헬스체크 타임아웃
             )
             response.raise_for_status()
             return response.json()

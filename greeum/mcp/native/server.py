@@ -247,7 +247,7 @@ class GreeumNativeMCPServer:
             # Some features may be degraded but server continues
             self.model_ready = False
 
-    async def wait_for_model(self, timeout: float = 30.0):
+    async def wait_for_model(self, timeout: float = 60.0):
         """
         v3.1.1rc2.dev9: 모델 로딩 대기
 
