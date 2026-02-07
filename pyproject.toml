@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "greeum"
-version = "5.2.2"
+version = "5.2.3"
 description = "LLM-Integrated Memory System with InsightJudge, HybridGraphSearch, and Branch-aware Storage"
 authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
 readme = {file = "README.md", content-type = "text/markdown"}

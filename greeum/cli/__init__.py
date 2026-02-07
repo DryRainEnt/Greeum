@@ -483,10 +483,51 @@ def _get_tailscale_ip() -> Optional[str]:
         return None
 
 
+def _kill_existing_greeum_server(port: int) -> None:
+    """기존에 실행 중인 Greeum 서버 프로세스를 정리."""
+    # 1. systemd 서비스가 있으면 먼저 중지
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-active", "greeum-api"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.stdout.strip() == "active":
+            click.echo("      기존 systemd 서비스 중지 중...")
+            subprocess.run(["sudo", "systemctl", "stop", "greeum-api"], timeout=30)
+    except Exception:
+        pass
+
+    # 2. 포트를 점유하고 있는 프로세스 종료
+    try:
+        result = subprocess.run(
+            ["lsof", "-ti", f":{port}"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            pids = result.stdout.strip().split('\n')
+            for pid in pids:
+                pid = pid.strip()
+                if pid:
+                    click.echo(f"      포트 {port} 사용 중인 프로세스(PID {pid}) 종료 중...")
+                    subprocess.run(["kill", pid], timeout=10)
+            # 잠시 대기 후 강제 종료
+            import time
+            time.sleep(1)
+            for pid in pids:
+                pid = pid.strip()
+                if pid:
+                    subprocess.run(["kill", "-9", pid], capture_output=True, timeout=10)
+    except Exception:
+        pass
+
+
 def _create_systemd_service(api_key: str, port: int, data_dir: str) -> bool:
     """Create and enable systemd service for Greeum API server."""
     python_bin = sys.executable or shutil.which("python3") or "/usr/bin/python3"
     user = os.environ.get("USER", "dryrain")
+
+    # 기존 프로세스 정리
+    _kill_existing_greeum_server(port)
 
     service_content = f"""[Unit]
 Description=Greeum API Server
@@ -516,10 +557,10 @@ WantedBy=multi-user.target
         if proc.returncode != 0:
             return False
 
-        # Reload, enable, and start
+        # Reload, enable, and restart (not start — ensures clean state)
         subprocess.run(["sudo", "systemctl", "daemon-reload"], timeout=30, check=True)
         subprocess.run(["sudo", "systemctl", "enable", "greeum-api"], timeout=30, check=True)
-        subprocess.run(["sudo", "systemctl", "start", "greeum-api"], timeout=30, check=True)
+        subprocess.run(["sudo", "systemctl", "restart", "greeum-api"], timeout=30, check=True)
         return True
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return False
