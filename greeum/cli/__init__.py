@@ -275,6 +275,46 @@ def _test_remote_connection(url: str, api_key: str) -> tuple:
         return False, {"error": str(e)}
 
 
+def _needs_tailscale(url: str) -> bool:
+    """URL이 Tailscale 네트워크를 필요로 하는지 확인."""
+    if not url:
+        return False
+    from urllib.parse import urlparse
+    host = urlparse(url).hostname or ""
+    return host.endswith(".ts.net") or host.startswith("100.")
+
+
+def _ensure_tailscale_for_remote(server_url: str) -> bool:
+    """원격 연결에 필요한 Tailscale 설치/연결을 자동으로 처리. Returns True if ready."""
+    if not _needs_tailscale(server_url):
+        return True
+
+    click.echo("\n[Tailscale] 서버가 Tailscale 네트워크를 사용합니다.")
+
+    if _check_tailscale_installed():
+        click.echo("  Tailscale 설치됨  ✓")
+    else:
+        click.echo("  Tailscale이 설치되어 있지 않습니다.")
+        if click.confirm("  자동으로 설치할까요? (sudo 필요)", default=True):
+            if _install_tailscale():
+                click.echo("  설치 완료  ✓")
+            else:
+                click.echo("  [WARN] 설치 실패. 수동 설치: https://tailscale.com/download")
+                return False
+        else:
+            click.echo("  [WARN] Tailscale 없이는 서버에 연결할 수 없습니다.")
+            return False
+
+    # Tailscale 연결 확인/시작
+    if _tailscale_up():
+        ts_ip = _get_tailscale_ip()
+        click.echo(f"  Tailscale 연결됨 ({ts_ip})  ✓")
+        return True
+    else:
+        click.echo("  [WARN] Tailscale 연결 실패. 'sudo tailscale up'으로 수동 연결하세요.")
+        return False
+
+
 def _setup_remote_mode(config: GreeumConfig, remote_url: Optional[str],
                        api_key: Optional[str], project: str):
     """원격 서버 연결 설정."""
@@ -294,6 +334,14 @@ def _setup_remote_mode(config: GreeumConfig, remote_url: Optional[str],
         project = click.prompt("기본 프로젝트 (선택, Enter로 건너뛰기)", default="", show_default=False)
     else:
         click.echo(f"기본 프로젝트: {project}")
+
+    # Tailscale 필요 시 자동 설치/연결
+    if _needs_tailscale(remote_url):
+        ts_ready = _ensure_tailscale_for_remote(remote_url)
+        if not ts_ready:
+            if not click.confirm("Tailscale 없이 계속 설정을 저장할까요?", default=False):
+                click.echo("설정이 취소되었습니다.")
+                return
 
     # 연결 테스트
     click.echo("\n연결 테스트 중...")
