@@ -82,7 +82,7 @@ def test_setup_resets_malformed_db(tmp_path):
         main,
         ["setup", "--data-dir", str(data_dir), "--skip-warmup", "--skip-worker"],
         env=env,
-        input="y\n",
+        input="1\ny\n",
     )
     config_store.CONFIG_PATH = original_config_path
     os.environ.pop("GREEUM_CONFIG_DIR", None)

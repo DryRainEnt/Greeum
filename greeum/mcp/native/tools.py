@@ -11,6 +11,7 @@ Core Features:
 """
 
 import logging
+import sqlite3
 from typing import Dict, Any, List, Optional, Union
 from datetime import datetime
 import json
@@ -140,6 +141,10 @@ class GreeumMCPTools:
             return await self._handle_infer_causality(arguments)
         elif tool_name == "system_doctor":
             return await self._handle_system_doctor(arguments)
+        elif tool_name == "get_recent_memories":
+            return await self._handle_get_recent_memories(arguments)
+        elif tool_name == "get_memories_by_date":
+            return await self._handle_get_memories_by_date(arguments)
         else:
             raise ValueError(f"Unknown tool: {tool_name}")
 
@@ -173,19 +178,6 @@ class GreeumMCPTools:
             # Check components
             if not self._check_components():
                 return "ERROR: Greeum components not available. Please check installation."
-
-            # DEBUG: DB status check before processing
-            try:
-                db_manager = self.components['db_manager']
-                cursor = db_manager.conn.cursor()
-                cursor.execute("BEGIN")
-                cursor.execute("SELECT COUNT(*) FROM blocks")
-                block_count = cursor.fetchone()[0]
-                cursor.execute("ROLLBACK")
-                logger.info(f"[DEBUG] DB accessible, current block count: {block_count}")
-            except Exception as db_error:
-                logger.error(f"[DEBUG] DB access error before processing: {db_error}")
-                return f"ERROR: Database access failed: {db_error}"
 
             # Check for duplicates
             duplicate_check = self.components['duplicate_detector'].check_duplicate(content)
@@ -634,10 +626,18 @@ This may indicate a transaction rollback or database issue."""
                     search_info += f" (depth {depth}, tolerance {tolerance:.1f})"
                 search_info += ":\n"
 
+                # Batch-fetch association info for all result blocks
+                block_indices = [m.get('block_index', -1) for m in results]
+                assoc_map = self._get_associations_for_blocks(block_indices)
+
                 for i, memory in enumerate(results, 1):
                     timestamp = memory.get('timestamp', 'Unknown')
                     content = memory.get('context', '')[:100] + ('...' if len(memory.get('context', '')) > 100 else '')
-                    search_info += f"{i}. [{timestamp}] {content}\n"
+                    assoc_info = assoc_map.get(memory.get('block_index', -1), "")
+                    line = f"{i}. [{timestamp}] {content}"
+                    if assoc_info:
+                        line += f" {assoc_info}"
+                    search_info += line + "\n"
 
                 return search_info
             else:
@@ -695,6 +695,164 @@ This may indicate a transaction rollback or database issue."""
 
         return results
 
+    def _get_associations_for_block(self, block_index: int) -> str:
+        """Return top 3 associations for a block as '[type<>#idx(strength)]' string."""
+        if block_index < 0:
+            return ""
+        try:
+            db_manager = self.components.get('db_manager')
+            if not db_manager:
+                return ""
+            cursor = db_manager.conn.cursor()
+
+            # Get node_id for this block
+            cursor.execute(
+                "SELECT node_id FROM memory_nodes WHERE memory_id = ? LIMIT 1",
+                (block_index,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return ""
+            node_id = row[0]
+
+            # Bidirectional association lookup, top 3 by strength
+            cursor.execute(
+                """
+                SELECT a.association_type, a.strength,
+                       CASE WHEN a.source_node_id = ? THEN a.target_node_id
+                            ELSE a.source_node_id END AS neighbor_id
+                FROM associations a
+                WHERE a.source_node_id = ? OR a.target_node_id = ?
+                ORDER BY a.strength DESC
+                LIMIT 3
+                """,
+                (node_id, node_id, node_id),
+            )
+            assocs = cursor.fetchall()
+            if not assocs:
+                return ""
+
+            parts = []
+            for atype, strength, neighbor_id in assocs:
+                # Resolve neighbor block index
+                cursor.execute(
+                    "SELECT memory_id FROM memory_nodes WHERE node_id = ? LIMIT 1",
+                    (neighbor_id,),
+                )
+                nb = cursor.fetchone()
+                nb_idx = nb[0] if nb else "?"
+                parts.append(f"{atype}\u2194#{nb_idx}({strength:.2f})")
+
+            return "[" + ", ".join(parts) + "]"
+        except sqlite3.OperationalError:
+            return ""  # Tables may not exist yet
+        except Exception as e:
+            logger.warning("_get_associations_for_block error: %s", e)
+            return ""
+
+    def _get_associations_for_blocks(self, block_indices: List[int]) -> Dict[int, str]:
+        """Batch-fetch association info for multiple blocks in 3 queries instead of N*3.
+
+        Returns:
+            Dict mapping block_index -> '[type↔#idx(strength), ...]' string
+        """
+        valid = [bi for bi in block_indices if bi >= 0]
+        if not valid:
+            return {}
+        try:
+            db_manager = self.components.get('db_manager')
+            if not db_manager:
+                return {}
+            cursor = db_manager.conn.cursor()
+
+            # 1. Batch: block_index → node_id
+            ph = ",".join("?" for _ in valid)
+            cursor.execute(
+                f"SELECT node_id, memory_id FROM memory_nodes WHERE memory_id IN ({ph})",
+                tuple(valid),
+            )
+            block_to_node: Dict[int, str] = {}
+            node_to_block: Dict[str, int] = {}
+            for node_id, mem_id in cursor.fetchall():
+                block_to_node[mem_id] = node_id
+                node_to_block[node_id] = mem_id
+
+            if not block_to_node:
+                return {}
+
+            node_ids = list(block_to_node.values())
+
+            # 2. Batch: all associations for these nodes
+            nph = ",".join("?" for _ in node_ids)
+            cursor.execute(
+                f"""
+                SELECT a.source_node_id, a.target_node_id, a.association_type, a.strength
+                FROM associations a
+                WHERE a.source_node_id IN ({nph}) OR a.target_node_id IN ({nph})
+                ORDER BY a.strength DESC
+                """,
+                tuple(node_ids) + tuple(node_ids),
+            )
+
+            # Group by source block, keep top 3 per block
+            node_id_set = set(node_ids)
+            assoc_by_node: Dict[str, list] = {nid: [] for nid in node_ids}
+            neighbor_ids_needed: set = set()
+
+            for src, tgt, atype, strength in cursor.fetchall():
+                # Determine which "our" node this belongs to and who the neighbor is
+                if src in node_id_set:
+                    if len(assoc_by_node[src]) < 3:
+                        assoc_by_node[src].append((atype, strength, tgt))
+                        neighbor_ids_needed.add(tgt)
+                if tgt in node_id_set and tgt != src:
+                    if len(assoc_by_node[tgt]) < 3:
+                        assoc_by_node[tgt].append((atype, strength, src))
+                        neighbor_ids_needed.add(src)
+
+            # 3. Batch: resolve neighbor node_ids → block indices
+            neighbor_block_map: Dict[str, int] = {}
+            if neighbor_ids_needed:
+                # Exclude nodes we already know
+                unknown = neighbor_ids_needed - node_id_set
+                # Known nodes: reuse existing mapping
+                for nid in neighbor_ids_needed & node_id_set:
+                    neighbor_block_map[nid] = node_to_block[nid]
+                if unknown:
+                    uph = ",".join("?" for _ in unknown)
+                    cursor.execute(
+                        f"SELECT node_id, memory_id FROM memory_nodes WHERE node_id IN ({uph})",
+                        tuple(unknown),
+                    )
+                    for nid, mem_id in cursor.fetchall():
+                        neighbor_block_map[nid] = mem_id
+
+            # 4. Format results
+            result: Dict[int, str] = {}
+            for bi in valid:
+                nid = block_to_node.get(bi)
+                if not nid or not assoc_by_node.get(nid):
+                    continue
+                parts = []
+                seen = set()
+                for atype, strength, neighbor_nid in assoc_by_node[nid]:
+                    nb_idx = neighbor_block_map.get(neighbor_nid, "?")
+                    key = (atype, nb_idx)
+                    if key not in seen:
+                        parts.append(f"{atype}\u2194#{nb_idx}({strength:.2f})")
+                        seen.add(key)
+                    if len(parts) >= 3:
+                        break
+                if parts:
+                    result[bi] = "[" + ", ".join(parts) + "]"
+
+            return result
+        except sqlite3.OperationalError:
+            return {}  # Tables may not exist yet
+        except Exception as e:
+            logger.warning("_get_associations_for_blocks error: %s", e)
+            return {}
+
     async def _handle_get_memory_stats(self, arguments: Dict[str, Any]) -> str:
         """get_memory_stats 도구 처리"""
         try:
@@ -705,12 +863,38 @@ This may indicate a transaction rollback or database issue."""
             last_block_info = db_manager.get_last_block_info()
             total_blocks = last_block_info.get('block_index', 0) + 1 if last_block_info else 0
 
+            # v5.3.0: Association and consolidation statistics
+            assoc_section = ""
+            consolidation_section = ""
+            try:
+                cursor = db_manager.conn.cursor()
+
+                # Association counts
+                cursor.execute("SELECT COUNT(*) FROM associations")
+                total_assocs = cursor.fetchone()[0]
+                cursor.execute("SELECT association_type, COUNT(*) FROM associations GROUP BY association_type")
+                type_counts = {row[0]: row[1] for row in cursor.fetchall()}
+
+                if total_assocs > 0:
+                    type_str = ", ".join(f"{t}: {c}" for t, c in sorted(type_counts.items()))
+                    assoc_section = f"\n**Associations**: {total_assocs} ({type_str})"
+
+                # Consolidation state
+                cursor.execute("SELECT verdict, COUNT(*) FROM consolidation_state GROUP BY verdict")
+                cstate = {row[0]: row[1] for row in cursor.fetchall()}
+                if cstate:
+                    total_pairs = sum(cstate.values())
+                    parts = ", ".join(f"{v}: {c}" for v, c in sorted(cstate.items()))
+                    consolidation_section = f"\n**Consolidation**: {total_pairs} pairs evaluated ({parts})"
+            except sqlite3.OperationalError:
+                pass  # Tables may not exist yet
+
             return f"""**Memory System Statistics**
 
 **Total Blocks**: {total_blocks}
 **Database**: SQLite (ThreadSafe)
 **Version**: {self._get_version()}
-**Status**: Active"""
+**Status**: Active{assoc_section}{consolidation_section}"""
 
         except Exception as e:
             logger.error(f"get_memory_stats failed: {e}")
@@ -1000,6 +1184,82 @@ This may indicate a transaction rollback or database issue."""
         except Exception as e:
             logger.error(f"system_doctor failed: {e}")
             return f"**ERROR: System Doctor Failed**\n\nFailed to run diagnostics: {str(e)}\n\nPlease check system installation."
+
+    async def _handle_get_recent_memories(self, arguments: Dict[str, Any]) -> str:
+        """Handle get_recent_memories tool — 최신순으로 기억 조회."""
+        try:
+            limit = arguments.get("limit", 10)
+            limit = max(1, min(limit, 100))
+
+            db_manager = self.components.get('db_manager')
+            if not db_manager:
+                return "ERROR: Database not available."
+
+            blocks = db_manager.get_recent_blocks(limit=limit)
+            if not blocks:
+                return "No memories found."
+
+            lines = [f"**Recent Memories** (latest {len(blocks)})\n"]
+            for b in blocks:
+                idx = b.get('block_index', '?')
+                ts = b.get('timestamp', 'Unknown')
+                content = b.get('context', '')[:120]
+                imp = b.get('importance', 0)
+                lines.append(f"- **#{idx}** [{ts}] (imp: {imp:.2f})")
+                lines.append(f"  {content}")
+            return "\n".join(lines)
+
+        except Exception as e:
+            logger.error(f"get_recent_memories failed: {e}")
+            return f"ERROR: Failed to retrieve recent memories: {e}"
+
+    async def _handle_get_memories_by_date(self, arguments: Dict[str, Any]) -> str:
+        """Handle get_memories_by_date tool — 날짜 범위로 기억 조회."""
+        try:
+            start_date = arguments.get("start_date")
+            end_date = arguments.get("end_date")
+            limit = arguments.get("limit", 20)
+            limit = max(1, min(limit, 100))
+
+            if not start_date:
+                return "ERROR: start_date parameter is required (format: YYYY-MM-DD)"
+
+            # end_date 미지정 시 오늘까지
+            if not end_date:
+                end_date = datetime.now().strftime("%Y-%m-%d") + "T23:59:59"
+            else:
+                # 날짜만 입력된 경우 하루 끝까지 포함
+                if "T" not in end_date:
+                    end_date = end_date + "T23:59:59"
+
+            if "T" not in start_date:
+                start_date = start_date + "T00:00:00"
+
+            db_manager = self.components.get('db_manager')
+            if not db_manager:
+                return "ERROR: Database not available."
+
+            blocks = db_manager.get_blocks_by_date(
+                start_date=start_date,
+                end_date=end_date,
+                limit=limit,
+            )
+            if not blocks:
+                return f"No memories found between {start_date[:10]} and {end_date[:10]}."
+
+            lines = [f"**Memories** ({start_date[:10]} ~ {end_date[:10]}, {len(blocks)} results)\n"]
+            for b in blocks:
+                idx = b.get('block_index', '?')
+                ts = b.get('timestamp', 'Unknown')
+                content = b.get('context', '')[:120]
+                imp = b.get('importance', 0)
+                lines.append(f"- **#{idx}** [{ts}] (imp: {imp:.2f})")
+                lines.append(f"  {content}")
+            return "\n".join(lines)
+
+        except Exception as e:
+            logger.error(f"get_memories_by_date failed: {e}")
+            return f"ERROR: Failed to retrieve memories by date: {e}"
 
     def _check_components(self) -> bool:
         """컴포넌트 가용성 확인"""

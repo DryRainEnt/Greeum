@@ -3,7 +3,7 @@ from greeum.core.block_manager import BlockManager
 
 
 def test_summarize_blocks():
-    bm = BlockManager(use_faiss=False)
+    bm = BlockManager()
     me = MemoryEvolutionManager(bm.db_manager)
 
     # add two blocks

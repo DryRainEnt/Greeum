@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "greeum"
-version = "5.2.3"
+version = "5.3.0"
 description = "LLM-Integrated Memory System with InsightJudge, HybridGraphSearch, and Branch-aware Storage"
 authors = [ {name = "DryRainEnt", email="kachirjsdn@gmail.com"} ]
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -46,6 +46,7 @@ dependencies = [
 test = ["pytest>=7.0", "pytest-cov", "responses>=0.23.0"]
 dev = ["black", "isort", "flake8", "ruff"]
 mcp-http = ["fastapi>=0.110.0", "uvicorn[standard]>=0.22.0"]
+consolidator = []  # No extra deps — click, numpy, requests already in core
 full = [
     "sentence-transformers>=2.2.0",
     "openai>=0.27.0", 
@@ -86,6 +87,7 @@ greeum = "greeum.cli:main"
 greeum-server = "greeum.server.__main__:main"
 greeum-workflow = "greeum.automation.workflow:workflow"
 greeum-digest = "greeum.automation.digest:digest"
+greeum-consolidator = "greeum.consolidator.__main__:main"
 
 [tool.setuptools]
 license-files = []

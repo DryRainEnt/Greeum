@@ -3,6 +3,7 @@ DFS Local-First Search Engine for Greeum v3.0.0+
 Implements depth-first search with branch awareness
 """
 
+import sqlite3
 import time
 import json
 import logging
@@ -254,6 +255,16 @@ class DFSSearchEngine:
 
         # P1: Update adaptive patterns based on search results
         self._update_adaptive_patterns(local_results, query, depth, local_hops)
+
+        # v5.3.0: Association expansion — fill remaining slots via consolidator associations
+        if len(local_results) < limit:
+            found_indices = {r['block_index'] for r in local_results}
+            assoc_results = self._expand_via_associations(found_indices, limit - len(local_results))
+            for r in assoc_results:
+                if r['block_index'] not in found_indices:
+                    r['_source'] = 'association'
+                    local_results.append(r)
+                    found_indices.add(r['block_index'])
 
         # Check if we have enough results
         if len(local_results) >= limit or not fallback:
@@ -879,6 +890,103 @@ class DFSSearchEngine:
         # Log adaptive learning
         logger.debug(f"P1 Adaptive: Updated patterns for {len(results)} results, "
                     f"branches tracked: {len(self.adaptive_patterns['branch_access_frequency'])}")
+
+    def _expand_via_associations(self, found_indices: Set[int], limit: int = 5) -> List[Dict]:
+        """Expand search results via consolidator-generated associations (bidirectional).
+
+        Steps:
+        1. found_indices → memory_nodes.node_id
+        2. associations (source OR target) → neighbor node_ids
+        3. neighbor node_id → memory_id (block_index)
+        4. Filter out already-found indices
+        5. Return top *limit* blocks sorted by association strength
+        """
+        if not found_indices or limit <= 0:
+            return []
+
+        try:
+            cursor = self.db_manager.conn.cursor()
+
+            # 1. Get node_ids for found block indices
+            placeholders = ",".join("?" for _ in found_indices)
+            cursor.execute(
+                f"SELECT node_id, memory_id FROM memory_nodes WHERE memory_id IN ({placeholders})",
+                tuple(found_indices),
+            )
+            node_rows = cursor.fetchall()
+            if not node_rows:
+                return []
+
+            node_ids = [row[0] for row in node_rows]
+
+            # 2. Query associations bidirectionally (capped to avoid large scans)
+            assoc_limit = max(limit * 10, 50)
+            ph = ",".join("?" for _ in node_ids)
+            cursor.execute(
+                f"""
+                SELECT a.source_node_id, a.target_node_id, a.strength, a.association_type
+                FROM associations a
+                WHERE a.source_node_id IN ({ph}) OR a.target_node_id IN ({ph})
+                ORDER BY a.strength DESC
+                LIMIT ?
+                """,
+                tuple(node_ids) + tuple(node_ids) + (assoc_limit,),
+            )
+            assoc_rows = cursor.fetchall()
+            if not assoc_rows:
+                return []
+
+            # 3. Collect neighbor node_ids (the "other side" of each association)
+            node_id_set = set(node_ids)
+            neighbor_strengths: Dict[str, float] = {}  # neighbor_node_id → best strength
+            for src, tgt, strength, _ in assoc_rows:
+                neighbor = tgt if src in node_id_set else src
+                if neighbor not in node_id_set:
+                    if neighbor not in neighbor_strengths or strength > neighbor_strengths[neighbor]:
+                        neighbor_strengths[neighbor] = strength
+
+            if not neighbor_strengths:
+                return []
+
+            # 4. Map neighbor node_ids → block indices, filter already found
+            n_ph = ",".join("?" for _ in neighbor_strengths)
+            cursor.execute(
+                f"SELECT node_id, memory_id FROM memory_nodes WHERE node_id IN ({n_ph}) AND memory_id IS NOT NULL",
+                tuple(neighbor_strengths.keys()),
+            )
+            neighbor_blocks = {}
+            for nid, mem_id in cursor.fetchall():
+                if mem_id not in found_indices:
+                    neighbor_blocks[mem_id] = neighbor_strengths[nid]
+
+            if not neighbor_blocks:
+                return []
+
+            # 5. Sort by strength, take top limit
+            sorted_blocks = sorted(neighbor_blocks.items(), key=lambda x: x[1], reverse=True)[:limit]
+            block_indices_to_fetch = [bi for bi, _ in sorted_blocks]
+
+            b_ph = ",".join("?" for _ in block_indices_to_fetch)
+            cursor.execute(
+                f"SELECT * FROM blocks WHERE block_index IN ({b_ph})",
+                tuple(block_indices_to_fetch),
+            )
+            results = []
+            strength_map = dict(sorted_blocks)
+            for row in cursor.fetchall():
+                block = dict(row)
+                block['_score'] = strength_map.get(block['block_index'], 0.0) * 0.5
+                results.append(block)
+
+            logger.info("Association expansion: %d blocks added from %d associations",
+                        len(results), len(assoc_rows))
+            return results
+
+        except sqlite3.OperationalError:
+            return []  # Tables may not exist yet
+        except Exception as e:
+            logger.warning("Association expansion failed: %s", e)
+            return []
 
     def get_adaptive_suggestions(self, query: str) -> List[str]:
         """

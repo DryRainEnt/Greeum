@@ -2,6 +2,7 @@ import os
 import json
 import hashlib
 import datetime
+import sqlite3
 from typing import List, Dict, Any, Optional, Tuple
 import numpy as np
 from pathlib import Path
@@ -823,6 +824,15 @@ class BlockManager:
             
             # v4.0: Update metrics for new block creation
             self.metrics['new_blocks'] += 1
+
+            # v5.3.0: Queue for incremental consolidation (non-blocking, best-effort)
+            try:
+                conn.execute(
+                    "INSERT OR IGNORE INTO consolidation_queue (block_index, queued_at, status) VALUES (?, ?, 'pending')",
+                    (new_block_index, current_timestamp),
+                )
+            except sqlite3.OperationalError:
+                pass  # Table may not exist yet if consolidator has never run
 
             logger.info(f"Block added successfully: index={new_block_index}, hash={current_hash[:10]}...")
             return {
