@@ -322,9 +322,50 @@ class JSONRPCProcessor:
                         }
                     }
                 }
+            },
+            {
+                "name": "get_recent_memories",
+                "description": "Retrieve the most recent memories in chronological order (newest first). Useful for reviewing what was recently stored, checking conversation history, or getting an overview of latest activity.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "limit": {
+                            "type": "integer",
+                            "description": "Number of recent memories to retrieve",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 10
+                        }
+                    }
+                }
+            },
+            {
+                "name": "get_memories_by_date",
+                "description": "Retrieve memories within a specific date range. Useful for finding memories from a particular day, week, or time period. Returns results in reverse chronological order.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "start_date": {
+                            "type": "string",
+                            "description": "Start date (YYYY-MM-DD format)"
+                        },
+                        "end_date": {
+                            "type": "string",
+                            "description": "End date (YYYY-MM-DD format, defaults to today)",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of results",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 20
+                        }
+                    },
+                    "required": ["start_date"]
+                }
             }
         ]
-        
+
         result = {"tools": tools}
         logger.info(f"Listed {len(tools)} tools")
         return result

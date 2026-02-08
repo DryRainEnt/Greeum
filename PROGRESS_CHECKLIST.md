@@ -98,10 +98,45 @@ GET  /docs                # Swagger UI
 
 ---
 
+## CLI / MCP 개선 체크리스트 (2026-02-08)
+
+### 신규 기능 (완료)
+- [x] **MCP 시간순 기억 조회 도구** — `get_recent_memories`, `get_memories_by_date` MCP 도구 추가
+
+### 버그 수정 (완료)
+- [x] `restore from-file` NameError — `system` → `db_manager` 교체
+- [x] `memory search` AttributeError — result 타입 분기 수정
+- [x] 연산자 우선순위 버그 — `verbose or debug and not ...` 괄호 추가
+- [x] MCP serve silent exit — 에러 메시지 항상 stderr로 출력
+- [x] `stm promote` 임베딩 차원 불일치 — process_user_input dict 반환값 + 384차원 임베딩 사용
+- [x] `memory search` 에러 메시지 조건 반전 수정
+- [x] 크로스 플랫폼 Tailscale/서비스/프로세스 관리
+
+### 보안 개선 (완료)
+- [x] API key 파일 권한 — .server.env (chmod 600), systemd unit (chmod 640), launchd plist (chmod 600)
+- [x] sudo 사용 전 존재 확인 (_sudo_prefix 헬퍼)
+- [x] Windows Task Scheduler /RU SYSTEM → 현재 사용자
+
+### 코드 품질 개선 (완료)
+- [x] DatabaseManager 연결 정리 — 16곳 finally 블록 + context manager 지원 추가
+- [x] `datetime.utcnow()` → `datetime.now()` 마이그레이션
+- [x] 이모지 플레이스홀더 → 깔끔한 마커(`[>]`, `[!]`, `[+]`, `[-]`) 137개 치환
+- [x] `backup/dashboard` exit code 수정 (실패 시 sys.exit(1)) — 5곳
+- [x] 임시 파일 정리 (backup push/pull finally 블록)
+- [x] 포트 기본값 상수화 (DEFAULT_API_PORT, DEFAULT_MCP_HTTP_PORT 등)
+
+### 미해결 개선 사항
+- [ ] `--repair` 플래그 구현 또는 제거
+- [ ] `ltm verify` 해시 검증 알고리즘 정합성 수정
+- [ ] `migrate` 명령 data-dir 기본값 하드코딩 → 설정 기반
+
+---
+
 ## 변경 이력
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-02-08 | CLI 크로스 플랫폼 지원 + Critical/High 버그 수정 7건 + 보안 강화 |
 | 2026-01-03 | REST API v5.0.0 (InsightJudge, 인증, STM/브랜치 탐색) |
 | 2026-01-02 | Hybrid Search + 3단계 파이프라인 구현 완료 |
 | 2025-12-31 | API 서버 기본 구현 완료 |

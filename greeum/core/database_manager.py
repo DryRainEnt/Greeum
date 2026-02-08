@@ -1176,6 +1176,13 @@ class DatabaseManager:
             self.conn.close()
             logger.info(f"Database connection closed: {self.connection_string}")
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+
     def get_short_term_memory_by_id(self, memory_id: str) -> Optional[Dict[str, Any]]:
         """
         ID로 단기 기억 조회
