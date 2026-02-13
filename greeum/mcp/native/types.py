@@ -10,7 +10,7 @@ JSON-RPC 2.0 및 MCP 프로토콜 타입 정의
 """
 
 from typing import Any, Dict, List, Optional, Union, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 import uuid
 
 # 중앙화된 버전 참조
@@ -71,12 +71,26 @@ class ServerInfo(BaseModel):
     name: str = "Greeum Memory System"
     version: str = Field(default_factory=_get_version)
 
+
 class Capabilities(BaseModel):
     """MCP 기능 목록"""
     tools: Optional[Dict[str, Any]] = Field(default_factory=dict)
     resources: Optional[Dict[str, Any]] = Field(default_factory=dict)
     prompts: Optional[Dict[str, Any]] = Field(default_factory=dict)
     logging: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+    @field_validator('tools', 'resources', 'prompts', 'logging', mode='before')
+    @classmethod
+    def _coerce_capability_dict(cls, value):
+        """Allow bool and legacy payloads by normalizing to dict."""
+        if value is True:
+            return {}
+        if value in (False, None):
+            return {}
+        if isinstance(value, dict):
+            return value
+        # Gracefully downgrade unexpected payloads to empty dicts
+        return {}
 
 # =============================================================================
 # MCP Initialize Protocol
