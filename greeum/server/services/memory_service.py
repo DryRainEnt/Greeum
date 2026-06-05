@@ -16,6 +16,13 @@ logger = logging.getLogger(__name__)
 # InsightJudge 사용 여부 (환경변수로 제어)
 _USE_INSIGHT_FILTER = os.environ.get("GREEUM_USE_INSIGHT_FILTER", "1") == "1"
 
+# Strict mode: if True, raise on InsightJudge LLM failure (legacy behavior: HTTP 500).
+# Default False = fail-soft: store the memory anyway and mark is_insight=None so the
+# caller knows the LLM judgment was unavailable. Avoids data loss when the judge LLM
+# (e.g. 127.0.0.1:8080) is slow/down — see docs/issues/2026-05-30-* (InsightJudge timeout
+# was causing POST /memory 500 in production).
+_REQUIRE_LLM_JUDGE = os.environ.get("GREEUM_INSIGHT_REQUIRE_LLM", "0") == "1"
+
 # Lazy-loaded components
 _service_instance: Optional["MemoryService"] = None
 
@@ -88,6 +95,9 @@ class MemoryService:
         self._ensure_initialized()
 
         # Step 1: InsightJudge LLM 필터링 (v5.0.0)
+        # judge_status: "passed" | "rejected" | "unavailable" | "skipped"
+        judge_status = "skipped"
+        judge_reason: Optional[str] = None
         if self.use_insight_filter and self._insight_judge:
             try:
                 judgment = self._insight_judge.judge(content)
@@ -102,10 +112,20 @@ class MemoryService:
                         "insight_reason": judgment.insight_reason,
                         "suggestions": [],
                     }
+                judge_status = "passed"
             except RuntimeError as e:
-                # LLM 서버 미사용 시 명시적 실패
-                logger.error(f"InsightJudge unavailable: {e}")
-                raise RuntimeError(f"InsightJudge LLM server unavailable: {e}")
+                # LLM 서버 미사용/타임아웃 처리
+                if _REQUIRE_LLM_JUDGE:
+                    logger.error(f"InsightJudge unavailable (strict mode): {e}")
+                    raise RuntimeError(f"InsightJudge LLM server unavailable: {e}")
+                # Fail-soft (default): 메모리는 저장하되 judge 상태를 'unavailable'로 표기.
+                # GREEUM_INSIGHT_REQUIRE_LLM=1 설정 시 위 strict 분기로 다시 500.
+                logger.warning(
+                    f"InsightJudge unavailable; storing memory anyway (fail-soft). "
+                    f"Set GREEUM_INSIGHT_REQUIRE_LLM=1 for strict mode. Reason: {e}"
+                )
+                judge_status = "unavailable"
+                judge_reason = f"judge_llm_unavailable: {type(e).__name__}"
 
         # Step 2: Duplicate check
         dup_result = self._duplicate_detector.check_duplicate(content)
@@ -147,6 +167,12 @@ class MemoryService:
         if block_data:
             branch_id = block_data.get("root") or block_data.get("slot")
 
+        # is_insight 정직 표기: passed=True, unavailable=None(미판정), skipped=True(필터 미사용)
+        if judge_status == "unavailable":
+            is_insight_value: Optional[bool] = None
+        else:
+            is_insight_value = True
+
         return {
             "success": True,
             "block_index": block_data.get("block_index", -1) if block_data else -1,
@@ -155,8 +181,9 @@ class MemoryService:
             "storage": "LTM",
             "quality_score": quality_result.get("quality_score", 0.0),
             "duplicate_check": "passed",
-            "is_insight": True,  # InsightJudge 통과 또는 비활성화
-            "insight_reason": None,
+            "is_insight": is_insight_value,
+            "insight_reason": judge_reason,
+            "judge_status": judge_status,
             "suggestions": quality_result.get("suggestions", []),
         }
 

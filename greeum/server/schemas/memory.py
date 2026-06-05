@@ -39,8 +39,9 @@ class MemoryAddResponse(BaseModel):
     storage: str = Field(default="LTM", description="Storage type")
     quality_score: float = Field(description="Content quality score")
     duplicate_check: str = Field(description="Duplicate check result")
-    is_insight: Optional[bool] = Field(default=None, description="InsightJudge result (v5.0.0)")
-    insight_reason: Optional[str] = Field(default=None, description="InsightJudge reason (v5.0.0)")
+    is_insight: Optional[bool] = Field(default=None, description="InsightJudge result. True=passed, False=rejected, None=judge unavailable (fail-soft) or filter disabled")
+    insight_reason: Optional[str] = Field(default=None, description="InsightJudge reason / fail-soft cause")
+    judge_status: Optional[str] = Field(default=None, description="InsightJudge run status: 'passed'|'rejected'|'unavailable'|'skipped' (v5.4)")
     suggestions: Optional[List[str]] = Field(default=None, description="Quality suggestions")
 
 
