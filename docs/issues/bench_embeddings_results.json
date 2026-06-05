@@ -1,0 +1,24 @@
+{
+  "benchmark": "scripts/bench_embeddings.py",
+  "date": "2026-05-30",
+  "db": "/home/dryrain/.greeum/memory.db",
+  "n_blocks": 334,
+  "n_pos_pairs": 1730,
+  "n_query_blocks": 195,
+  "ground_truth": "semantic+causal associations (consolidator/LLM-judged); temporal excluded; random negatives for AUC",
+  "notes": [
+    "Embedding-only retrieval (no BM25/graph hybrid); relative ranking is the decision signal.",
+    "model file = real model.safetensors/largest weight; dependency footprint measured separately.",
+    "torch(GPU build) = 1760MB + CUDA libs 4573MB; CPU-only torch ~200MB. model2vec = numpy(41MB) only.",
+    "e5_small_onnx_int8 NOT benchmarked: optimum 2.x / optimum-onnx 0.1.0 / transformers 4.57 import incompatibility in this env."
+  ],
+  "results": {
+    "e5_small": {"recall@1": 0.3385, "recall@5": 0.4607, "recall@10": 0.5099, "mrr": 0.5147, "pair_auc": 0.7601, "dim": 384, "model_file_mb": 470.6, "needs_torch": true, "per_doc_ms": 1.88},
+    "model2vec_potion_ml": {"recall@1": 0.3436, "recall@5": 0.3792, "recall@10": 0.4256, "mrr": 0.4927, "pair_auc": 0.7043, "dim": 256, "model_file_mb": 512.4, "model_file_mb_fp16_est": 256, "needs_torch": false, "per_doc_ms": 0.07},
+    "baseline_minilm_current": {"recall@1": 0.2564, "recall@5": 0.3217, "recall@10": 0.3439, "mrr": 0.4075, "pair_auc": 0.8181, "dim": 384, "model_file_mb": 470.6, "needs_torch": true, "per_doc_ms": 2.07},
+    "e5_base": {"recall@1": 0.3231, "recall@5": 0.4319, "recall@10": 0.4967, "mrr": 0.5029, "pair_auc": 0.7241, "dim": 768, "model_file_mb": 1112.2, "needs_torch": true, "per_doc_ms": 4.96},
+    "model2vec_distill_e5small_naive": {"recall@1": 0.2513, "recall@5": 0.2678, "recall@10": 0.2957, "mrr": 0.3766, "pair_auc": 0.6153, "dim": 256, "needs_torch": false, "per_doc_ms": 0.25, "note": "on-the-fly distill with defaults; worse than pre-trained potion"},
+    "hash_fallback_floor": {"recall@1": 0.0154, "recall@5": 0.0494, "recall@10": 0.0685, "mrr": 0.086, "pair_auc": 0.4922, "dim": 384, "model_file_mb": 0, "needs_torch": false, "per_doc_ms": 0.03, "note": "current `greeum mcp serve` default — essentially random"},
+    "e5_small_onnx_int8": {"status": "not benchmarked (version incompatibility)", "expected": "~e5_small quality, ~120MB, no torch at inference"}
+  }
+}

@@ -2,33 +2,41 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## ⚠️ CRITICAL REQUIREMENTS (v3.1.1a1+)
+## ⚠️ CRITICAL REQUIREMENTS (v5.4 트랙)
 
 ### Semantic Embedding Requirement
 **MANDATORY**: The system requires proper semantic embeddings for core functionality.
+v5.4부터 hash-fallback은 **시끄러운 경고와 함께만** 동작하며, 두 가지 의미 임베딩 경로를 자동 선택한다:
 
-**Problem**: Without sentence-transformers or equivalent semantic embedding models:
-- All similarities compute to ~0 (using hash-based random embeddings)
-- Slot selection degrades to meaningless round-robin
-- The 0.4 similarity threshold becomes ineffective
-- Context-aware memory grouping fails completely
-- Branch-based indexing provides no value
+| 경로 | extra | 특징 | 권장 사용 |
+|------|-------|------|----------|
+| `sentence-transformers` | `greeum[full]` | torch 기반, 최고 recall@5/10 | GPU 있거나 deep recall 필요 |
+| `model2vec` (정적, no-torch) | `greeum[lite]` | numpy만, CPU 즉시, 27× 빠름 | 드롭인 기본·라이트 환경 |
+| hash fallback | (없음) | **사실상 랜덤** — 절대 production 금지 | 테스트 한정 |
 
-**Solution**: Install semantic embedding support:
+**자동 선택 우선순위** (`EmbeddingRegistry._auto_init`):
+SentenceTransformer → Model2Vec → 시끄러운 hash 폴백.
+
+**Install**:
 ```bash
-# Option 1: Install with full dependencies (RECOMMENDED)
-pip install greeum[full]
-
-# Option 2: Install sentence-transformers separately
-pip install sentence-transformers
-
-# Verify installation:
-python -c "from sentence_transformers import SentenceTransformer; print('✓ Ready')"
+pip install greeum[full]   # ST + faiss + 풀 의존성 (recall 우선)
+pip install greeum[lite]   # model2vec만 (드롭인 가벼움)
 ```
 
+**환경변수** (v5.4):
+- `GREEUM_HYBRID_VEC_WEIGHT` / `GREEUM_HYBRID_BM25_WEIGHT` — 하이브리드 가중치 (기본 0.7/0.3).
+  e5_small 사용 시 0.9/0.1 권장. 자세한 측정은 `docs/issues/2026-05-30-embedding-packaging-strategy.md`.
+- `GREEUM_DISABLE_ST` / `GREEUM_DISABLE_M2V` — 특정 경로 비활성화.
+- `GREEUM_SILENT_HASH_FALLBACK=1` — 테스트/CI에서만 hash 배너 억제.
+- `GREEUM_INSIGHT_REQUIRE_LLM=1` — InsightJudge LLM 실패 시 엄격 모드(500 반환). 기본은 fail-soft.
+- `GREEUM_DB_THREAD_LOCAL=1` — DatabaseManager per-thread 연결 (FastAPI/MCP-HTTP 권장).
+
 **Version History**:
-- v3.1.0: FAILED - Discovered using random hash embeddings
-- v3.1.1a1: Target - Proper semantic embeddings implementation
+- v3.1.0: FAILED — hash embeddings 발견
+- v3.1.1a1: ST 도입
+- v5.0: Hybrid Graph Search + 3단계 파이프라인
+- v5.3.0: Consolidator + Association 검색
+- v5.4 (작업 중): Model2Vec 통합, 하이브리드 가중치 재튜닝, fail-soft, thread-local 옵션
 
 ## Project Overview
 

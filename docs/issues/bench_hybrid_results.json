@@ -1,0 +1,123 @@
+{
+  "bm25_only": {
+    "recall@1": 0.2974,
+    "recall@5": 0.3082,
+    "recall@10": 0.3262,
+    "mrr": 0.4176,
+    "n_query": 195
+  },
+  "candidates": {
+    "baseline_minilm": {
+      "vector_only": {
+        "recall@1": 0.2564,
+        "recall@5": 0.3217,
+        "recall@10": 0.3439,
+        "mrr": 0.4075,
+        "n_query": 195
+      },
+      "hybrid_wavg": {
+        "recall@1": 0.3179,
+        "recall@5": 0.3851,
+        "recall@10": 0.424,
+        "mrr": 0.4716,
+        "n_query": 195
+      },
+      "hybrid_rrf": {
+        "recall@1": 0.3128,
+        "recall@5": 0.362,
+        "recall@10": 0.397,
+        "mrr": 0.4645,
+        "n_query": 195
+      },
+      "needs_torch_at_inference": true,
+      "embed_total_s": 5.03
+    },
+    "e5_small": {
+      "vector_only": {
+        "recall@1": 0.3385,
+        "recall@5": 0.4607,
+        "recall@10": 0.5099,
+        "mrr": 0.5147,
+        "n_query": 195
+      },
+      "hybrid_wavg": {
+        "recall@1": 0.3026,
+        "recall@5": 0.3372,
+        "recall@10": 0.3615,
+        "mrr": 0.4453,
+        "n_query": 195
+      },
+      "hybrid_rrf": {
+        "recall@1": 0.3231,
+        "recall@5": 0.3837,
+        "recall@10": 0.4332,
+        "mrr": 0.4833,
+        "n_query": 195
+      },
+      "needs_torch_at_inference": true,
+      "embed_total_s": 5.11
+    },
+    "e5_base": {
+      "vector_only": {
+        "recall@1": 0.3231,
+        "recall@5": 0.4319,
+        "recall@10": 0.4967,
+        "mrr": 0.5029,
+        "n_query": 195
+      },
+      "hybrid_wavg": {
+        "recall@1": 0.3128,
+        "recall@5": 0.3403,
+        "recall@10": 0.3554,
+        "mrr": 0.4516,
+        "n_query": 195
+      },
+      "hybrid_rrf": {
+        "recall@1": 0.3231,
+        "recall@5": 0.3719,
+        "recall@10": 0.4376,
+        "mrr": 0.4813,
+        "n_query": 195
+      },
+      "needs_torch_at_inference": true,
+      "embed_total_s": 6.03
+    },
+    "potion_ml": {
+      "vector_only": {
+        "recall@1": 0.3436,
+        "recall@5": 0.3792,
+        "recall@10": 0.4256,
+        "mrr": 0.4927,
+        "n_query": 195
+      },
+      "hybrid_wavg": {
+        "recall@1": 0.3333,
+        "recall@5": 0.3628,
+        "recall@10": 0.4163,
+        "mrr": 0.4781,
+        "n_query": 195
+      },
+      "hybrid_rrf": {
+        "recall@1": 0.3026,
+        "recall@5": 0.3302,
+        "recall@10": 0.4024,
+        "mrr": 0.4542,
+        "n_query": 195
+      },
+      "needs_torch_at_inference": false,
+      "embed_total_s": 2.05
+    }
+  },
+  "meta": {
+    "db": "/home/dryrain/.greeum/memory.db",
+    "n_blocks": 334,
+    "n_pos_pairs": 1730,
+    "bm25_vocab": 1362,
+    "avg_doc_len": 9.31,
+    "fusion_weights": [
+      0.5,
+      0.5
+    ],
+    "rrf_k": 60
+  }
+}
