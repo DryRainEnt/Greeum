@@ -47,9 +47,15 @@ test = ["pytest>=7.0", "pytest-cov", "responses>=0.23.0"]
 dev = ["black", "isort", "flake8", "ruff"]
 mcp-http = ["fastapi>=0.110.0", "uvicorn[standard]>=0.22.0"]
 consolidator = []  # No extra deps — click, numpy, requests already in core
+# v5.4 (P1B): no-torch static embedding path — multilingual potion via Model2Vec.
+# Auto-selected when sentence-transformers is absent/disabled; ~256MB on disk, runs on
+# any CPU without GPU. See docs/issues/2026-05-30-embedding-packaging-strategy.md.
+lite = [
+    "model2vec>=0.6.0",
+]
 full = [
     "sentence-transformers>=2.2.0",
-    "openai>=0.27.0", 
+    "openai>=0.27.0",
     "faiss-cpu>=1.7.4",
     "keybert>=0.7.0",
     "scikit-learn>=1.3.0",

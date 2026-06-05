@@ -10,6 +10,7 @@ Features:
 """
 
 import math
+import os
 import logging
 import json
 from typing import List, Dict, Optional, Tuple, Set
@@ -17,6 +18,21 @@ from collections import Counter
 import sqlite3
 
 logger = logging.getLogger(__name__)
+
+
+def _default_hybrid_weights() -> Tuple[float, float]:
+    """Return (vector_weight, bm25_weight) defaults for HybridScorer.
+
+    Defaults (0.7 / 0.3) from the 2026-05-30 benchmark on the live DB
+    (334 blocks, 1730 semantic+causal GT pairs — see scripts/bench_hybrid_weights.py
+    and docs/issues/2026-05-30-hybrid-fusion-weights.md). 50/50 was strictly worse
+    than 0.7/0.3 for every embedding model tested. For high-recall (e5_small/full-ST)
+    deployments, 0.9/0.1 performs better — set via env vars below.
+    """
+    return (
+        float(os.getenv("GREEUM_HYBRID_VEC_WEIGHT", "0.7")),
+        float(os.getenv("GREEUM_HYBRID_BM25_WEIGHT", "0.3")),
+    )
 
 
 class BM25Index:
@@ -380,8 +396,8 @@ class HybridScorer:
     def __init__(
         self,
         bm25_index: BM25Index,
-        vector_weight: float = 0.5,
-        bm25_weight: float = 0.5,
+        vector_weight: Optional[float] = None,
+        bm25_weight: Optional[float] = None,
         fusion_method: str = "weighted_avg",
         rrf_k: int = 60
     ):
@@ -390,14 +406,17 @@ class HybridScorer:
 
         Args:
             bm25_index: BM25Index instance
-            vector_weight: Weight for vector similarity (for weighted_avg)
-            bm25_weight: Weight for BM25 score (for weighted_avg)
+            vector_weight: Weight for vector similarity. None → _default_hybrid_weights()
+                (env-overridable, defaults to 0.7).
+            bm25_weight: Weight for BM25 score. None → _default_hybrid_weights()
+                (env-overridable, defaults to 0.3).
             fusion_method: "weighted_avg" or "rrf"
             rrf_k: k parameter for RRF (default: 60)
         """
+        default_vec, default_bm25 = _default_hybrid_weights()
         self.bm25_index = bm25_index
-        self.vector_weight = vector_weight
-        self.bm25_weight = bm25_weight
+        self.vector_weight = default_vec if vector_weight is None else vector_weight
+        self.bm25_weight = default_bm25 if bm25_weight is None else bm25_weight
         self.fusion_method = fusion_method
         self.rrf_k = rrf_k
 

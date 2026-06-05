@@ -105,12 +105,9 @@ class HybridGraphSearch:
                     self.bm25_index.save_to_db(db_manager)
                 logger.info(f"Built BM25 index with {count} documents")
 
-        # Hybrid scorer
-        self.hybrid_scorer = HybridScorer(
-            self.bm25_index,
-            vector_weight=0.5,
-            bm25_weight=0.5
-        )
+        # Hybrid scorer — defaults come from HybridScorer._default_hybrid_weights()
+        # (env-overridable: GREEUM_HYBRID_VEC_WEIGHT / GREEUM_HYBRID_BM25_WEIGHT).
+        self.hybrid_scorer = HybridScorer(self.bm25_index)
 
         # Metrics
         self.metrics = {

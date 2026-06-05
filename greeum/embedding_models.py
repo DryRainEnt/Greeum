@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import hashlib
 import logging
 import os
+import sys
 import time
 import threading
 from dataclasses import dataclass
@@ -12,6 +13,36 @@ import numpy as np
 
 
 logger = logging.getLogger(__name__)
+
+
+_HASH_FALLBACK_BANNER = (
+    "\n"
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    "⚠️  Greeum: SEMANTIC SEARCH DISABLED — running on hash-based embeddings.\n"
+    "    Reason: {reason}\n"
+    "    Consequences: similarity collapses to ~0; retrieval is essentially random.\n"
+    "    Fix:  pip install greeum[full]    (or)   pip install sentence-transformers\n"
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+)
+
+
+def _emit_hash_fallback_banner(reason: str) -> None:
+    """Loud, unmistakable notice that the registry fell back to hash embeddings.
+
+    Writes to stderr directly so the message survives logger configuration in MCP/stdio
+    servers (which often suppress logger output). Also calls logger.warning for
+    centralized log aggregation. Suppressible via GREEUM_SILENT_HASH_FALLBACK=1 for
+    intentional test/CI use only.
+    """
+    if os.getenv("GREEUM_SILENT_HASH_FALLBACK", "").lower() in ("1", "true", "yes"):
+        return
+    msg = _HASH_FALLBACK_BANNER.format(reason=reason)
+    try:
+        sys.stderr.write(msg)
+        sys.stderr.flush()
+    except Exception:
+        pass
+    logger.warning(msg)
 
 
 # Cache for loaded SentenceTransformer instances: model key -> (model, dim, needs_padding)
@@ -481,6 +512,160 @@ class SentenceTransformerModel(EmbeddingModel):
         return self.dimension
 
 
+# Cache for loaded Model2Vec StaticModel instances: model_name -> (model, dim)
+_M2V_MODEL_CACHE: Dict[str, Tuple[Any, int]] = {}
+_M2V_CACHE_LOCK = threading.Lock()
+
+
+def _model2vec_disabled() -> bool:
+    """Allow disabling Model2Vec via env (parallel to GREEUM_DISABLE_ST)."""
+    value = os.getenv("GREEUM_DISABLE_M2V", "")
+    return value.lower() in ("1", "true", "yes")
+
+
+class Model2VecEmbedding(EmbeddingModel):
+    """Model2Vec 정적(no-torch-at-inference) 임베딩 모델.
+
+    Model2Vec은 sentence-transformer를 정적 토큰 임베딩으로 증류한 결과로, 추론 시
+    torch가 필요 없고 numpy만으로 동작한다(설치/실행 매트릭스가 훨씬 가벼움). 기본
+    모델은 다국어 학습된 `minishlab/potion-multilingual-128M` (한국어 포함).
+
+    벤치마크(2026-05-30, 라이브 DB 334블록 + 1730 GT 쌍): potion @70/30 하이브리드에서
+    R@1 .426 (모든 후보 중 최고), MRR .558 (e5_small과 동률) — 자세한 사항은
+    docs/issues/2026-05-30-embedding-packaging-strategy.md.
+    """
+
+    DEFAULT_MODEL = "minishlab/potion-multilingual-128M"
+
+    def __init__(self, model_name: Optional[str] = None,
+                 config: Optional["EmbeddingConfig"] = None):
+        self.model_name = model_name or self.DEFAULT_MODEL
+        self.model = None  # Lazy load
+        self._dimension: Optional[int] = None
+        self.target_dimension = 768  # Greeum standard (pad/truncate to match)
+        self.config = config or EmbeddingConfig()
+        self._cache = LRUEmbeddingCache(self.config.cache_size) if self.config.enable_caching else None
+        self._monitor = PerformanceMonitor(self.config.performance_monitoring)
+        logger.debug("Model2VecEmbedding initialized with lazy loading for: %s", self.model_name)
+
+    def _ensure_model_loaded(self) -> None:
+        if self.model is not None:
+            return
+        if _model2vec_disabled():
+            raise RuntimeError(
+                "Model2Vec usage disabled via GREEUM_DISABLE_M2V."
+            )
+        try:
+            from model2vec import StaticModel
+        except ImportError as exc:
+            raise ImportError(
+                "model2vec is not installed. Install one of:\n"
+                "  pip install greeum[lite]   # bundled default (no torch)\n"
+                "  pip install model2vec"
+            ) from exc
+
+        with _M2V_CACHE_LOCK:
+            cached = _M2V_MODEL_CACHE.get(self.model_name)
+            if cached:
+                self.model, self._dimension = cached
+                return
+            logger.info("Loading Model2Vec static model: %s", self.model_name)
+            model = StaticModel.from_pretrained(self.model_name)
+            # Probe dimension
+            dim = int(np.asarray(model.encode(["x"])).shape[-1])
+            self.model = model
+            self._dimension = dim
+            _M2V_MODEL_CACHE[self.model_name] = (model, dim)
+            logger.info("Model2Vec ready: %s (dim: %d)", self.model_name, dim)
+
+    @property
+    def dimension(self) -> int:
+        if self._dimension is None:
+            self._ensure_model_loaded()
+        return self._dimension or 0
+
+    def _pad_or_truncate(self, vec: np.ndarray) -> np.ndarray:
+        cur = vec.shape[-1]
+        if cur == self.target_dimension:
+            return vec
+        if cur < self.target_dimension:
+            padded = np.zeros(self.target_dimension, dtype=vec.dtype)
+            padded[:cur] = vec
+            return padded
+        return vec[: self.target_dimension]
+
+    def encode(self, text: str) -> List[float]:
+        start = time.perf_counter()
+        if self._cache:
+            cached = self._cache.get(text)
+            if cached is not None:
+                self._monitor.record_cache(True)
+                self._monitor.record_encoding(time.perf_counter() - start)
+                return cached
+        self._monitor.record_cache(False)
+
+        self._ensure_model_loaded()
+        vec = np.asarray(self.model.encode([text])[0], dtype=float)
+        vec = self._pad_or_truncate(vec)
+        norm = np.linalg.norm(vec)
+        if norm > 0:
+            vec = vec / norm
+        out = vec.tolist()
+
+        if self._cache:
+            self._cache.put(text, out)
+        self._monitor.record_encoding(time.perf_counter() - start)
+        return out
+
+    def batch_encode(self, texts: List[str]) -> List[List[float]]:
+        if not texts:
+            return []
+        # Use cache first for any cached items
+        results: List[Optional[List[float]]] = [None] * len(texts)
+        to_encode_idx: List[int] = []
+        to_encode_texts: List[str] = []
+        for i, t in enumerate(texts):
+            if self._cache:
+                cached = self._cache.get(t)
+                if cached is not None:
+                    results[i] = cached
+                    self._monitor.record_cache(True)
+                    continue
+            self._monitor.record_cache(False)
+            to_encode_idx.append(i)
+            to_encode_texts.append(t)
+
+        if to_encode_texts:
+            start = time.perf_counter()
+            self._ensure_model_loaded()
+            vecs = np.asarray(self.model.encode(to_encode_texts), dtype=float)
+            for j, idx in enumerate(to_encode_idx):
+                vec = self._pad_or_truncate(vecs[j])
+                norm = np.linalg.norm(vec)
+                if norm > 0:
+                    vec = vec / norm
+                out = vec.tolist()
+                results[idx] = out
+                if self._cache:
+                    self._cache.put(texts[idx], out)
+            self._monitor.record_encoding((time.perf_counter() - start) / max(1, len(to_encode_texts)))
+
+        return [r for r in results if r is not None]  # all should be filled
+
+    def get_dimension(self) -> int:
+        return self.target_dimension
+
+    def get_actual_dimension(self) -> int:
+        return self.dimension
+
+    def get_model_name(self) -> str:
+        return f"m2v_{self.model_name.split('/')[-1]}"
+
+    def clear_cache(self) -> None:
+        if self._cache:
+            self._cache.clear()
+
+
 class EmbeddingRegistry:
     """임베딩 모델 레지스트리"""
     
@@ -493,35 +678,53 @@ class EmbeddingRegistry:
         self._auto_init()
 
     def _auto_init(self):
-        """레지스트리 초기화 시 최적 모델 자동 선택"""
-        if _sentence_transformer_disabled():
-            logger.info(
-                "GREEUM_DISABLE_ST set – defaulting to SimpleEmbeddingModel (hash fallback)."
-            )
-            self.register_model("simple", SimpleEmbeddingModel(dimension=768), set_as_default=True)
-            return
-        try:
-            # 1순위: Sentence-Transformers (의미 기반)
-            model = SentenceTransformerModel()
-            self.register_model("sentence-transformer", model, set_as_default=True)
-            logger.info("✅ SentenceTransformer 모델 자동 초기화 성공 (의미 기반 검색 활성화)")
-        except (ImportError, RuntimeError):
-            # 2순위: Simple (Fallback)
-            logger.warning(
-                "⚠️ WARNING: sentence-transformers unavailable or disabled - using SimpleEmbeddingModel\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "의미 기반 검색이 비활성화됩니다. 다음 기능들이 제대로 작동하지 않습니다:\n"
-                "  • 의미 기반 검색\n"
-                "  • 슬롯 자동 할당\n"
-                "  • 유사 메모리 그룹화\n"
-                "\n"
-                "해결 방법:\n"
-                "  pip install sentence-transformers\n"
-                "  또는\n"
-                "  pip install greeum[full]\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            )
-            self.register_model("simple", SimpleEmbeddingModel(dimension=768), set_as_default=True)
+        """레지스트리 초기화 시 최적 모델 자동 선택.
+
+        우선순위:
+            1. SentenceTransformer (의미 기반, torch 필요) — `greeum[full]`
+            2. Model2Vec (정적, no-torch) — `greeum[lite]` 기본 번들 후보 (Phase 1B+)
+            3. SimpleEmbeddingModel (해시 폴백, 사실상 랜덤) — **시끄러운 경고와 함께만**
+
+        env로 명시적 disable: GREEUM_DISABLE_ST, GREEUM_DISABLE_M2V.
+        """
+        st_disabled = _sentence_transformer_disabled()
+        m2v_disabled = _model2vec_disabled()
+
+        # 1순위: Sentence-Transformers
+        if not st_disabled:
+            try:
+                model = SentenceTransformerModel()
+                # Trigger eager load to surface ImportError now (lazy would hide it).
+                _ = model.dimension
+                self.register_model("sentence-transformer", model, set_as_default=True)
+                logger.info("✅ SentenceTransformer 모델 자동 초기화 성공 (의미 기반 검색 활성화)")
+                return
+            except (ImportError, RuntimeError) as exc:
+                logger.info("SentenceTransformer unavailable (%s); trying Model2Vec next.", exc)
+
+        # 2순위: Model2Vec 정적 (no-torch)
+        if not m2v_disabled:
+            try:
+                m2v = Model2VecEmbedding()
+                _ = m2v.dimension  # trigger load
+                self.register_model("model2vec", m2v, set_as_default=True)
+                logger.info("✅ Model2Vec 모델 자동 초기화 성공 (no-torch 정적 임베딩 활성화)")
+                return
+            except (ImportError, RuntimeError) as exc:
+                logger.info("Model2Vec unavailable (%s); falling back to hash.", exc)
+
+        # 3순위: Hash 폴백 — 시끄러운 경고 필수
+        reason_parts = []
+        if st_disabled:
+            reason_parts.append("GREEUM_DISABLE_ST set")
+        else:
+            reason_parts.append("sentence-transformers not importable")
+        if m2v_disabled:
+            reason_parts.append("GREEUM_DISABLE_M2V set")
+        else:
+            reason_parts.append("model2vec not importable")
+        _emit_hash_fallback_banner(" + ".join(reason_parts))
+        self.register_model("simple", SimpleEmbeddingModel(dimension=768), set_as_default=True)
 
     def register_model(self, name: str, model: EmbeddingModel, set_as_default: bool = False) -> None:
         """
