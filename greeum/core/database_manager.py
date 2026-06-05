@@ -20,8 +20,22 @@ from .db_integrity import (
 logger = logging.getLogger(__name__)
 
 class DatabaseManager:
-    """데이터베이스 연결 및 관리 클래스"""
-    
+    """데이터베이스 연결 및 관리 클래스.
+
+    Threading model (Phase 1A.5 / Auto-3, 2026-06-04 — DRAFT, opt-in via env):
+        기본 동작은 기존과 동일 — 단일 sqlite3 연결을 모든 호출자가 공유.
+        SQLite는 기본적으로 ``check_same_thread=True``라 다른 스레드에서 같은 연결을 사용하면
+        ``ProgrammingError`` 발생 (LUCA가 보고한 문제, 60+ 콜사이트 영향 — 이슈
+        ``docs/issues/2026-05-30-context-classifier-thread-safety.md`` 참조).
+
+        해결책: ``GREEUM_DB_THREAD_LOCAL=1`` 설정 시 ``self.conn``이 **per-thread 연결**을
+        반환하도록 동작 전환. 각 스레드의 첫 ``.conn`` 접근이 lazy하게 자체 sqlite3 연결을
+        생성 (WAL 모드 + 동일 PRAGMA). 60+ 콜사이트 코드 변경 없이 동작.
+
+        주의: 기본 OFF — 본인 검토 후 활성화 또는 default 전환 결정. Phase 2(MCP-HTTP)
+        진행 전 활성화 권장 (HTTP 스레드풀이 이 버그를 증폭시킴).
+    """
+
     def __init__(self, connection_string=None, db_type='sqlite'):
         """
         데이터베이스 관리자 초기화
@@ -31,7 +45,12 @@ class DatabaseManager:
             db_type: 데이터베이스 타입 (sqlite, postgres 등)
         """
         self.db_type = db_type
-        
+
+        # Thread-local connection mode (opt-in via env, default off)
+        self._thread_local_mode = os.environ.get("GREEUM_DB_THREAD_LOCAL", "0") == "1"
+        self._local = threading.local()
+        self._shared_conn = None  # used when thread-local mode is off
+
         # Smart Database Path Detection (옵션 3)
         if connection_string:
             self.connection_string = connection_string
@@ -51,6 +70,67 @@ class DatabaseManager:
             self._write_warn_threshold = 5.0
         # logger.info(f"DatabaseManager initialization complete: {self.connection_string} (type: {self.db_type})")  # Too verbose
     
+    # ---- Thread-local connection plumbing (Auto-3 draft, opt-in via env) ----
+    @property
+    def conn(self):
+        """Return the active sqlite3 connection.
+
+        In thread-local mode (``GREEUM_DB_THREAD_LOCAL=1``), each thread sees its
+        own lazy-initialised connection. In default (legacy) mode, a single
+        process-wide connection is returned — same behavior as v5.3.0 and earlier.
+        """
+        if self._thread_local_mode:
+            existing = getattr(self._local, "conn", None)
+            if existing is not None:
+                return existing
+            # Lazy init for a new thread that has not yet acquired a connection.
+            self._setup_thread_local_connection()
+            return getattr(self._local, "conn", None)
+        return self._shared_conn
+
+    @conn.setter
+    def conn(self, value):
+        """Setter so existing ``self.conn = sqlite3.connect(...)`` still works.
+
+        In thread-local mode, the value is stored on this thread's local storage.
+        In default mode, it overwrites the single process-wide connection.
+        """
+        if self._thread_local_mode:
+            self._local.conn = value
+        else:
+            self._shared_conn = value
+
+    def _setup_thread_local_connection(self) -> None:
+        """Create a new sqlite3 connection bound to the current thread.
+
+        Mirrors the PRAGMAs from ``_setup_connection`` but without the one-shot
+        integrity check (already done on the creating thread). Postgres is not
+        supported in thread-local mode (callers will get a clear RuntimeError).
+        """
+        if self.db_type != 'sqlite':
+            raise RuntimeError(
+                "GREEUM_DB_THREAD_LOCAL=1 currently supports SQLite only "
+                f"(db_type={self.db_type})."
+            )
+        timeout = float(os.getenv('GREEUM_SQLITE_TIMEOUT', '3'))
+        conn = sqlite3.connect(self.connection_string, timeout=timeout)
+        conn.row_factory = sqlite3.Row
+        try:
+            conn.execute('PRAGMA journal_mode=WAL')
+            conn.execute('PRAGMA synchronous=NORMAL')
+            conn.execute('PRAGMA temp_store=MEMORY')
+            busy_ms = int(float(os.getenv('GREEUM_SQLITE_BUSY_TIMEOUT', '1.5')) * 1000)
+            conn.execute(f'PRAGMA busy_timeout = {busy_ms}')
+        except sqlite3.OperationalError as pragma_error:
+            logger.debug("SQLite PRAGMA setup skipped on thread-local conn: %s", pragma_error)
+        self._local.conn = conn
+        logger.debug(
+            "Initialised thread-local sqlite connection for thread %s",
+            threading.get_ident(),
+        )
+
+    # ---- end thread-local plumbing ----
+
     def _get_smart_db_path(self) -> str:
         """
         지능형 데이터베이스 경로 감지
@@ -1171,9 +1251,26 @@ class DatabaseManager:
         return migrated_count
     
     def close(self):
-        """데이터베이스 연결 종료"""
-        if self.conn:
-            self.conn.close()
+        """데이터베이스 연결 종료.
+
+        Thread-local 모드: 현재 스레드의 연결만 닫는다. 다른 스레드의 conn은 그
+        스레드가 종료될 때 GC + sqlite3 finalizer로 정리됨. 모든 thread-local 연결을
+        명시적으로 닫으려면 별도 트래커가 필요 (Phase 2에서 검토).
+        Default 모드: 단일 공유 연결을 닫는다.
+        """
+        if self._thread_local_mode:
+            existing = getattr(self._local, "conn", None)
+            if existing is not None:
+                existing.close()
+                self._local.conn = None
+                logger.info(
+                    f"Thread-local DB connection closed (thread {threading.get_ident()}): "
+                    f"{self.connection_string}"
+                )
+            return
+        if self._shared_conn is not None:
+            self._shared_conn.close()
+            self._shared_conn = None
             logger.info(f"Database connection closed: {self.connection_string}")
 
     def __enter__(self):
