@@ -3,6 +3,14 @@
 ## Unreleased (v5.4 트랙 — 작업 중)
 
 ### Added
+- **MCP-over-HTTP 전송 업그레이드** (`greeum/mcp/native/http_server.py`, Phase 2):
+  - MCP Streamable HTTP 스펙 준수 — `POST /mcp`가 `Accept` 헤더 기반으로 JSON 또는 SSE 응답 분기
+  - `Mcp-Session-Id` 헤더 발급·에코 (클라이언트가 세션 추적 가능, 서버 stateless)
+  - `DELETE /mcp` 세션 종료 ack
+  - X-API-Key 인증 통합 (`GREEUM_API_KEY` 설정 시 자동 활성; `server/middleware/auth.py` 재사용)
+  - Health 엔드포인트 분리 (`/`, `/healthz` 무인증)
+  - 13 신규 단위 테스트 (`tests/test_mcp_http_transport.py`, httpx 부재 시 graceful skip)
+  - 미구현(향후): `GET /mcp` 서버 푸시 SSE, OAuth 2.1, per-session 서버 상태
 - **프레임워크 어댑터 3종** (`greeum/adapters/`):
   - `langchain.GreeumRetriever` — LangChain `BaseRetriever` 구현, `from_block_manager`/`from_http_client` 분기로 in-process·원격 모두 지원. extra: `greeum[langchain]`.
   - `llamaindex.GreeumRetriever` — LlamaIndex `BaseRetriever` 구현, 동일한 두 모드. extra: `greeum[llamaindex]`.

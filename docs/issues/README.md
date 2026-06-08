@@ -20,7 +20,7 @@
 |--------|----------|--------|------|------|
 | 2026-05-30 | P0 | High | **In Progress** | [임베딩 패키징 전략 — 벤치 완료, 단계 출시 중](2026-05-30-embedding-packaging-strategy.md) |
 | 2026-05-30 | P1 | Medium | **In Progress** | [Hybrid 가중치 50/50 → 0.7/0.3 (Phase 1A 코드 반영됨)](2026-05-30-hybrid-fusion-weights.md) |
-| 2026-05-30 | P0 | High | Approved (대기) | [MCP HTTP transport — spec 준수 + 인증](2026-05-30-mcp-http-transport-spec-auth.md) |
+| 2026-05-30 | P0 | High | **In Progress** (Phase 2 부분 완료) | [MCP HTTP transport — spec 준수 + 인증](2026-05-30-mcp-http-transport-spec-auth.md) |
 | 2026-05-30 | P1 | Medium | **Resolved** (Phase 3, 커밋됨) | [LangChain + LlamaIndex retriever 어댑터](2026-05-30-langchain-llamaindex-adapters.md) |
 | 2026-05-30 | P1 | Medium | **Resolved** (Phase 3, 커밋됨) | [Anthropic native memory-tool 심](2026-05-30-anthropic-memory-tool-shim.md) |
 | 2026-05-30 | P2 | Medium | Approved (대기) | [MCP 서버 중복 구현 정리](2026-05-30-mcp-implementation-consolidation.md) |
