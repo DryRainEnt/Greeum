@@ -3,6 +3,11 @@
 ## Unreleased (v5.4 트랙 — 작업 중)
 
 ### Added
+- **레거시 MCP 정리 prep** (Phase 4, 삭제 미실행):
+  - ChatGPT/OpenAI 커넥터 호환 `search` / `fetch` 도구를 native로 포팅 (`greeum/mcp/native/tools.py` 디스패치 + `greeum/mcp/native/protocol.py` 스키마). 이전엔 레거시 `production_mcp_server.py`에만 있어 삭제 시 누락될 위험이었음.
+  - 포팅 분석 문서 작성: `docs/design/mcp_legacy_porting.md` — 레거시 9개 파일 vs native 매핑, 포팅·드롭 결정, 삭제 체크리스트.
+  - 9개 레거시 파일에 deprecation/legacy 헤더 + 모듈 로드 시 경고 로깅 추가 (동작 변경 없음). 사실상 dead 7개는 `logger.warning`, websocket 전송 경로용 2개(`cli_entry.py`/`server_core.py`)는 `logger.info`.
+  - 6 신규 테스트 (`tests/test_native_search_fetch.py`): dispatch·schema·error-path 검증. 전체 167 → 173 통과, 회귀 0.
 - **MCP-over-HTTP 전송 업그레이드** (`greeum/mcp/native/http_server.py`, Phase 2):
   - MCP Streamable HTTP 스펙 준수 — `POST /mcp`가 `Accept` 헤더 기반으로 JSON 또는 SSE 응답 분기
   - `Mcp-Session-Id` 헤더 발급·에코 (클라이언트가 세션 추적 가능, 서버 stateless)

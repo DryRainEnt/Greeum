@@ -15,6 +15,18 @@ Greeum MCP CLI Entry Point
 - transport별 어댑터 분리 가능
 """
 
+# LEGACY (Phase 4 prep, 2026-06) — only used by `greeum mcp serve --transport websocket`.
+# Canonical transports (stdio, HTTP Streamable) live in greeum.mcp.native.
+# Migrate to `--transport http` when possible; this module is targeted for
+# deletion if websocket support is dropped.
+# See docs/design/mcp_legacy_porting.md.
+import logging as _legacy_deprec_log
+_legacy_deprec_log.getLogger(__name__).info(
+    "Loading legacy websocket-transport module %s — prefer `--transport http` "
+    "(see docs/design/mcp_legacy_porting.md)",
+    __name__,
+)
+
 import asyncio
 import logging
 import sys

@@ -145,6 +145,12 @@ class GreeumMCPTools:
             return await self._handle_get_recent_memories(arguments)
         elif tool_name == "get_memories_by_date":
             return await self._handle_get_memories_by_date(arguments)
+        elif tool_name == "search":
+            # OpenAI / ChatGPT-connector compat alias (Phase 4 prep port).
+            return await self._handle_search(arguments)
+        elif tool_name == "fetch":
+            # OpenAI / ChatGPT-connector compat (Phase 4 prep port).
+            return await self._handle_fetch(arguments)
         else:
             raise ValueError(f"Unknown tool: {tool_name}")
 
@@ -1184,6 +1190,61 @@ This may indicate a transaction rollback or database issue."""
         except Exception as e:
             logger.error(f"system_doctor failed: {e}")
             return f"**ERROR: System Doctor Failed**\n\nFailed to run diagnostics: {str(e)}\n\nPlease check system installation."
+
+    # ---- OpenAI / ChatGPT connector-compat tools (Phase 4 port) ----------
+    async def _handle_search(self, arguments: Dict[str, Any]) -> str:
+        """Connector-compat ``search`` tool.
+
+        OpenAI's ChatGPT connector spec (and Deep Research) require tools
+        named exactly ``search`` and ``fetch``. This is a thin alias over
+        ``search_memory`` with the spec's minimal arg shape — query + limit,
+        no depth/tolerance — so the same backend logic powers both surfaces.
+        """
+        query = arguments.get("query", "")
+        if not query:
+            return "ERROR: query parameter is required"
+        limit = int(arguments.get("limit", 5))
+        limit = max(1, min(limit, 50))
+        # Defer to the canonical search_memory handler (depth=0, default tolerance).
+        return await self._handle_search_memory({
+            "query": query,
+            "limit": limit,
+            "depth": 0,
+        })
+
+    async def _handle_fetch(self, arguments: Dict[str, Any]) -> str:
+        """Connector-compat ``fetch`` tool.
+
+        ``fetch`` either retrieves a specific block by id or returns the
+        ``count`` most-recent memories. Mirrors the ChatGPT connector spec
+        for retrieval primitives.
+        """
+        block_id = arguments.get("block_id")
+        if block_id is not None and block_id != "":
+            # Specific block by index.
+            db_manager = self.components.get('db_manager')
+            if not db_manager:
+                return "ERROR: Database not available."
+            try:
+                idx = int(block_id)
+            except (TypeError, ValueError):
+                return f"ERROR: block_id must be an integer (got: {block_id!r})"
+            block = db_manager.get_block_by_index(idx)
+            if not block:
+                return f"Block #{idx} not found."
+            ts = block.get('timestamp', 'Unknown')
+            content = block.get('context', '')
+            imp = block.get('importance', 0)
+            tags = block.get('tags') or []
+            return (
+                f"**Block #{idx}** [{ts}] (importance: {imp:.2f})\n"
+                + (f"Tags: {', '.join(tags)}\n" if tags else "")
+                + f"\n{content}"
+            )
+        # Fallback: most-recent ``count`` memories.
+        count = int(arguments.get("count", 10))
+        count = max(1, min(count, 50))
+        return await self._handle_get_recent_memories({"limit": count})
 
     async def _handle_get_recent_memories(self, arguments: Dict[str, Any]) -> str:
         """Handle get_recent_memories tool — 최신순으로 기억 조회."""

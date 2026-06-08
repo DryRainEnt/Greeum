@@ -20,6 +20,18 @@ Greeum MCP Server Core
 - API 실패 시 자동 폴백 (직접 모드)
 """
 
+# LEGACY (Phase 4 prep, 2026-06) — only used by `greeum mcp serve --transport websocket`.
+# Canonical transports (stdio, HTTP Streamable) live in greeum.mcp.native.
+# Migrate to `--transport http` when possible; this module is targeted for
+# deletion if websocket support is dropped.
+# See docs/design/mcp_legacy_porting.md.
+import logging as _legacy_deprec_log
+_legacy_deprec_log.getLogger(__name__).info(
+    "Loading legacy websocket-transport module %s — prefer `--transport http` "
+    "(see docs/design/mcp_legacy_porting.md)",
+    __name__,
+)
+
 import logging
 import os
 import sys

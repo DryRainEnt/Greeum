@@ -363,6 +363,47 @@ class JSONRPCProcessor:
                     },
                     "required": ["start_date"]
                 }
+            },
+            {
+                "name": "search",
+                "description": "Search Greeum memories. Alias for `search_memory` with the OpenAI/ChatGPT-connector compatible parameter shape (query + limit only). Use this when wiring Greeum into ChatGPT Connectors or OpenAI Deep Research, which require a tool named exactly `search`.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query for finding relevant memories"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of results",
+                            "minimum": 1,
+                            "maximum": 50,
+                            "default": 5
+                        }
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "name": "fetch",
+                "description": "Fetch a specific memory block by id, or the most-recent N memories. OpenAI/ChatGPT-connector compatibility primitive (must be named exactly `fetch`). When `block_id` is provided, returns that single block with full content + metadata. Otherwise returns the latest `count` memories.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "block_id": {
+                            "type": "string",
+                            "description": "Specific block id (integer as string) to retrieve. If omitted, returns recent memories."
+                        },
+                        "count": {
+                            "type": "integer",
+                            "description": "Number of recent memories to fetch when no block_id given",
+                            "minimum": 1,
+                            "maximum": 50,
+                            "default": 10
+                        }
+                    }
+                }
             }
         ]
 

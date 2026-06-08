@@ -5,6 +5,17 @@ Core objective: Encourage AI to use memory tools more frequently with smaller me
 through optimized descriptions that provide clear usage guidance and promote active engagement.
 """
 
+# DEPRECATED (Phase 4 prep, 2026-06) — superseded by greeum.mcp.native.*
+# Verified zero internal imports (or only dead-chain imports). Targeted for
+# deletion after maintainer review. DO NOT add new features here.
+# See docs/design/mcp_legacy_porting.md for the porting status.
+import logging as _legacy_deprec_log
+_legacy_deprec_log.getLogger(__name__).warning(
+    "Loading deprecated module %s — migrate to greeum.mcp.native.* "
+    "(see docs/design/mcp_legacy_porting.md)",
+    __name__,
+)
+
 from typing import Dict, List, Any, Optional
 import json
 import asyncio

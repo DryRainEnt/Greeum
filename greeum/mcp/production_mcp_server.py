@@ -16,6 +16,17 @@ Claude Desktop 직접 연동을 위한 네이티브 JSON-RPC 2.0 MCP 서버
 - 기존 비즈니스 로직 완전 재사용
 """
 
+# DEPRECATED (Phase 4 prep, 2026-06) — superseded by greeum.mcp.native.*
+# Verified zero internal imports (or only dead-chain imports). Targeted for
+# deletion after maintainer review. DO NOT add new features here.
+# See docs/design/mcp_legacy_porting.md for the porting status.
+import logging as _legacy_deprec_log
+_legacy_deprec_log.getLogger(__name__).warning(
+    "Loading deprecated module %s — migrate to greeum.mcp.native.* "
+    "(see docs/design/mcp_legacy_porting.md)",
+    __name__,
+)
+
 import json
 import sys
 import logging
