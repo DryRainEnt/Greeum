@@ -23,7 +23,7 @@
 | 2026-05-30 | P0 | High | **In Progress** (Phase 2 부분 완료) | [MCP HTTP transport — spec 준수 + 인증](2026-05-30-mcp-http-transport-spec-auth.md) |
 | 2026-05-30 | P1 | Medium | **Resolved** (Phase 3, 커밋됨) | [LangChain + LlamaIndex retriever 어댑터](2026-05-30-langchain-llamaindex-adapters.md) |
 | 2026-05-30 | P1 | Medium | **Resolved** (Phase 3, 커밋됨) | [Anthropic native memory-tool 심](2026-05-30-anthropic-memory-tool-shim.md) |
-| 2026-05-30 | P2 | Medium | Approved (대기) | [MCP 서버 중복 구현 정리](2026-05-30-mcp-implementation-consolidation.md) |
+| 2026-05-30 | P2 | Medium | **Prep 완료 (삭제 결재 대기)** | [MCP 서버 중복 구현 정리](2026-05-30-mcp-implementation-consolidation.md) — 포팅·deprecation 헤더 완료, 분석은 `docs/design/mcp_legacy_porting.md` |
 | 2026-05-30 | — | Medium | Triaged | [ContextClassifier SQLite thread-safety violation](2026-05-30-context-classifier-thread-safety.md) |
 
 ## 닫힌 이슈
