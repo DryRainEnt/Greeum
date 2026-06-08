@@ -3,6 +3,15 @@
 ## Unreleased (v5.4 트랙 — 작업 중)
 
 ### Added
+- **재임베딩 마이그레이션 스크립트** (`scripts/migrate_embeddings.py`, Phase 1C):
+  - 라이브 DB의 mixed-dim 임베딩 상태(128/768/3072 혼재)를 단일 모델·차원으로 정규화.
+  - 기본 dry-run, `--apply`로 명시적 쓰기. SQLite backup API로 자동 백업 (`--no-backup`은 테스트 한정).
+  - 모델 선택: `--model auto|st|m2v|simple` (auto = 레지스트리 default).
+  - 멱등성: 이미 target 모델·차원인 블록은 skip. 배치 transaction, 진행 로깅.
+  - Legacy 스키마 호환: `block_embeddings`에 PK 없으면 DELETE+INSERT 폴백.
+  - 검증: 실행 후 차원 분포·전체 카운트 확인. 실패 시 exit code 1.
+  - 9 단위 테스트 (`tests/test_migrate_embeddings.py`): dry-run·apply·백업·idempotency·limit·legacy schema·에러 경로.
+  - 라이브 DB(334 블록) dry-run 검증: 마이그레이션 대상 334개, 예상 ~30초.
 - **레거시 MCP 정리 prep** (Phase 4, 삭제 미실행):
   - ChatGPT/OpenAI 커넥터 호환 `search` / `fetch` 도구를 native로 포팅 (`greeum/mcp/native/tools.py` 디스패치 + `greeum/mcp/native/protocol.py` 스키마). 이전엔 레거시 `production_mcp_server.py`에만 있어 삭제 시 누락될 위험이었음.
   - 포팅 분석 문서 작성: `docs/design/mcp_legacy_porting.md` — 레거시 9개 파일 vs native 매핑, 포팅·드롭 결정, 삭제 체크리스트.
