@@ -1,8 +1,13 @@
 # Changelog
 
-## Unreleased (v5.4 트랙 — 작업 중, 미커밋)
+## Unreleased (v5.4 트랙 — 작업 중)
 
 ### Added
+- **프레임워크 어댑터 3종** (`greeum/adapters/`):
+  - `langchain.GreeumRetriever` — LangChain `BaseRetriever` 구현, `from_block_manager`/`from_http_client` 분기로 in-process·원격 모두 지원. extra: `greeum[langchain]`.
+  - `llamaindex.GreeumRetriever` — LlamaIndex `BaseRetriever` 구현, 동일한 두 모드. extra: `greeum[llamaindex]`.
+  - `anthropic_memory.AnthropicMemoryHandler` — Anthropic `memory_20250818` 도구를 Greeum 블록 스토어로 라우팅. view/create/str_replace/insert/delete 지원. 가상 경로는 `mem-path:<path>` 태그로 매핑; 블록 불변성을 위해 편집은 새 블록 생성, 삭제는 기본 soft. 추가 의존성 없음.
+  - 12 신규 단위 테스트 (`tests/test_adapters.py`, 프레임워크 미설치 시 graceful skip).
 - `Model2VecEmbedding` 클래스 — Model2Vec 기반 정적(no-torch-at-inference) 다국어 임베딩.
   기본 모델 `minishlab/potion-multilingual-128M`. 기존 `EmbeddingModel` 인터페이스 준수, 768차원 패딩.
 - `EmbeddingRegistry._auto_init` 우선순위 갱신: SentenceTransformer → Model2Vec → 시끄러운 해시 폴백.

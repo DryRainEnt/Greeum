@@ -53,6 +53,15 @@ consolidator = []  # No extra deps — click, numpy, requests already in core
 lite = [
     "model2vec>=0.6.0",
 ]
+# v5.4 (P3): framework adapters in greeum/adapters/ — Greeum as a drop-in
+# retriever in LangChain / LlamaIndex pipelines. Anthropic memory-tool shim
+# (memory_20250818) has no extra deps and ships with core.
+langchain = [
+    "langchain-core>=0.3",
+]
+llamaindex = [
+    "llama-index-core>=0.11",
+]
 full = [
     "sentence-transformers>=2.2.0",
     "openai>=0.27.0",
