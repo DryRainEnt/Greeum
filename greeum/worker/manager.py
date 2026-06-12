@@ -131,8 +131,11 @@ def ensure_http_worker(
         "--port",
         str(port),
     ]
-    if semantic:
-        cmd.append("--semantic")
+    # v5.4+: semantic is the default; only append the opt-out flag when caller
+    # explicitly disables it. Keeping the parameter name as ``semantic`` for
+    # backwards compatibility — the meaning is unchanged.
+    if not semantic:
+        cmd.append("--no-semantic")
 
     env = os.environ.copy()
     env.setdefault("GREEUM_DATA_DIR", str(data_dir))

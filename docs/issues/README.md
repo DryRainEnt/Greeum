@@ -14,7 +14,7 @@
 
 **2026-05-30 의사결정**: Option A 묶음 + 로드맵 전체 + LUCA 확장 경로 모두 승인. 스프린트 계획: `docs/sprints/2026-06-greeum-harness-sprint.md`.
 
-**진행 상황 (2026-06-09)**: Phase 1A/1B/2/3/4-prep 완료(커밋·푸시), Phase 1C 마이그레이션 스크립트 완성(라이브 실행 대기). 본인 결재 게이트: 라이브 마이그레이션 실행 + Phase 1D CLI 기본 전환 + v5.4.0a 릴리스 시점 + Phase 4 본격 삭제.
+**진행 상황 (2026-06-12)**: Phase 1A/1B/1C/1D-code/2/3/4-prep 완료(커밋). 본인 결재 게이트로 남은 항목: (1) 라이브 마이그레이션 실행, (2) `GREEUM_DB_THREAD_LOCAL` default 전환, (3) v5.4.0a 버전 bump + 릴리스 태깅, (4) Phase 4 본격 삭제.
 
 ## 열린 이슈
 

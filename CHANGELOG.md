@@ -2,6 +2,15 @@
 
 ## Unreleased (v5.4 트랙 — 작업 중)
 
+### Changed
+- **`greeum mcp serve` 기본 동작이 의미 임베딩으로 전환** (Phase 1D):
+  - `--semantic` 플래그 의미 반전: 이전엔 opt-in(`default=False`), 이제 default=True. CLI 호출 한 번에 자동으로 SentenceTransformer → Model2Vec → 시끄러운 해시 폴백 순서로 최선 경로 선택.
+  - 해시 폴백을 의도적으로 원하는 테스트·CI는 `--no-semantic` 명시. 이 경로는 `GREEUM_DISABLE_ST=1` + `GREEUM_DISABLE_M2V=1`을 함께 세팅해 사용자가 요청한 그대로 동작 (시끄러운 배너는 `GREEUM_SILENT_HASH_FALLBACK=1`로만 억제 가능).
+  - `greeum mcp warmup` 완료 메시지를 새 기본에 맞게 업데이트.
+  - `greeum/worker/manager.py`도 의미 반전 (`semantic=False`일 때만 `--no-semantic` 추가).
+  - 문서 갱신: `docs/README_ko.md`, `docs/greeum-workflow-guide.md`에서 `--semantic` 권유 문구 제거.
+  - **버전 번호 bump 및 릴리스 태깅은 의도적으로 보류** (본인 결재 사항). 코드만 v5.4 준비 상태.
+
 ### Added
 - **재임베딩 마이그레이션 스크립트** (`scripts/migrate_embeddings.py`, Phase 1C):
   - 라이브 DB의 mixed-dim 임베딩 상태(128/768/3072 혼재)를 단일 모델·차원으로 정규화.

@@ -18,10 +18,13 @@ greeum setup --start-worker
 pip install sentence-transformers
 greeum mcp warmup  # 모델 캐시 미리 다운로드
 ```
-- 기본값은 해시 기반 폴백(SimpleEmbedding)입니다.
-- 의미 기반 검색이 필요하면 다음과 같이 실행하세요.
+- **v5.4+ 기본은 의미 임베딩**입니다. `greeum mcp serve` 만 입력하면 자동으로
+  SentenceTransformer → Model2Vec → (둘 다 없을 때만) 시끄러운 해시 폴백 순서로
+  최선의 의미 임베딩이 선택됩니다.
+- 테스트·CI 등에서 의도적으로 해시 폴백을 원하는 경우에만 `--no-semantic`을 사용하세요.
   ```bash
-  greeum mcp serve --semantic
+  greeum mcp serve              # 의미 임베딩(권장, 기본)
+  greeum mcp serve --no-semantic  # 해시 폴백(테스트 한정)
   ```
 
 ## 2. MCP 연동 요약

@@ -1615,8 +1615,10 @@ def memory_reindex(data_dir: Optional[str], disable_faiss: bool) -> None:
 @click.option('--verbose', '-v', is_flag=True, help='Enable verbose logging (INFO level)')
 @click.option('--debug', '-d', is_flag=True, help='Enable debug logging (DEBUG level)')
 @click.option('--quiet', '-q', is_flag=True, help='[!] Use default behavior instead')
-@click.option('--semantic/--no-semantic', default=False, show_default=True,
-              help='Enable semantic embeddings (requires cached SentenceTransformer)')
+@click.option('--semantic/--no-semantic', default=True, show_default=True,
+              help='Enable semantic embeddings (default in v5.4+; auto-picks '
+                   'SentenceTransformer → Model2Vec → loud hash banner). '
+                   'Pass --no-semantic only for tests/CI that intentionally want hash.')
 def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quiet: bool, semantic: bool):
     """Start MCP server for Claude Code integration"""  
     config = load_config()
@@ -1642,27 +1644,30 @@ def serve(transport: str, port: int, host: str, verbose: bool, debug: bool, quie
         ensure_data_dir(config.data_dir)
         os.environ.setdefault('GREEUM_DATA_DIR', config.data_dir)
         if semantic:
-            # Allow explicit opt-in by clearing the fallback flag
+            # v5.4 default: semantic-on. Let EmbeddingRegistry auto-init pick the
+            # best path (SentenceTransformer → Model2Vec → loud hash banner).
+            # Make sure a stray GREEUM_DISABLE_ST from a parent shell doesn't
+            # disable ST silently.
             if os.getenv('GREEUM_DISABLE_ST'):
                 os.environ.pop('GREEUM_DISABLE_ST')
             if (verbose or debug) and not config.semantic_ready:
-                click.echo('[WARN] Semantic mode requested but warm-up is not recorded; first startup may take longer.')
+                click.echo('[NOTE] First semantic startup may take longer (model warm-up). '
+                           'Run `greeum mcp warmup` once to cache the model.')
+            # Eager ST init as a hint; failures fall through to auto-init which
+            # will try Model2Vec next or surface the loud hash banner.
             try:
                 init_sentence_transformer(set_as_default=True)
-            except RuntimeError as err:
+            except (RuntimeError, ImportError) as err:
                 if verbose or debug:
-                    click.echo(f'[WARN] {err}')
-            except ImportError as err:
-                if verbose or debug:
-                    click.echo(f'[WARN] {err}')
-                force_simple_fallback(set_as_default=True)
+                    click.echo(f'[NOTE] SentenceTransformer not used ({type(err).__name__}); '
+                               'auto-init will try Model2Vec or surface a loud banner.')
         else:
+            # Explicit opt-out for tests/CI. Force the hash fallback in BOTH
+            # paths (ST and M2V) so the user gets exactly what they asked for —
+            # the loud banner from EmbeddingRegistry._auto_init fires unless
+            # GREEUM_SILENT_HASH_FALLBACK=1 is also set.
             os.environ.setdefault('GREEUM_DISABLE_ST', '1')
-            if verbose or debug:
-                if config.semantic_ready:
-                    click.echo('[NOTE] Semantic embeddings available. Use --semantic to enable them for this session.')
-                else:
-                    click.echo('[NOTE] SentenceTransformer disabled (hash fallback). Use --semantic after warm-up to re-enable.')
+            os.environ.setdefault('GREEUM_DISABLE_M2V', '1')
             force_simple_fallback(set_as_default=True)
         try:
             # Native MCP Server 사용 (FastMCP 완전 배제, anyio 기반 안전한 실행)
@@ -1752,7 +1757,11 @@ def worker_serve(host: str, port: int, semantic: bool, stdio: bool) -> None:
 @click.option('--model', default='sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
               show_default=True, help='SentenceTransformer model to pre-download')
 def warmup_embeddings(model: str):
-    """Download the semantic embedding model so --semantic starts instantly."""
+    """Pre-download the semantic embedding model so first MCP startup is instant.
+
+    v5.4+: semantic mode is the CLI default; warmup is a one-time cache step,
+    not a prerequisite. ``--no-semantic`` on `mcp serve` skips it entirely.
+    """
 
     click.echo(f"[>] Downloading {model} ...")
 
@@ -1769,7 +1778,7 @@ def warmup_embeddings(model: str):
 
     mark_semantic_ready(True)
     click.echo(f"[OK] Warm-up complete. Model cached at {cache_dir}.")
-    click.echo("   Use 'greeum mcp serve --semantic' to enable semantic embeddings.")
+    click.echo("   `greeum mcp serve` now uses semantic embeddings by default.")
 
 
 # API 서브명령어들  

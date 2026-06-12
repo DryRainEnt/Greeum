@@ -54,7 +54,7 @@ env     = { "GREEUM_QUIET" = "true", "PYTORCH_ENABLE_MPS_FALLBACK" = "1" }
 > `greeum setup --start-worker`를 먼저 실행하면 초기 타임아웃을 피할 수 있습니다.
 
 ### ClaudeCode / Cursor
-- 명령: `greeum mcp serve` (semantic 필요 시 `--semantic`)
+- 명령: `greeum mcp serve` (v5.4+ 의미 임베딩이 기본; 해시 폴백 원하면 `--no-semantic`)
 - 자동 워커 감지를 위해 `GREEUM_MCP_HTTP=http://127.0.0.1:8820/mcp` 환경 변수를 설정
 
 ### Slack/온보딩 메시지 예시
@@ -72,7 +72,7 @@ env     = { "GREEUM_QUIET" = "true", "PYTORCH_ENABLE_MPS_FALLBACK" = "1" }
 | STDIO 로그가 많다 | `export GREEUM_QUIET=true` |
 | 첫 호출이 느리다 | 워커 자동 워밍업(`greeum setup --start-worker`) |
 | DB 오류가 발생 | `greeum migrate doctor --yes` 실행 |
-| 의미 검색 활성화 | `greeum mcp warmup` → `greeum mcp serve --semantic` |
+| 의미 검색 활성화 | (v5.4+ 기본) 처음만 `greeum mcp warmup` 으로 모델 캐시, 이후 `greeum mcp serve` |
 | Slack 알림 | `GREEUM_SLACK_WEBHOOK` 설정 후 `greeum-digest` |
 
 ---
