@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 DEFAULT_DATA_DIR = Path.home() / ".greeum"
-DEFAULT_ST_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+DEFAULT_ST_MODEL = "intfloat/multilingual-e5-small"
 
 
 def _default_config_path() -> Path:

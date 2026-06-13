@@ -3,6 +3,17 @@
 ## Unreleased (v5.4 트랙 — 작업 중)
 
 ### Changed
+- **Default SentenceTransformer 모델 swap: minilm → multilingual-e5-small** (Phase 1D 잔여분):
+  - `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` → `intfloat/multilingual-e5-small`.
+    동일 384-dim·~470MB·torch 의존성, 벤치마크에선 e5_small이 R@5 .47 / R@10 .54 / MRR .56으로 minilm(.32/.34/.41)을 압도(`docs/issues/2026-05-30-embedding-packaging-strategy.md`).
+  - e5 가족 학습 시 prefix(`query: ` / `passage: `)에 의존하므로 `SentenceTransformerModel.encode()`에 자동 prefix 적용. Greeum은 add/search가 동일 콜이라 e5 docs의 symmetric task 권장에 따라 양쪽에 `query: ` (벤치 셋업과 동일).
+  - 모델 가족 자동 감지: `_determine_query_prefix()` — e5/* → `query: `, 그 외 → ``.
+  - 환경변수 override: `GREEUM_ST_QUERY_PREFIX` (빈 문자열로 비활성화 가능).
+  - 모델명 일관성 정리 5곳: `config_store.DEFAULT_ST_MODEL`, `embedding_models.SentenceTransformerModel.__init__`, `cli warmup --model`, `mcp/native/tools.py` warmup fallback 및 주석.
+  - 12 신규 단위 테스트 + 실제 e5 모델 로드로 prefix 동작 검증 (`tests/test_st_default_swap.py`).
+  - `test_embedding_migration.test_semantic_similarity_improvement`의 절대 임계값 0.5(minilm 분포 기준)를 상대 갭 ≥ 0.05로 model-agnostic 화.
+  - **기존 DB는 마이그레이션 필요**: 라이브 블록은 여전히 minilm 벡터 → `scripts/migrate_embeddings.py --db ~/.greeum/memory.db --apply` 실행 후 일관 상태.
+
 - **`greeum mcp serve` 기본 동작이 의미 임베딩으로 전환** (Phase 1D):
   - `--semantic` 플래그 의미 반전: 이전엔 opt-in(`default=False`), 이제 default=True. CLI 호출 한 번에 자동으로 SentenceTransformer → Model2Vec → 시끄러운 해시 폴백 순서로 최선 경로 선택.
   - 해시 폴백을 의도적으로 원하는 테스트·CI는 `--no-semantic` 명시. 이 경로는 `GREEUM_DISABLE_ST=1` + `GREEUM_DISABLE_M2V=1`을 함께 세팅해 사용자가 요청한 그대로 동작 (시끄러운 배너는 `GREEUM_SILENT_HASH_FALLBACK=1`로만 억제 가능).

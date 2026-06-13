@@ -440,7 +440,7 @@ This may indicate a transaction rollback or database issue."""
 
                                 # IMPORTANT: Only use first 384 dimensions (actual model output)
                                 # The rest is zero-padding for compatibility
-                                ACTUAL_DIM = 384  # paraphrase-multilingual-MiniLM-L12-v2 dimension
+                                ACTUAL_DIM = 384  # v5.4 default: intfloat/multilingual-e5-small (384-dim, same as legacy minilm)
 
                                 # Use only the meaningful part (first 384 dimensions)
                                 head_embedding = head_embedding[:ACTUAL_DIM]
@@ -1073,7 +1073,7 @@ This may indicate a transaction rollback or database issue."""
             init_sentence_transformer(model_name=model_name, set_as_default=True)
             chosen = model_name or os.environ.get(
                 "GREEUM_ST_MODEL",
-                "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+                "intfloat/multilingual-e5-small",  # v5.4 default
             )
             return f"✅ Warm-up complete for {chosen}"
         except Exception as exc:

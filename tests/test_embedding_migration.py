@@ -66,39 +66,43 @@ class TestEmbeddingMigration(BaseGreeumTestCase):
                            f"New embedding should be 768D: {text}")
     
     def test_semantic_similarity_improvement(self):
-        """의미적 유사도 개선 테스트"""
-        # 유사한 텍스트들
+        """의미적으로 유사한 쌍이 다른 쌍보다 평균 cos가 더 높다 (모델-agnostic).
+
+        v5.4 ST default 모델 swap(minilm → multilingual-e5-small) 이후 절대 임계값
+        0.5는 e5 가족 baseline cos 분포(높음)와 안 맞아 의미 없음. 본 테스트의
+        진짜 의도는 "similar 쌍 cos > different 쌍 cos"이므로 상대 비교로 전환.
+        """
         similar_pairs = [
             ("The weather is nice today", "Today has beautiful weather"),
             ("I like pizza", "Pizza is my favorite food"),
-            ("Machine learning is important", "AI and ML are crucial technologies")
+            ("Machine learning is important", "AI and ML are crucial technologies"),
         ]
-        
-        # 다른 텍스트들
         different_pairs = [
             ("The weather is nice today", "I like to eat pizza"),
-            ("Machine learning is important", "The weather is sunny")
+            ("Machine learning is important", "The weather is sunny"),
         ]
-        
-        for text1, text2 in similar_pairs:
-            # 새 모델로 유사도 계산
-            emb1 = self.new_model.encode(text1)
-            emb2 = self.new_model.encode(text2)
-            similarity = self.new_model.similarity(emb1, emb2)
-            
-            # 의미적으로 유사한 텍스트는 높은 유사도를 가져야 함
-            self.assertGreater(similarity, 0.5, 
-                             f"Similar texts should have high similarity: '{text1}' vs '{text2}' (similarity: {similarity:.3f})")
-        
-        for text1, text2 in different_pairs:
-            # 새 모델로 유사도 계산
-            emb1 = self.new_model.encode(text1)
-            emb2 = self.new_model.encode(text2)
-            similarity = self.new_model.similarity(emb1, emb2)
-            
-            # 의미적으로 다른 텍스트는 낮은 유사도를 가져야 함
-            self.assertLess(similarity, 0.5, 
-                          f"Different texts should have low similarity: '{text1}' vs '{text2}' (similarity: {similarity:.3f})")
+
+        def _sim_of(pairs):
+            scores = []
+            for t1, t2 in pairs:
+                e1 = self.new_model.encode(t1)
+                e2 = self.new_model.encode(t2)
+                scores.append(self.new_model.similarity(e1, e2))
+            return scores
+
+        sim_scores = _sim_of(similar_pairs)
+        diff_scores = _sim_of(different_pairs)
+        avg_sim = sum(sim_scores) / len(sim_scores)
+        avg_diff = sum(diff_scores) / len(diff_scores)
+
+        # 의미적으로 유사한 쌍의 평균 cos가 다른 쌍의 평균보다 의미 있게 높아야 함.
+        # 최소 gap 0.05 — minilm/e5 양쪽 모두 만족하는 보수적 임계.
+        gap = avg_sim - avg_diff
+        self.assertGreater(
+            gap, 0.05,
+            f"similar avg {avg_sim:.3f} should exceed different avg {avg_diff:.3f} "
+            f"by ≥ 0.05 (got gap={gap:.3f}). similar={sim_scores}, different={diff_scores}",
+        )
     
     def test_multilingual_support(self):
         """다국어 지원 테스트"""

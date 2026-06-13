@@ -67,7 +67,7 @@ class APIConfig:
     
     # External Services
     embedding_service: str = "local"  # local, openai, huggingface
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_model: str = "intfloat/multilingual-e5-small"
 
 
 @dataclass

@@ -313,6 +313,33 @@ class SimpleEmbeddingModel(EmbeddingModel):
         return f"simple_hash_{self.dimension}"
 
 
+DEFAULT_ST_MODEL = 'intfloat/multilingual-e5-small'
+# v5.4(2026-06-13): default ST 모델을 minilm → multilingual-e5-small로 swap.
+# 벤치마크 결과(scripts/bench_hybrid_weights.py, docs/issues/2026-05-30-embedding-
+# packaging-strategy.md): e5_small @ hybrid 0.9/0.1에서 R@5 .47, R@10 .54,
+# MRR .56 — 동일 384-dim·~470MB·torch 의존성으로 minilm 대비 무료 업그레이드.
+
+
+def _determine_query_prefix(model_name: str) -> str:
+    """모델 가족별 권장 query prefix를 결정.
+
+    e5 가족(intfloat/e5-*, intfloat/multilingual-e5-*)은 학습 시 ``query: `` /
+    ``passage: ``를 입력에 붙여 학습됐기 때문에 추론 시에도 마커가 있어야
+    품질이 나옴. Greeum은 현재 add/search 모두 동일 ``encode()`` 콜을
+    사용하므로 e5 docs의 "symmetric task" 권장에 따라 양쪽에 ``query: `` 적용
+    (벤치마크 셋업과 동일).
+
+    ``GREEUM_ST_QUERY_PREFIX`` 환경변수로 강제 override 가능 (빈 문자열로 비활성화도 가능).
+    """
+    env = os.getenv('GREEUM_ST_QUERY_PREFIX')
+    if env is not None:
+        return env
+    name = model_name.lower()
+    if 'intfloat/e5-' in name or 'intfloat/multilingual-e5-' in name or '/e5-mistral' in name:
+        return 'query: '
+    return ''
+
+
 class SentenceTransformerModel(EmbeddingModel):
     """Sentence-Transformers 기반 의미적 임베딩 모델 (Lazy Loading)"""
 
@@ -321,21 +348,24 @@ class SentenceTransformerModel(EmbeddingModel):
         Sentence-Transformer 모델 초기화 (Lazy Loading)
 
         Args:
-            model_name: 모델 이름 (기본값: 다국어 지원 모델)
+            model_name: 모델 이름 (기본값: ``DEFAULT_ST_MODEL``)
         """
-        # 기본 모델: 다국어 지원 (한국어 포함), 384차원
         if model_name is None:
-            model_name = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
+            model_name = DEFAULT_ST_MODEL
 
         self.model_name = model_name
         self.model = None  # Lazy loading: 실제 사용 시 초기화
         self._dimension = None
         self._needs_padding = None
         self.target_dimension = 768  # Greeum 표준 차원
+        self.query_prefix = _determine_query_prefix(model_name)
         self.config = config or EmbeddingConfig()
         self._cache = LRUEmbeddingCache(self.config.cache_size) if self.config.enable_caching else None
         self._monitor = PerformanceMonitor(self.config.performance_monitoring)
-        logger.debug("SentenceTransformerModel initialized with lazy loading for: %s", model_name)
+        logger.debug(
+            "SentenceTransformerModel initialized with lazy loading for: %s (query_prefix=%r)",
+            model_name, self.query_prefix,
+        )
 
     def _ensure_model_loaded(self):
         """모델이 로드되어 있는지 확인하고 필요 시 로드"""
@@ -425,7 +455,10 @@ class SentenceTransformerModel(EmbeddingModel):
             임베딩 벡터 (768차원으로 패딩됨)
         """
         start = time.perf_counter()
-        cache_key = text
+        # query_prefix는 모델 가족별 권장 마커. e5는 'query: '를 학습 시 붙였으므로
+        # 추론 시에도 동일 마커가 있어야 품질이 나옴 (docs: see _determine_query_prefix).
+        input_text = (self.query_prefix + text) if self.query_prefix else text
+        cache_key = input_text
         if self._cache:
             cached = self._cache.get(cache_key)
             if cached is not None:
@@ -436,7 +469,7 @@ class SentenceTransformerModel(EmbeddingModel):
         self._monitor.record_cache(False)
 
         self._ensure_model_loaded()
-        embedding = self.model.encode(text, convert_to_numpy=True)
+        embedding = self.model.encode(input_text, convert_to_numpy=True)
 
         if self.needs_padding:
             padded = np.zeros(self.target_dimension)

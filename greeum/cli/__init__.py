@@ -1754,8 +1754,8 @@ def worker_serve(host: str, port: int, semantic: bool, stdio: bool) -> None:
         click.echo(f"Worker exited with status {exc.returncode}")
 
 @mcp.command('warmup')
-@click.option('--model', default='sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
-              show_default=True, help='SentenceTransformer model to pre-download')
+@click.option('--model', default='intfloat/multilingual-e5-small',
+              show_default=True, help='SentenceTransformer model to pre-download (v5.4 default)')
 def warmup_embeddings(model: str):
     """Pre-download the semantic embedding model so first MCP startup is instant.
 
