@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "produced_at": "2026-06-13T21:54:58+00:00",
+  "config": {
+    "Ns": [
+      200,
+      1000,
+      3000,
+      10000
+    ],
+    "needles_per_N": 50,
+    "seed": 42,
+    "embedder": "sentence-transformer"
+  },
+  "per_N": [
+    {
+      "N": 200,
+      "n_needles": 50,
+      "embed_total_s": 1.46,
+      "vanilla_vector": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 0.02,
+        "search_p95_ms": 0.04
+      },
+      "greeum_hybrid": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 0.44,
+        "search_p95_ms": 0.45,
+        "weights": {
+          "vec": 0.7,
+          "bm25": 0.3
+        }
+      }
+    },
+    {
+      "N": 1000,
+      "n_needles": 50,
+      "embed_total_s": 2.11,
+      "vanilla_vector": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 0.05,
+        "search_p95_ms": 1.98
+      },
+      "greeum_hybrid": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 2.32,
+        "search_p95_ms": 4.29,
+        "weights": {
+          "vec": 0.7,
+          "bm25": 0.3
+        }
+      }
+    },
+    {
+      "N": 3000,
+      "n_needles": 50,
+      "embed_total_s": 0.86,
+      "vanilla_vector": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 0.19,
+        "search_p95_ms": 2.62
+      },
+      "greeum_hybrid": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 6.65,
+        "search_p95_ms": 9.39,
+        "weights": {
+          "vec": 0.7,
+          "bm25": 0.3
+        }
+      }
+    },
+    {
+      "N": 10000,
+      "n_needles": 50,
+      "embed_total_s": 0.35,
+      "vanilla_vector": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 1.01,
+        "search_p95_ms": 2.37
+      },
+      "greeum_hybrid": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 22.69,
+        "search_p95_ms": 23.91,
+        "weights": {
+          "vec": 0.7,
+          "bm25": 0.3
+        }
+      }
+    }
+  ],
+  "slope.recall@1.vanilla_vector": -0.0,
+  "slope.recall@1.greeum_hybrid": -0.0,
+  "slope_ratio.recall@1": null,
+  "slope.recall@5.vanilla_vector": -0.0,
+  "slope.recall@5.greeum_hybrid": -0.0,
+  "slope_ratio.recall@5": null,
+  "slope.recall@10.vanilla_vector": -0.0,
+  "slope.recall@10.greeum_hybrid": -0.0,
+  "slope_ratio.recall@10": null
+}

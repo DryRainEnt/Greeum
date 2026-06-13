@@ -1,0 +1,59 @@
+# Machine-readable evaluation policy.
+# Loaded by scripts/eval/check_regression.py to gate PRs.
+#
+# Each metric:
+#   direction:   max | min | shallower (for slopes)
+#   baseline:    expected value from baseline JSON; filled by tooling
+#   hard_fail:   margin (fraction) below baseline that triggers PR block
+#   warn:        margin that triggers a warning (not block)
+#
+# Initial margins (set after the first baseline run, 2026-06-14):
+#   hard_fail = baseline * 0.90  (10% regression tolerated)
+#   warn      = baseline * 0.95  (5% warning band)
+
+metrics:
+  internal_bench:
+    - name: "internal.embedding.recall@5"
+      direction: max
+      hard_fail_margin: 0.10
+      warn_margin: 0.05
+    - name: "internal.embedding.mrr"
+      direction: max
+      hard_fail_margin: 0.10
+      warn_margin: 0.05
+    - name: "internal.hybrid.recall@10"
+      direction: max
+      hard_fail_margin: 0.10
+      warn_margin: 0.05
+
+  niah_curve:
+    # Each N point — quality should not collapse.
+    - name: "niah.recall@10.N=1K"
+      direction: max
+      hard_fail_margin: 0.05
+    - name: "niah.recall@10.N=10K"
+      direction: max
+      hard_fail_margin: 0.10  # larger margin at scale (more noise)
+    # The KEY USP metric — slope must stay flatter than vanilla baseline.
+    - name: "niah.slope.greeum_vs_vanilla_ratio"
+      direction: max
+      hard_fail_below: 0.5    # Greeum slope must be < 1/2 of vanilla slope (in absolute value)
+
+  miracl_ko:
+    - name: "miracl_ko.nDCG@10"
+      direction: max
+      hard_fail_margin: 0.05
+    - name: "miracl_ko.Recall@10"
+      direction: max
+      hard_fail_margin: 0.05
+    - name: "miracl_ko.MRR@10"
+      direction: max
+      hard_fail_margin: 0.05
+
+  operational:
+    - name: "search.latency.p95_ms"
+      direction: min
+      hard_fail_margin: 1.5     # 50% slower than baseline = fail
+    - name: "ingest.latency.p95_ms"
+      direction: min
+      hard_fail_margin: 2.0     # 2x slower = fail (ingest tolerates more noise)

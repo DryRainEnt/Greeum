@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "produced_at": "2026-06-13T21:53:48+00:00",
+  "config": {
+    "Ns": [
+      200,
+      1000
+    ],
+    "needles_per_N": 30,
+    "seed": 42,
+    "embedder": "sentence-transformer"
+  },
+  "per_N": [
+    {
+      "N": 200,
+      "n_needles": 30,
+      "embed_total_s": 1.42,
+      "vanilla_vector": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 0.03,
+        "search_p95_ms": 0.08
+      },
+      "greeum_hybrid": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 0.39,
+        "search_p95_ms": 0.59,
+        "weights": {
+          "vec": 0.7,
+          "bm25": 0.3
+        }
+      }
+    },
+    {
+      "N": 1000,
+      "n_needles": 30,
+      "embed_total_s": 2.01,
+      "vanilla_vector": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 0.05,
+        "search_p95_ms": 1.33
+      },
+      "greeum_hybrid": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 2.23,
+        "search_p95_ms": 2.42,
+        "weights": {
+          "vec": 0.7,
+          "bm25": 0.3
+        }
+      }
+    }
+  ],
+  "slope.recall@1.vanilla_vector": -0.0,
+  "slope.recall@1.greeum_hybrid": -0.0,
+  "slope_ratio.recall@1": null,
+  "slope.recall@5.vanilla_vector": -0.0,
+  "slope.recall@5.greeum_hybrid": -0.0,
+  "slope_ratio.recall@5": null,
+  "slope.recall@10.vanilla_vector": -0.0,
+  "slope.recall@10.greeum_hybrid": -0.0,
+  "slope_ratio.recall@10": null
+}
