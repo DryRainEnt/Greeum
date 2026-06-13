@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "produced_at": "2026-06-13T22:06:10+00:00",
+  "config": {
+    "Ns": [
+      500
+    ],
+    "needles_per_N": 30,
+    "seed": 42,
+    "embedder": "sentence-transformer",
+    "needle_mode": "semantic",
+    "scoring_mode": "brute_force (every query vs every doc)",
+    "limitations": [
+      "Brute-force scoring scales linearly with N for BM25; production Greeum uses HybridGraphSearch anchor-DFS which bounds candidates to a local neighborhood and is the real subject of the log-shaped USP claim. This script does not exercise the anchor path.",
+      "trivial needle_mode shares the unique id between needle and query, so recall stays at 1.0 by token overlap up to large N. Use --needle-mode semantic to probe actual semantic retrieval."
+    ]
+  },
+  "per_N": [
+    {
+      "N": 500,
+      "n_needles": 30,
+      "embed_total_s": 2.5,
+      "vanilla_vector": {
+        "recall@1": 0.3333,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 0.03,
+        "search_p95_ms": 0.07
+      },
+      "greeum_hybrid": {
+        "recall@1": 0.3333,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "search_p50_ms": 0.74,
+        "search_p95_ms": 0.81,
+        "weights": {
+          "vec": 0.7,
+          "bm25": 0.3
+        }
+      }
+    }
+  ],
+  "slope.recall@1.vanilla_vector": 0.0,
+  "slope.recall@1.greeum_hybrid": 0.0,
+  "slope_ratio.recall@1": null,
+  "slope.recall@5.vanilla_vector": 0.0,
+  "slope.recall@5.greeum_hybrid": 0.0,
+  "slope_ratio.recall@5": null,
+  "slope.recall@10.vanilla_vector": 0.0,
+  "slope.recall@10.greeum_hybrid": 0.0,
+  "slope_ratio.recall@10": null
+}

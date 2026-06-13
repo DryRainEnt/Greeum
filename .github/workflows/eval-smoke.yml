@@ -1,0 +1,123 @@
+name: Eval — Smoke (regression gate)
+
+# Runs the smoke-tier eval suite on every PR + push to main and gates the PR if
+# any metric drops below the policy's hard_fail margin vs the committed baseline.
+#
+# Smoke tier targets:
+#   - NIAH semantic mode, N=500, 30 needles    (~30s, self-contained synthetic)
+#   - MIRACL-Korean smoke (30q × 500p)          (~30s after first HF download)
+#
+# Full eval suite (standard / release tiers) is run manually via workflow_dispatch
+# or pre-release; see docs/eval/policy.md.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'greeum/**'
+      - 'scripts/eval/**'
+      - 'docs/eval/policy.yml'
+      - 'docs/eval/baseline_*.json'
+      - '.github/workflows/eval-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'greeum/**'
+      - 'scripts/eval/**'
+      - 'docs/eval/policy.yml'
+      - 'docs/eval/baseline_*.json'
+      - '.github/workflows/eval-smoke.yml'
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: 'Eval tier (smoke / standard / release)'
+        required: true
+        default: 'smoke'
+        type: choice
+        options: [smoke, standard, release]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Cache HuggingFace + eval data
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/huggingface
+            ~/.greeum_eval_cache
+          # Bust the cache when eval scripts change so HF re-fetches if needed.
+          key: hf-eval-v1-${{ runner.os }}-${{ hashFiles('scripts/eval/*.py') }}
+          restore-keys: |
+            hf-eval-v1-${{ runner.os }}-
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # Sentence-Transformers (default ST path) + huggingface_hub for data + numpy
+          pip install 'sentence-transformers>=2.2.0' huggingface_hub 'numpy>=1.24.0'
+
+      - name: Determine tier
+        id: tier
+        run: |
+          TIER="${{ github.event.inputs.tier || 'smoke' }}"
+          echo "tier=$TIER" >> "$GITHUB_OUTPUT"
+          echo "Running tier=$TIER"
+
+      - name: NIAH (semantic mode, log-scale stress)
+        env:
+          TIER: ${{ steps.tier.outputs.tier }}
+        run: |
+          mkdir -p docs/eval/results
+          case "$TIER" in
+            smoke)    NS="500"; NEEDLES="30"  ;;
+            standard) NS="200,1000,3000"; NEEDLES="50"  ;;
+            release)  NS="200,1000,3000,10000,30000"; NEEDLES="100" ;;
+          esac
+          python scripts/eval/niah_scaling.py \
+            --N "$NS" --needles "$NEEDLES" \
+            --needle-mode semantic \
+            --out docs/eval/results/niah_ci_${TIER}.json
+
+      - name: MIRACL-Korean retrieval
+        env:
+          TIER: ${{ steps.tier.outputs.tier }}
+        run: |
+          python scripts/eval/miracl_ko.py \
+            --tier "$TIER" \
+            --out docs/eval/results/miracl_ci_${TIER}.json
+
+      - name: Check regression vs committed baselines
+        env:
+          TIER: ${{ steps.tier.outputs.tier }}
+        run: |
+          set -e
+          # MIRACL smoke is the gate for PRs (NIAH semantic recall@10 is flat
+          # so it's informational, not a gate).
+          BL="docs/eval/baseline_miracl_ko_${TIER}_2026-06-14.json"
+          if [ ! -f "$BL" ]; then
+            echo "::warning::No baseline file for tier $TIER ($BL) — skipping regression check"
+            exit 0
+          fi
+          python scripts/eval/check_regression.py \
+            --result docs/eval/results/miracl_ci_${TIER}.json \
+            --baseline "$BL" \
+            --policy scripts/eval/policy.yml
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-${{ steps.tier.outputs.tier }}-results
+          path: docs/eval/results/*_ci_*.json
+          retention-days: 30
