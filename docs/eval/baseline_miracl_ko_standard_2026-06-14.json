@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "produced_at": "2026-06-13T22:02:26+00:00",
+  "tier": "standard",
+  "config": {
+    "lang": "ko",
+    "split": "dev",
+    "n_queries": 100,
+    "n_distractors": 2000,
+    "n_gold_total": 187,
+    "n_eval_corpus": 2187,
+    "top_k": 10,
+    "embedder": "sentence-transformer",
+    "hybrid_weights": [
+      0.7,
+      0.3
+    ],
+    "seed": 42
+  },
+  "vanilla_vector": {
+    "nDCG@10": 0.819,
+    "Recall@10": 0.7939,
+    "MRR": 0.9479,
+    "search_p50_ms": 7.97,
+    "search_p95_ms": 9.73
+  },
+  "greeum_hybrid": {
+    "nDCG@10": 0.6694,
+    "Recall@10": 0.7126,
+    "MRR": 0.785,
+    "search_p50_ms": 4.88,
+    "search_p95_ms": 5.49
+  }
+}

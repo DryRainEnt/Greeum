@@ -101,6 +101,13 @@ _METRIC_PATHS = {
     "search.latency.p50_ms":            ("latency", "search_latency_ms", "p50"),
     "search.latency.p95_ms":            ("latency", "search_latency_ms", "p95"),
     "ingest.latency.p95_ms":            ("latency", "ingest_latency_ms", "p95"),
+    # MIRACL-Korean
+    "miracl_ko.vanilla.nDCG@10":        ("vanilla_vector", "nDCG@10"),
+    "miracl_ko.vanilla.Recall@10":      ("vanilla_vector", "Recall@10"),
+    "miracl_ko.vanilla.MRR":            ("vanilla_vector", "MRR"),
+    "miracl_ko.hybrid.nDCG@10":         ("greeum_hybrid", "nDCG@10"),
+    "miracl_ko.hybrid.Recall@10":       ("greeum_hybrid", "Recall@10"),
+    "miracl_ko.hybrid.MRR":             ("greeum_hybrid", "MRR"),
 }
 
 

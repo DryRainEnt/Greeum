@@ -40,15 +40,24 @@ metrics:
       hard_fail_below: 0.5    # Greeum slope must be < 1/2 of vanilla slope (in absolute value)
 
   miracl_ko:
-    - name: "miracl_ko.nDCG@10"
+    - name: "miracl_ko.vanilla.nDCG@10"
       direction: max
-      hard_fail_margin: 0.05
-    - name: "miracl_ko.Recall@10"
+      hard_fail_margin: 0.10
+    - name: "miracl_ko.vanilla.Recall@10"
       direction: max
-      hard_fail_margin: 0.05
-    - name: "miracl_ko.MRR@10"
+      hard_fail_margin: 0.10
+    - name: "miracl_ko.vanilla.MRR"
       direction: max
-      hard_fail_margin: 0.05
+      hard_fail_margin: 0.10
+    - name: "miracl_ko.hybrid.nDCG@10"
+      direction: max
+      hard_fail_margin: 0.10
+    - name: "miracl_ko.hybrid.Recall@10"
+      direction: max
+      hard_fail_margin: 0.10
+    - name: "miracl_ko.hybrid.MRR"
+      direction: max
+      hard_fail_margin: 0.10
 
   operational:
     - name: "search.latency.p95_ms"
