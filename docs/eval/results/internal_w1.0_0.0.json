@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "produced_at": "2026-06-16T11:28:57+00:00",
+  "tier": "standard",
+  "config": {
+    "db": "/home/dryrain/.greeum/memory.db",
+    "n_blocks": 344,
+    "n_pos_pairs": 1734,
+    "limit_blocks": null,
+    "limit_pairs": null,
+    "latency_samples": 30,
+    "embedder": "sentence-transformer",
+    "hybrid_weights": [
+      1.0,
+      0.0
+    ]
+  },
+  "quality": {
+    "embedding_only": {
+      "recall@1": 0.3467,
+      "recall@5": 0.4655,
+      "recall@10": 0.5177,
+      "mrr": 0.5198,
+      "n_query": 199,
+      "pair_auc": 0.7422
+    },
+    "hybrid_production": {
+      "weights": {
+        "vec": 1.0,
+        "bm25": 0.0
+      },
+      "recall@1": 0.3467,
+      "recall@5": 0.4655,
+      "recall@10": 0.5177,
+      "mrr": 0.5198,
+      "n_query": 199
+    },
+    "_aux": {
+      "n_blocks": 344,
+      "n_pos_pairs": 1734,
+      "embed_total_s": 2.56,
+      "embed_per_doc_ms": 7.45
+    }
+  },
+  "latency": {
+    "search_latency_ms": {
+      "p50": 0.04,
+      "p95": 0.04,
+      "mean": 0.04,
+      "n_samples": 30
+    },
+    "ingest_latency_ms": {
+      "p50": 0.0,
+      "p95": 0.01,
+      "mean": 0.0,
+      "n_samples": 30
+    }
+  }
+}

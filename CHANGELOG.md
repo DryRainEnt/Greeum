@@ -3,6 +3,17 @@
 ## Unreleased (v5.4 트랙 — 작업 중)
 
 ### Changed
+- **Hybrid 가중치 default 0.7/0.3 → 0.9/0.1** (2026-06-14, Eval-C 후속 sweep 결과):
+  - v5.4 default ST 모델이 multilingual-e5-small로 바뀐 시점부터 e5의 더 강한 vector signal에 맞춰 가중치도 vec-heavy로 갱신했어야 했음. 0.7/0.3은 Model2Vec(potion) peak였던 잔재.
+  - sweep 측정 결과 양 데이터에서 0.9/0.1이 0.7/0.3을 strictly dominate:
+    - 라이브 DB R@10  .477 → .540 (+.063), MRR .502 → .551 (+.049)
+    - MIRACL-Korean nDCG@10  .803 → .876 (+.073), MRR .785 → .933 (+.148)
+  - 회귀-추적 워크플로우의 첫 실전 사례: 측정이 default를 흔들었고, 측정이 가르치는 대로 따랐음.
+  - 베이스라인 4개 (internal/MIRACL × smoke/standard) 모두 새 default로 재측정·freeze.
+  - `docs/eval/tuning_guide.md` 신규 — 데이터 종류별 가중치 권장값.
+  - 환경변수 override (`GREEUM_HYBRID_VEC_WEIGHT`, `GREEUM_HYBRID_BM25_WEIGHT`) 여전히 작동.
+  - 자세한 sweep 데이터: `docs/eval/findings/2026-06-14_hybrid_weight_dataset_dependence.md`
+
 - **Default SentenceTransformer 모델 swap: minilm → multilingual-e5-small** (Phase 1D 잔여분):
   - `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` → `intfloat/multilingual-e5-small`.
     동일 384-dim·~470MB·torch 의존성, 벤치마크에선 e5_small이 R@5 .47 / R@10 .54 / MRR .56으로 minilm(.32/.34/.41)을 압도(`docs/issues/2026-05-30-embedding-packaging-strategy.md`).

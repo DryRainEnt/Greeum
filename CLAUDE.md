@@ -24,8 +24,10 @@ pip install greeum[lite]   # model2vec만 (드롭인 가벼움)
 ```
 
 **환경변수** (v5.4):
-- `GREEUM_HYBRID_VEC_WEIGHT` / `GREEUM_HYBRID_BM25_WEIGHT` — 하이브리드 가중치 (기본 0.7/0.3).
-  e5_small 사용 시 0.9/0.1 권장. 자세한 측정은 `docs/issues/2026-05-30-embedding-packaging-strategy.md`.
+- `GREEUM_HYBRID_VEC_WEIGHT` / `GREEUM_HYBRID_BM25_WEIGHT` — 하이브리드 가중치
+  (**기본 0.9/0.1**, 2026-06-14 sweep 결과로 0.7/0.3에서 상향). 라이브 DB·MIRACL-Korean
+  양쪽 데이터에서 0.9/0.1이 0.7/0.3을 strictly dominate. 짧은 텍스트/태그 위주 코퍼스만
+  BM25 비중을 높이는 게 의미 있음. 가이드는 `docs/eval/tuning_guide.md`.
 - `GREEUM_DISABLE_ST` / `GREEUM_DISABLE_M2V` — 특정 경로 비활성화.
 - `GREEUM_SILENT_HASH_FALLBACK=1` — 테스트/CI에서만 hash 배너 억제.
 - `GREEUM_INSIGHT_REQUIRE_LLM=1` — InsightJudge LLM 실패 시 엄격 모드(500 반환). 기본은 fail-soft.

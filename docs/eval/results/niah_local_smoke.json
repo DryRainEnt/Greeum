@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "produced_at": "2026-06-13T22:06:10+00:00",
+  "produced_at": "2026-06-16T11:34:29+00:00",
   "config": {
     "Ns": [
       500
@@ -19,23 +19,23 @@
     {
       "N": 500,
       "n_needles": 30,
-      "embed_total_s": 2.5,
+      "embed_total_s": 2.52,
       "vanilla_vector": {
         "recall@1": 0.3333,
         "recall@5": 1.0,
         "recall@10": 1.0,
         "search_p50_ms": 0.03,
-        "search_p95_ms": 0.07
+        "search_p95_ms": 0.05
       },
       "greeum_hybrid": {
         "recall@1": 0.3333,
         "recall@5": 1.0,
         "recall@10": 1.0,
-        "search_p50_ms": 0.74,
-        "search_p95_ms": 0.81,
+        "search_p50_ms": 0.75,
+        "search_p95_ms": 0.79,
         "weights": {
-          "vec": 0.7,
-          "bm25": 0.3
+          "vec": 0.9,
+          "bm25": 0.1
         }
       }
     }

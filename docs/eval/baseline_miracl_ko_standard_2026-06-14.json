@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "produced_at": "2026-06-13T22:02:26+00:00",
+  "produced_at": "2026-06-16T11:32:02+00:00",
   "tier": "standard",
   "config": {
     "lang": "ko",
@@ -12,8 +12,8 @@
     "top_k": 10,
     "embedder": "sentence-transformer",
     "hybrid_weights": [
-      0.7,
-      0.3
+      0.9,
+      0.1
     ],
     "seed": 42
   },
@@ -21,14 +21,14 @@
     "nDCG@10": 0.819,
     "Recall@10": 0.7939,
     "MRR": 0.9479,
-    "search_p50_ms": 7.97,
-    "search_p95_ms": 9.73
+    "search_p50_ms": 7.82,
+    "search_p95_ms": 8.29
   },
   "greeum_hybrid": {
-    "nDCG@10": 0.6694,
-    "Recall@10": 0.7126,
-    "MRR": 0.785,
-    "search_p50_ms": 4.88,
-    "search_p95_ms": 5.49
+    "nDCG@10": 0.8049,
+    "Recall@10": 0.7939,
+    "MRR": 0.9328,
+    "search_p50_ms": 4.71,
+    "search_p95_ms": 5.27
   }
 }

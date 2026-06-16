@@ -23,15 +23,31 @@ logger = logging.getLogger(__name__)
 def _default_hybrid_weights() -> Tuple[float, float]:
     """Return (vector_weight, bm25_weight) defaults for HybridScorer.
 
-    Defaults (0.7 / 0.3) from the 2026-05-30 benchmark on the live DB
-    (334 blocks, 1730 semantic+causal GT pairs — see scripts/bench_hybrid_weights.py
-    and docs/issues/2026-05-30-hybrid-fusion-weights.md). 50/50 was strictly worse
-    than 0.7/0.3 for every embedding model tested. For high-recall (e5_small/full-ST)
-    deployments, 0.9/0.1 performs better — set via env vars below.
+    **Default: 0.9 / 0.1** (since 2026-06-14, after the Eval-C / weight-sweep
+    measurement on both internal live DB and MIRACL-Korean). Replaces the
+    previous 0.7/0.3 which was Model2Vec(potion)'s peak — when v5.4 swapped
+    the default ST model to multilingual-e5-small, the weight default needed
+    to follow.
+
+    Measured (both datasets, 0.7/0.3 → 0.9/0.1):
+        - live DB internal:  R@10  .477 → .540  (+.063)   MRR .502 → .551
+        - MIRACL-Korean dev:  nDCG@10 .803 → .876  (+.073)
+        - No regression on any axis; 0.9/0.1 strictly dominates 0.7/0.3 in
+          measurements to date.
+
+    Tuning notes (use ``GREEUM_HYBRID_VEC_WEIGHT`` / ``GREEUM_HYBRID_BM25_WEIGHT``):
+        - For corpora with strong lexical signals (short text, repeated tokens,
+          tag-rich memories), a higher BM25 share (0.7/0.3 or 0.5/0.5) may
+          improve recall on exact-match queries.
+        - For prose / Wikipedia / paraphrase-heavy retrieval, vec-heavy (0.9/0.1
+          or even 1.0/0.0) tends to win — the semantic embedding already
+          captures the signal that BM25 only crudely approximates.
+
+    Full sweep + decision: ``docs/eval/findings/2026-06-14_hybrid_weight_dataset_dependence.md``.
     """
     return (
-        float(os.getenv("GREEUM_HYBRID_VEC_WEIGHT", "0.7")),
-        float(os.getenv("GREEUM_HYBRID_BM25_WEIGHT", "0.3")),
+        float(os.getenv("GREEUM_HYBRID_VEC_WEIGHT", "0.9")),
+        float(os.getenv("GREEUM_HYBRID_BM25_WEIGHT", "0.1")),
     )
 
 

@@ -1,45 +1,45 @@
 {
   "schema_version": 1,
-  "produced_at": "2026-06-13T21:51:16+00:00",
+  "produced_at": "2026-06-16T11:31:27+00:00",
   "tier": "standard",
   "config": {
     "db": "/home/dryrain/.greeum/memory.db",
-    "n_blocks": 342,
-    "n_pos_pairs": 1733,
+    "n_blocks": 344,
+    "n_pos_pairs": 1734,
     "limit_blocks": null,
     "limit_pairs": null,
     "latency_samples": 30,
     "embedder": "sentence-transformer",
     "hybrid_weights": [
-      0.7,
-      0.3
+      0.9,
+      0.1
     ]
   },
   "quality": {
     "embedding_only": {
-      "recall@1": 0.3434,
-      "recall@5": 0.4628,
-      "recall@10": 0.5163,
-      "mrr": 0.5178,
-      "n_query": 198,
-      "pair_auc": 0.7445
+      "recall@1": 0.3467,
+      "recall@5": 0.4655,
+      "recall@10": 0.5177,
+      "mrr": 0.5198,
+      "n_query": 199,
+      "pair_auc": 0.7422
     },
     "hybrid_production": {
       "weights": {
-        "vec": 0.7,
-        "bm25": 0.3
+        "vec": 0.9,
+        "bm25": 0.1
       },
-      "recall@1": 0.3687,
-      "recall@5": 0.4594,
-      "recall@10": 0.495,
-      "mrr": 0.5279,
-      "n_query": 198
+      "recall@1": 0.3819,
+      "recall@5": 0.4824,
+      "recall@10": 0.5301,
+      "mrr": 0.5502,
+      "n_query": 199
     },
     "_aux": {
-      "n_blocks": 342,
-      "n_pos_pairs": 1733,
-      "embed_total_s": 2.53,
-      "embed_per_doc_ms": 7.38
+      "n_blocks": 344,
+      "n_pos_pairs": 1734,
+      "embed_total_s": 2.55,
+      "embed_per_doc_ms": 7.41
     }
   },
   "latency": {
