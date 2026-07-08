@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/dryrainent-greeum-badge.png)](https://mseep.ai/app/dryrainent-greeum)
+
 # Greeum
 
 [![PyPI version](https://badge.fury.io/py/greeum.svg)](https://badge.fury.io/py/greeum)
