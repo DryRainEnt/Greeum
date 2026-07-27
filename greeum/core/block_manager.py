@@ -1346,16 +1346,29 @@ class BlockManager:
         use_fallback = options.get('fallback', True)
         include_meta = options.get('include_meta', True)
         
-        # Get query embedding if available
+        # Get query embedding if available.
+        #
+        # FIX (2026-07-27): this previously did `EmbeddingRegistry().get_model('default')`,
+        # but no model is registered under the key 'default' (keys are
+        # 'sentence-transformer' / 'model2vec' / 'simple'), so get_model raised
+        # ValueError, which a bare `except: pass` swallowed → query_embedding stayed
+        # None → the entire vector branch of DFS search was silently skipped, degrading
+        # every search to keyword-only (very weak for Korean). Cross-session audit
+        # captured this in the shared Greeum memory (block #347, 2026-07-27).
+        #
+        # Use the module-level singleton via get_embedding(), which encodes with the
+        # registry's *default_model* (cached, no per-call registry construction).
         query_embedding = None
         try:
-            from ..embedding_models import EmbeddingRegistry
-            registry = EmbeddingRegistry()
-            model = registry.get_model('default')
-            if model:
-                query_embedding = model.encode(query)
-        except:
-            pass
+            from ..embedding_models import get_embedding
+            query_embedding = get_embedding(query)
+        except Exception as exc:  # noqa: BLE001 — never let embedding failure abort search
+            # Do NOT silently pass: a broken embedding path must be visible in logs.
+            # Search still proceeds (keyword/DFS fallback) but the operator is warned.
+            logger.warning(
+                "Query embedding failed (%s: %s); search degrades to keyword/DFS fallback.",
+                type(exc).__name__, exc,
+            )
         
         # Phase 1: DFS Local-First Search with entry priority
         dfs_engine = DFSSearchEngine(self.db_manager)

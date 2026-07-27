@@ -2,6 +2,14 @@
 
 ## Unreleased (v5.4 트랙 — 작업 중)
 
+### Fixed
+- 🔴 **검색 침묵 버그 — query embedding이 항상 버려지던 문제** (`block_manager.py` `search_with_slots`):
+  - `EmbeddingRegistry().get_model('default')`를 호출했으나 `'default'`는 등록된 모델 키가 아님(`sentence-transformer`/`model2vec`/`simple`만 존재) → `ValueError` → 바로 아래 `except: pass`가 삼킴 → `query_embedding=None` → **DFS 검색의 벡터 분기 전체가 조용히 스킵** → 모든 검색이 키워드 전용으로 강등(한국어 검색 특히 약화, "No memories found").
+  - 다른 세션의 5.3.0 냉정 감사(공유 Greeum 메모리 블록 #347, 2026-07-27)에서 포착.
+  - **뼈아픈 점**: v5.4 임베딩·가중치 작업(e5-small, 0.9/0.1, Model2Vec)은 전부 이 경로 바깥의 품질을 개선했고, 평가 하니스도 `HybridScorer`를 직접 호출해 이 경로를 우회했기에 여태 못 잡음.
+  - 수정: 모듈 싱글턴 `get_embedding()` 헬퍼로 교체(레지스트리 default_model 사용, per-call 재생성 제거). 침묵 `except: pass` → `logger.warning`으로 격상(향후 임베딩 경로 파손은 로그에 보임).
+  - 회귀 테스트 신규: `tests/test_search_embedding_path.py` (3개) — `block_manager.search_with_slots`가 non-None query_embedding을 DFS에 전달함을 검증. 수정 전이면 실패하는 테스트. 우리 평가가 우회했던 실제 검색 경로를 처음으로 커버.
+
 ### Changed
 - **Hybrid 가중치 default 0.7/0.3 → 0.9/0.1** (2026-06-14, Eval-C 후속 sweep 결과):
   - v5.4 default ST 모델이 multilingual-e5-small로 바뀐 시점부터 e5의 더 강한 vector signal에 맞춰 가중치도 vec-heavy로 갱신했어야 했음. 0.7/0.3은 Model2Vec(potion) peak였던 잔재.
