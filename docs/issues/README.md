@@ -14,6 +14,8 @@
 
 **2026-05-30 의사결정**: Option A 묶음 + 로드맵 전체 + LUCA 확장 경로 모두 승인. 스프린트 계획: `docs/sprints/2026-06-greeum-harness-sprint.md`.
 
+**프로젝트 종료 (2026-10-11)**: 적극적 개발 종료. 아래 열린 이슈는 모두 기록용으로 보존되며 수정 계획 없음. 경위는 `docs/SUNSET.md`.
+
 **진행 상황 (2026-06-12)**: Phase 1A/1B/1C/1D-code/2/3/4-prep 완료(커밋). 본인 결재 게이트로 남은 항목: (1) 라이브 마이그레이션 실행, (2) `GREEUM_DB_THREAD_LOCAL` default 전환, (3) v5.4.0a 버전 bump + 릴리스 태깅, (4) Phase 4 본격 삭제.
 
 ## 열린 이슈
@@ -27,6 +29,8 @@
 | 2026-05-30 | P1 | Medium | **Resolved** (Phase 3, 커밋됨) | [Anthropic native memory-tool 심](2026-05-30-anthropic-memory-tool-shim.md) |
 | 2026-05-30 | P2 | Medium | **Prep 완료 (삭제 결재 대기)** | [MCP 서버 중복 구현 정리](2026-05-30-mcp-implementation-consolidation.md) — 포팅·deprecation 헤더 완료, 분석은 `docs/design/mcp_legacy_porting.md` |
 | 2026-05-30 | — | Medium | Triaged | [ContextClassifier SQLite thread-safety violation](2026-05-30-context-classifier-thread-safety.md) |
+| 2026-10-11 | — | High | Open (Won't Fix, sunset) | [`add_block` 유사 콘텐츠 침묵 병합 — 해시 재계산 없이 기존 블록 변형](2026-10-11-add-block-silent-merge-integrity.md) |
+| 2026-10-11 | — | Medium | Open (Won't Fix, sunset) | [`ThreadSafeDatabaseManager`에 `get_recent_blocks` 누락 — MCP `get_recent_memories` 오류](2026-10-11-threadsafe-db-missing-get-recent-blocks.md) |
 
 ## 닫힌 이슈
 

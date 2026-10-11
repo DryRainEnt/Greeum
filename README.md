@@ -1,5 +1,14 @@
 # Greeum
 
+> **⚠️ 프로젝트 종료 안내 / Project Sunset Notice (2026-10-11)**
+>
+> Greeum의 적극적인 개발은 2026-10-11에 종료되었습니다. 저장소는 참고용으로 보존되며 새 기능 개발이나 지원은 계획되어 있지 않습니다.
+> 마지막 상태: v5.4 트랙 (multilingual-e5-small 기본 임베딩, Model2Vec 경량 경로, 하이브리드 0.9/0.1, 검색 침묵 버그 #347 수정). 미해결 결함은 [`docs/issues/`](docs/issues/README.md)에 기록되어 있습니다.
+> 종료 이유는 [`docs/SUNSET.md`](docs/SUNSET.md)를 참조하세요.
+>
+> Active development of Greeum ended on 2026-10-11. The repository is preserved for reference; no further features or support are planned.
+> Final state: the v5.4 track (multilingual-e5-small default embedding, Model2Vec lite path, hybrid weights 0.9/0.1, silent-search bug #347 fixed). Known unresolved defects are recorded in [`docs/issues/`](docs/issues/README.md). See [`docs/SUNSET.md`](docs/SUNSET.md) for the retrospective.
+
 [![PyPI version](https://badge.fury.io/py/greeum.svg)](https://badge.fury.io/py/greeum)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
